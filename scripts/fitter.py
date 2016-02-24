@@ -13,7 +13,7 @@ from scipy.stats import rv_discrete
 #    def _pmf(self, a1, a2):
 #        return 0.5 + a1*x + 0.5*a2*(3*x**2 - 1)
 
-def scale_data(x, xlow, xhigh, invert=False):
+def scale_data(x, xlow=12., xhigh=70., invert=False):
     if not invert:
         return 2*(x - xlow)/(xhigh - xlow) - 1
     else:
@@ -47,21 +47,49 @@ def regularization(params, X, objective, lambda1 = 1., lambda2 = 1.):
     return objective(params, X) + lambda1 * np.sum(np.abs(params)) + lambda2 * np.sum(params**2)
 
 def fit_plot(pdf, data, params):
-    x = np.linspace(-1, 1, num=1000)
-    plt.plot(x, pdf(x, params))
-    h = plt.hist(data, bins=29, range=[-1., 1.], normed=True, histtype='step')
-    plt.show()
+    x = np.linspace(-1, 1, num=10000)
+    y = (166.*2./29.)*pdf(x, params) 
+    x = scale_data(x, invert=True)
 
+    h = plt.hist(data, bins=29, range=[12., 70.], normed=False, histtype='step')
+    bincenters  = (h[1][1:] + h[1][:-1])/2.
+    binerrs     = np.sqrt(h[0]) 
+
+    plt.clf()
+    plt.errorbar(bincenters, h[0], yerr=binerrs, fmt='o')
+    plt.plot(x, y)
+    plt.title('mumu + 1 b jet + 1 forward jet')
+    plt.xlabel('M_mumu [GeV]')
+    plt.ylabel('entries / 2 GeV')
+    plt.savefig('figures/dimuon_mass_fit.pdf')
+
+    #plt.rc('text', usetex=True)
+    #fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
+    #ax1 = axes[0]
+    #ax1.errorbar(bincenters, h[0], yerr=binerrs, fmt='o')
+    #ax1.plot(x, y)
+    #ax1.set_xlabel('M_{\mu\mu} [GeV]')
+    #ax1.set_ylabel('entries/2 GeV')
+    #fig.show()
+
+def get_corr(f_obj, params, data):
+    hcalc   = nd.Hessian(f_obj, step=0.01, method='central', full_output=True) 
+    hobj    = hcalc(params, data)[0]
+    hinv    = np.linalg.inv(hobj)
+
+    # get uncertainties on parameters
+    sig     = np.sqrt(hinv.diagonal())
+
+    # calculate correlation matrix
+    mcorr   = hinv/np.outer(sig, sig)
+
+    return sig, mcorr
 
 if __name__ == '__main__':
 
     # get data and convert variables to be on the range [-1, 1]
     data = pd.read_csv('data/dimuon_mass_1b1f.txt', header=None)[0].values
     data_scaled = np.apply_along_axis(scale_data, 0, data, xlow=12, xhigh=70)
-
-    # Initialize model parameters
-    bg_params   = {'a0': 1., 'a1':1., 'a2':1.}
-    sig_params  = {'mu': 0.01, 'mean':30., 'sigma':1.}
 
     # fit background only model
     a1 = 0.5
@@ -72,6 +100,7 @@ if __name__ == '__main__':
                          method = 'SLSQP', 
                          bounds = bnds,
                          args   = (data_scaled, bg_objective))
+    bg_sigma, bg_corr = get_corr(bg_objective, bg_result.x, data_scaled)   
 
     # fit signal+background model
     bnds = [(0., 1.), # A
@@ -83,21 +112,29 @@ if __name__ == '__main__':
                       #jac    = True,
                       args   = (data_scaled, bg_sig_objective),
                       bounds = bnds)
-
-    print result
+    comb_sigma, comb_corr = get_corr(bg_sig_objective, result.x, data_scaled)   
     qtest = np.sqrt(2*np.abs(bg_sig_objective(result.x, data_scaled) - bg_objective(bg_result.x, data_scaled)))
+
+    pct_sigma = np.abs(comb_sigma/result.x)
+    mu      = scale_data(result.x[1], invert=True) 
+    sig_mu  = mu*pct_sigma[1]
+    width   = result.x[2]*(70. - 12.)/2. 
+    sig_wid = width*pct_sigma[2]
+
+    np.set_printoptions(precision=3.)
+    print '\n'
+    print 'RESULTS'
+    print '-------'
+    print 'A        = {0:.3f} +/- {1:.3f}'.format(result.x[0], comb_sigma[0])
+    print 'mu       = {0:.3f} +/- {1:.3f}'.format(mu, sig_mu)
+    print 'width    = {0:.3f} +/- {1:.3f}'.format(width, sig_wid)
+    print 'a0       = {0:.3f} +/- {1:.3f}'.format(result.x[3], comb_sigma[3])
+    print 'a1       = {0:.3f} +/- {1:.3f}'.format(result.x[4], comb_sigma[4])
+    print'\n'
+    print 'correlation matrix:'
+    print comb_corr
+    print'\n'
     print 'q = {0}'.format(qtest)
 
-    '''
-    ### test space ###
-    data = rng.normal(loc=50., scale=5., size=10000)
-    x = rng.rand(10000)*100.
-    y = gaussian(x, 50., 5.)
+    fit_plot(combined_model, data, result.x)
 
-    #cons    = ({'type': 'ineq', 'fun': lambda p: p[0] > 12.},
-    #           {'type': 'ineq', 'fun': lambda p: p[0] < 70.},
-    #           {'type': 'ineq', 'fun': lambda p: p[0] < 70.})
-    #bnds    = ((0., 100.), (0., 10.))
-    result = minimize(test_objective, [35., 4.], method='nelder-mead', args=(data,))
-    #result = minimize(test_objective, [35., 4.], method='Newton-CG', args=(data,), bounds=bnds)
-    '''
