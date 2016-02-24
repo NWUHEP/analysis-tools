@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import numpy as np
 import pandas as pd
 import ROOT as r
 
@@ -16,21 +17,29 @@ if __name__ == '__main__':
             }
 
     rfiles = []
-    varnames = ['id', 
-            'mu1_pt', 'mu1_eta', 'mu1_phi',
-            'mu2_pt', 'mu2_eta', 'mu2_phi',
-            'jet1_pt', 'jet1_eta', 'jet1_phi',
-            'jet2_pt', 'jet2_eta', 'jet2_phi',
-            'met_rho', 'met_phi']
 
     for cat, name in filenames.iteritems():
-        outfile = file('dimuon_mass_{0}.csv'.format(cat), 'w')
-        froot = r.TFile(name)
-        tree  = froot.Get('amumuTree_DATA')
-        n     = tree.GetEntriesFast()
+        froot   = r.TFile(name)
+        tree    = froot.Get('amumuTree_DATA')
+        n       = tree.GetEntriesFast()
+        ntuple  = {'dimuon_mass':[], 
+                'muon1_pt':[], 'muon1_eta':[], 'muon1_phi':[], 
+                'muon2_pt':[], 'muon2_eta':[], 'muon2_phi':[], 
+                'met_mag':[], 'met_phi':[]
+                }
         for i in xrange(n):
             tree.GetEntry(i)
-            outfile.write('{0}\n'.format(tree.x))
+            ntuple['dimuon_mass'].append(tree.x)
+            ntuple['muon1_pt'].append(tree.muonOne.Pt())
+            ntuple['muon1_eta'].append(tree.muonOne.Eta())
+            ntuple['muon1_phi'].append(tree.muonOne.Phi())
+            ntuple['muon2_pt'].append(tree.muonTwo.Pt())
+            ntuple['muon2_eta'].append(tree.muonTwo.Eta())
+            ntuple['muon2_phi'].append(tree.muonTwo.Phi())
 
-        outfile.close()
+            metx, mety = tree.met.Px(), tree.met.Py()
+            ntuple['met_mag'].append(np.sqrt(metx**2 + mety**2))
+            ntuple['met_phi'].append(np.arctan(mety/metx))
 
+        df = pd.DataFrame(ntuple)
+        df.to_csv('data/ntuple_{0}.csv'.format(cat), index=False)

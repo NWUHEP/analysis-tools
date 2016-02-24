@@ -7,11 +7,23 @@ import numpy.random as rng
 import numdifftools as nd
 
 from scipy.optimize import minimize
-from scipy.stats import rv_discrete
+from scipy.stats import rv_continuous
 
-#class background_gen(rv_discrete):
-#    def _pmf(self, a1, a2):
-#        return 0.5 + a1*x + 0.5*a2*(3*x**2 - 1)
+# global options
+np.set_printoptions(precision=3.)
+
+#class background_gen(rv_continuous):
+#    def __init__(self, a1, a2, **kwargs):
+#        rv_continuous.__init__(self, **kwargs)
+#        self._a1 = a1
+#        self._a2 = a2
+#
+#    def _pdf(self, x):
+#        return 0.5 + self._a1*x + 0.5*self._a2*(3*x**2 - 1)
+
+class background_gen(rv_continuous):
+    def _pdf(self, x):
+        return 0.5 + 0.208*x + 0.5*0.017*(3*x**2 - 1)
 
 def scale_data(x, xlow=12., xhigh=70., invert=False):
     if not invert:
@@ -88,10 +100,13 @@ def get_corr(f_obj, params, data):
 if __name__ == '__main__':
 
     # get data and convert variables to be on the range [-1, 1]
-    data = pd.read_csv('data/dimuon_mass_1b1f.txt', header=None)[0].values
+    print 'Getting data and scaling to lie in range [-1, 1].'
+    ntuple      = pd.read_csv('data/ntuple_1b1f.csv')
+    data        = ntuple['dimuon_mass'].values
     data_scaled = np.apply_along_axis(scale_data, 0, data, xlow=12, xhigh=70)
 
     # fit background only model
+    print 'Performing background only fit with second order Legendre polynomial normalized to unity.'
     a1 = 0.5
     a2 = 0.5
     bnds = [(0., 2.), (0., 0.5)] # a1, a2
@@ -102,7 +117,18 @@ if __name__ == '__main__':
                          args   = (data_scaled, bg_objective))
     bg_sigma, bg_corr = get_corr(bg_objective, bg_result.x, data_scaled)   
 
+    print '\n'
+    print 'RESULTS'
+    print '-------'
+    print 'a0       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[0], bg_sigma[0])
+    print 'a1       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[1], bg_sigma[1])
+    print'\n'
+    print 'correlation matrix:'
+    print bg_corr
+    print'\n'
+
     # fit signal+background model
+    print 'Performing background plus signal fit with second order Legendre polynomial normalized to unity plus a Gaussian kernel.'
     bnds = [(0., 1.), # A
             (-0.8, -0.2), (0., 0.4), # mean, sigma
             (0., 2.), (0., 0.5)] # a1, a2
@@ -110,7 +136,7 @@ if __name__ == '__main__':
                       [0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1]], 
                       method = 'SLSQP',
                       #jac    = True,
-                      args   = (data_scaled, bg_sig_objective),
+                      args   = (data_scaled, bg_sig_objective, 1., 1.),
                       bounds = bnds)
     comb_sigma, comb_corr = get_corr(bg_sig_objective, result.x, data_scaled)   
     qtest = np.sqrt(2*np.abs(bg_sig_objective(result.x, data_scaled) - bg_objective(bg_result.x, data_scaled)))
@@ -121,7 +147,6 @@ if __name__ == '__main__':
     width   = result.x[2]*(70. - 12.)/2. 
     sig_wid = width*pct_sigma[2]
 
-    np.set_printoptions(precision=3.)
     print '\n'
     print 'RESULTS'
     print '-------'
@@ -134,7 +159,6 @@ if __name__ == '__main__':
     print 'correlation matrix:'
     print comb_corr
     print'\n'
-    print 'q = {0}'.format(qtest)
+    print 'q = {0:.3f}'.format(qtest)
 
     fit_plot(combined_model, data, result.x)
-
