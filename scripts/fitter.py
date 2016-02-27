@@ -69,7 +69,7 @@ def get_corr(f_obj, params, data):
 ### For monte carlo studies ###
 def mc_generator(pdf, samp_per_toy=1000, ntoys=1, domain=(-1.,1.)):
     '''Rejection sampling with broadcasting'''
-    rnums = rng.rand(2, 2*ntoys*samples_per_toy) 
+    rnums = rng.rand(2, 2*ntoys*samp_per_toy) 
     x = rnums[0]
     x = (domain[1] - domain[0])*x + domain[0]
     keep = pdf(x) > rnums[1]
@@ -202,8 +202,8 @@ if __name__ == '__main__':
     fit_plot(combined_model, data, result.x)
 
     ### TOY MC ###
-    #proc = Process(name='test_process', target=local_sig, args=(bg_result.x, result.x, 10000))
-    mc_toys, mc_results, mc_lls = local_sig(result.x[3:], result.x, ntoys=100000, samp_per_toy=166)
+    proc = Process(name='test_process', target=local_sig, args=(bg_result.x, result.x, 10000))
+    mc_toys, mc_results, mc_lls = local_sig(result.x[3:], result.x, ntoys=10000, samp_per_toy=166)
     plt.clf()
     #plt.yscale('log')
     plt.hist(1-mc_results[:,0], bins=50, range=[-0.2, 0.2], histtype='stepfilled')
