@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import pickle
 from timeit import default_timer as timer
 from multiprocessing import Process
 
@@ -202,10 +203,14 @@ if __name__ == '__main__':
 
     ### TOY MC ###
     #proc = Process(name='test_process', target=local_sig, args=(bg_result.x, result.x, 10000))
-    mc_toys, mc_results, mc_lls = local_sig(result.x[3:], result.x, ntoys=100000, samp_per_toy=300)
+    mc_toys, mc_results, mc_lls = local_sig(result.x[3:], result.x, ntoys=100000, samp_per_toy=166)
     plt.clf()
     #plt.yscale('log')
     plt.hist(1-mc_results[:,0], bins=50, range=[-0.2, 0.2], histtype='stepfilled')
     plt.show()
 
+    toy_file = open('data/toy_ouput.pkl', 'wb')
+    pickle.dump(mc_toys, toy_file)
+    pickle.dump(mc_results, toy_file)
+    toy_file.close()
     print timer() - start
