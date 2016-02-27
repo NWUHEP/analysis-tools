@@ -12,17 +12,17 @@ def mc_generator(pdf, samp_per_toy=1000, ntoys=1, domain=(-1.,1.)):
     x = x.reshape(x.size/samp_per_toy, samp_per_toy)
     return x
 
-def local_sig(p_bg, p_sigbg, ntoys, samp_per_toy):
-    bg_pdf = lambda x: 0.5 + p_bg[0]*x + 0.5*p_bg[1]*(3*x**2 -1)
+def local_sig(p, ntoys, samp_per_toy):
+    bg_pdf  = lambda x: 0.5 + p['a1']*x + 0.5*p['a2']*(3*x**2 -1)
     sim = mc_generator(bg_pdf, samp_per_toy, ntoys)
     results = []
     nlls = []
-    bnds = [(0., 1.05), # A
-            2*(p_sigbg[1], ), 2*(p_sigbg[2], ), # mean, sigma
-            2*(p_sigbg[3], ), 2*(p_sigbg[4], )] # a1, a2
+    bnds = [(0., 1.04), # A
+            2*(p['mu'], ), 2*(p['width'], ), # mean, sigma
+            2*(p['a1'], ), 2*(p['a2'], )] # a1, a2
     for toy in sim:
         res = minimize(regularization, 
-                       [0.01, -0.3, 0.1, p_bg[0], p_bg[1]], 
+                       [1., p['mu'], p['width'], p['a1'], p['a2']], 
                        method = 'SLSQP',
                        #jac    = True,
                        args   = (toy, bg_sig_objective, 0., 0.),
@@ -39,9 +39,9 @@ if __name__ == '__main__':
     ### Load fit ###
 
     ### TOY MC ###
-    proc = Process(name='test_process', target=local_sig, args=(bg_result.x, result.x, 10000))
-    mc_toys, mc_results, mc_lls = local_sig(result.x[3:], result.x, ntoys=100000, samp_per_toy=166)
-    plt.clf()
+    #proc = Process(name='test_process', target=local_sig, args=(bg_result.x, result.x, 10000))
+    params = {'A':0.88, 'mu':-0.42, 'width':0.054, 'a1':0.32, 'a2':0.133}
+    mc_toys, mc_results, mc_lls = local_sig(params, ntoys=10000, samp_per_toy=166)
     #plt.yscale('log')
     plt.hist(1-mc_results[:,0], bins=50, range=[-0.2, 0.2], histtype='stepfilled')
     plt.show()

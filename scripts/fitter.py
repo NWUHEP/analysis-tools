@@ -117,7 +117,8 @@ if __name__ == '__main__':
                          [0.5, 0.05], 
                          method = 'SLSQP', 
                          bounds = bnds,
-                         args   = (data_scaled, bg_objective))
+                         args   = (data_scaled, bg_objective)
+                         )
     bg_sigma, bg_corr = get_corr(bg_objective, bg_result.x, data_scaled)   
 
     if pout:
@@ -133,7 +134,7 @@ if __name__ == '__main__':
 
     # fit signal+background model
     print 'Performing background plus signal fit with second order Legendre polynomial normalized to unity plus a Gaussian kernel.'
-    bnds = [(0.5, 1.05), # A
+    bnds = [(0., 1.05), # A
             (-0.8, -0.2), (0., 0.4), # mean, sigma
             (0., 2.), (0., 0.5)] # a1, a2
     result = minimize(regularization, 
@@ -141,7 +142,8 @@ if __name__ == '__main__':
                       method = 'SLSQP',
                       #jac    = True,
                       args   = (data_scaled, bg_sig_objective, 1., 1.),
-                      bounds = bnds)
+                      bounds = bnds
+                      )
     comb_sigma, comb_corr = get_corr(bg_sig_objective, result.x, data_scaled)   
     qtest = 2*np.abs(bg_sig_objective(result.x, data_scaled) - bg_objective(bg_result.x, data_scaled))
 
@@ -169,4 +171,4 @@ if __name__ == '__main__':
 
     fit_plot(combined_model, data, result.x)
 
-    print timer() - start
+    print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
