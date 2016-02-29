@@ -172,3 +172,30 @@ if __name__ == '__main__':
     fit_plot(combined_model, data, result.x)
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
+
+    ### Calculate LEE2D ###
+    print 'Scanning over mu and sigma values of signal...'
+    scan_vals = [(n1, n2) for n1 in np.linspace(-0.95, 0.95, 100) for n2 in np.linspace(0.05, 0.5, 100)]
+    bnds = [(0., 1.04), # A
+            2*(result.x[1], ), 2*(result.x[2], ), # mean, sigma
+            2*(result.x[3], ), 2*(result.x[4], )] # a1, a2
+    llbg = bg_objective(bg_result.x, data_scaled)
+    qscan = []
+    for scan in scan_vals:
+        bnds[1] = (scan[0], scan[0])
+        bnds[2] = (scan[1], scan[1])
+        print bnds, '\n'
+        scan_result = minimize(regularization, 
+                               result.x, 
+                               method = 'SLSQP',
+                               #jac    = True,
+                               args   = (data_scaled, bg_sig_objective, 1., 1.),
+                               bounds = bnds
+                               )
+        print scan[0], scan[1], scan_result.x
+        quit = raw_input('Continue? ')
+        if quit == 'n': break
+        qtest = 2*np.abs(bg_sig_objective(scan_result.x, data_scaled) - llbg)
+        qscan.append(np.array([scan[0], scan[1], qtest]))
+
+    qscan = np.array(qscan)

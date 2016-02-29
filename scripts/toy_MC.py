@@ -31,7 +31,8 @@ def local_sig(p, ntoys, samp_per_toy):
             results.append(res.x) 
             nlls.append(bg_sig_objective(res.x, toy))
 
-    return sim, np.array(results), nlls
+    #return sim, np.array(results), nlls
+    return  np.array(results)
 
 if __name__ == '__main__':
     start = timer()
@@ -41,7 +42,12 @@ if __name__ == '__main__':
     ### TOY MC ###
     #proc = Process(name='test_process', target=local_sig, args=(bg_result.x, result.x, 10000))
     params = {'A':0.88, 'mu':-0.42, 'width':0.054, 'a1':0.32, 'a2':0.133}
-    mc_toys, mc_results, mc_lls = local_sig(params, ntoys=10000, samp_per_toy=166)
+
+    output = []
+    for _ in range(10):
+        mc_results = local_sig(params, ntoys=100000, samp_per_toy=166)
+        output.append(mc_results[:,0])
+
     #plt.yscale('log')
     plt.hist(1-mc_results[:,0], bins=50, range=[-0.2, 0.2], histtype='stepfilled')
     plt.show()
@@ -49,7 +55,7 @@ if __name__ == '__main__':
     ### Save to file ###
     print 'Saving result of toy MC to file data/toy_output.pkl'
     toy_file = open('data/toy_ouput.pkl', 'wb')
-    pickle.dump(mc_toys, toy_file)
+    #pickle.dump(mc_toys, toy_file)
     pickle.dump(mc_results, toy_file)
     toy_file.close()
 
