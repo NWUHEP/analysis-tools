@@ -2,7 +2,7 @@ from fitter import *
 
 ### For monte carlo studies ###
 def mc_generator(pdf, samp_per_toy=100, ntoys=1, domain=(-1.,1.)):
-    '''Rejection sampling with broadcasting'''
+    '''Rejection sampling with broadcasting gives approximately the requested number of toys'''
     rnums = rng.rand(2, 2*ntoys*samp_per_toy) 
     x = rnums[0]
     x = (domain[1] - domain[0])*x + domain[0]

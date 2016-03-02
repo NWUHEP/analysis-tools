@@ -10,7 +10,7 @@ import numpy.random as rng
 import matplotlib.pyplot as plt
 import numdifftools as nd
 
-from scipy.stats import chi2 
+from scipy.stats import chi2, norm 
 from scipy import integrate
 from scipy.optimize import minimize
 
@@ -84,11 +84,14 @@ def fit_plot(pdf, data, params, suffix):
     plt.clf()
     plt.errorbar(bincenters, h[0], yerr=binerrs, fmt='o')
     plt.plot(x, y, linewidth=2.)
-    plt.title('mumu + 1 b jet + 1 forward jet')
+    if suffix == '1b1f':
+        plt.title('mumu + 1 b jet + 1 forward jet')
+    elif suffix == '1b1c':
+        plt.title('mumu + 1 b jet + 1 central jet + MET < 40 + deltaPhi(mumu,bj)')
     plt.xlabel('M_mumu [GeV]')
     plt.ylabel('entries / 2 GeV')
     plt.xlim([12., 70.])
-    plt.ylim([0., 20.])
+    plt.ylim([0., np.max(y)*1.8])
     plt.savefig('figures/dimuon_mass_fit_{0}.pdf'.format(suffix))
     plt.close()
 
@@ -108,7 +111,7 @@ if __name__ == '__main__':
 
     # get data and convert variables to be on the range [-1, 1]
     print 'Getting data and scaling to lie in range [-1, 1].'
-    channel     = '1b1f'
+    channel     = '1b1c'
     ntuple      = pd.read_csv('data/ntuple_{0}.csv'.format(channel))
     data        = ntuple['dimuon_mass'].values
     data_scaled = np.apply_along_axis(scale_data, 0, data, xlow=12, xhigh=70)
@@ -174,8 +177,6 @@ if __name__ == '__main__':
         print comb_corr
         print'\n'
 
-    fit_plot(combined_model, data, result.x, channel)
-
     #=======================#
     ### Caluculate yields ###
     #=======================#
@@ -194,12 +195,16 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple p-value ###
-    #print ''
-    #print 'Calculating local p-value'
+    print ''
+    print 'Calculating local p-value and significance...'
     toys    = rng.normal(N_b, sig_b, int(1e8))
     pvars   = rng.poisson(toys)
     pval    = pvars[pvars > N_b + N_s].size/1e8
     print 'local p-value = {0}'.format(pval)
+    print 'local significance = {0:.2f}'.format(np.abs(norm.ppf(pval)))
+
+    ### Make plots ###
+    fit_plot(combined_model, data, result.x, channel)
 
     print ''
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
