@@ -25,18 +25,32 @@ if __name__ == '__main__':
         ntuple  = {'dimuon_mass':[], 
                 'muon1_pt':[], 'muon1_eta':[], 'muon1_phi':[], 
                 'muon2_pt':[], 'muon2_eta':[], 'muon2_phi':[], 
+                'bjet_pt':[], 'bjet_eta':[], 'bjet_phi':[], 
+                'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 
                 'met_mag':[], 'met_phi':[]
                 }
         for i in xrange(n):
             tree.GetEntry(i)
-            ntuple['dimuon_mass'].append(tree.x)
-            ntuple['muon1_pt'].append(tree.muonOne.Pt())
-            ntuple['muon1_eta'].append(tree.muonOne.Eta())
-            ntuple['muon1_phi'].append(tree.muonOne.Phi())
-            ntuple['muon2_pt'].append(tree.muonTwo.Pt())
-            ntuple['muon2_eta'].append(tree.muonTwo.Eta())
-            ntuple['muon2_phi'].append(tree.muonTwo.Phi())
 
+            # muons
+            mu1, mu2, bjet, jet = tree.muonOne, tree.muonTwo, tree.bjet, tree.fjet
+            ntuple['dimuon_mass'].append(tree.x)
+            ntuple['muon1_pt'].append(mu1.Pt())
+            ntuple['muon1_eta'].append(mu1.Eta())
+            ntuple['muon1_phi'].append(mu1.Phi())
+            ntuple['muon2_pt'].append(mu2.Pt())
+            ntuple['muon2_eta'].append(mu2.Eta())
+            ntuple['muon2_phi'].append(mu2.Phi())
+
+            # jets
+            ntuple['bjet_pt'].append(bjet.Pt())
+            ntuple['bjet_eta'].append(bjet.Eta())
+            ntuple['bjet_phi'].append(bjet.Phi())
+            ntuple['jet_pt'].append(jet.Pt())
+            ntuple['jet_eta'].append(jet.Eta())
+            ntuple['jet_phi'].append(jet.Phi())
+
+            # MET
             metx, mety = tree.met.Px(), tree.met.Py()
             ntuple['met_mag'].append(np.sqrt(metx**2 + mety**2))
             ntuple['met_phi'].append(np.arctan(mety/metx))

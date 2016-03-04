@@ -61,10 +61,10 @@ def get_corr(f_obj, params, data):
     hinv    = np.linalg.inv(hobj)
 
     # get uncertainties on parameters
-    sig     = np.sqrt(hinv.diagonal())
+    sig = np.sqrt(hinv.diagonal())
 
     # calculate correlation matrix
-    mcorr   = hinv/np.outer(sig, sig)
+    mcorr = hinv/np.outer(sig, sig)
 
     return sig, mcorr
 
@@ -93,6 +93,7 @@ def fit_plot(pdf, data, params, suffix):
     plt.xlim([12., 70.])
     plt.ylim([0., np.max(y)*1.8])
     plt.savefig('figures/dimuon_mass_fit_{0}.pdf'.format(suffix))
+    plt.savefig('figures/dimuon_mass_fit_{0}.png'.format(suffix))
     plt.close()
 
     #plt.rc('text', usetex=True)
@@ -119,8 +120,6 @@ if __name__ == '__main__':
 
     # fit background only model
     print 'Performing background only fit with second order Legendre polynomial normalized to unity.'
-    a1 = 0.5
-    a2 = 0.5
     bnds = [(0., 2.), (0., 0.5)] # a1, a2
     bg_result = minimize(regularization, 
                          [0.5, 0.05], 
@@ -134,8 +133,8 @@ if __name__ == '__main__':
         print '\n'
         print 'RESULTS'
         print '-------'
-        print 'a0       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[0], bg_sigma[0])
-        print 'a1       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[1], bg_sigma[1])
+        print 'a1       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[0], bg_sigma[0])
+        print 'a2       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[1], bg_sigma[1])
         print'\n'
         print 'correlation matrix:'
         print bg_corr
@@ -170,8 +169,8 @@ if __name__ == '__main__':
         print 'A        = {0:.3f} +/- {1:.3f}'.format(result.x[0], comb_sigma[0])
         print 'mu       = {0:.3f} +/- {1:.3f}'.format(mu, sig_mu)
         print 'width    = {0:.3f} +/- {1:.3f}'.format(width, sig_width)
-        print 'a0       = {0:.3f} +/- {1:.3f}'.format(result.x[3], comb_sigma[3])
-        print 'a1       = {0:.3f} +/- {1:.3f}'.format(result.x[4], comb_sigma[4])
+        print 'a1       = {0:.3f} +/- {1:.3f}'.format(result.x[3], comb_sigma[3])
+        print 'a2       = {0:.3f} +/- {1:.3f}'.format(result.x[4], comb_sigma[4])
         print'\n'
         print 'Correlation matrix:'
         print comb_corr
