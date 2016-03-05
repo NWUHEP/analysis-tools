@@ -15,7 +15,7 @@ def combination_bg_obj(params, X):
     ll      = -np.sum(np.log(pdf1)) - np.sum(np.log(pdf2))
     return ll
 
-def combination_sig_bg_obj(params, X):
+def combination_bg_sig_obj(params, X):
     '''
     Expects the list of parameters to be ordered as follow:
     A_1, A_2, mu, sigma, a1, a2, b1, b2
@@ -76,12 +76,12 @@ if __name__ == '__main__':
     ntuple_1b1f = pd.read_csv('data/ntuple_1b1f.csv')
     data_1b1f   = ntuple_1b1f['dimuon_mass'].values
     data_1b1f   = np.apply_along_axis(scale_data, 0, data_1b1f, xlow=12, xhigh=70)
-    N_1b1f      = data_1b1f.size
+    N1          = data_1b1f.size
 
     ntuple_1b1c = pd.read_csv('data/ntuple_1b1c.csv')
     data_1b1c   = ntuple_1b1c['dimuon_mass'].values
     data_1b1c   = np.apply_along_axis(scale_data, 0, data_1b1c, xlow=12, xhigh=70)
-    N_1b1c      = data_1b1c.size
+    N2          = data_1b1c.size
 
     # fit background only model
     print 'Performing background only fit with second order Legendre polynomial normalized to unity.'
@@ -114,16 +114,16 @@ if __name__ == '__main__':
             (0., 2.), (0., 0.5), # a1, a2
             (0., 2.), (0., 0.5)] # b1, b2
     result = minimize(regularization, 
-                      [1., 1., -0.3, 0.1, bg_result.x[0], bg_result.x[1], bg_result.x[2], bg_result.x[3]], 
+                      [1., 1., -0.4, 0.1, bg_result.x[0], bg_result.x[1], bg_result.x[2], bg_result.x[3]], 
                       method = 'SLSQP',
                       #jac    = True,
-                      args   = (data_scaled, bg_sig_objective, 1., 1.),
+                      args   = ([data_1b1f, data_1b1c], combination_bg_sig_obj),
                       bounds = bnds
                       )
     comb_sigma, comb_corr = get_corr(combination_bg_sig_obj, result.x, [data_1b1f, data_1b1c])   
-    qtest = np.sqrt(2*np.abs(combination_bg_sig_obj(result.x, [data_1b1f, data_1b1c]) - bg_objective(bg_result.x, [data_1b1f, data_1b1c])))
+    qtest = np.sqrt(2*np.abs(combination_bg_sig_obj(result.x, [data_1b1f, data_1b1c]) - combination_bg_obj(bg_result.x, [data_1b1f, data_1b1c])))
 
-    # Convert back to measured mass values
+    # Convert back to physical mass values
     pct_sigma   = np.abs(comb_sigma/result.x)
     mu          = scale_data(result.x[2], invert=True) 
     sig_mu      = mu*pct_sigma[1]
@@ -152,29 +152,33 @@ if __name__ == '__main__':
     # integrate over background only function in the range (mu - 2*sigma, mu +
     # 2*sigma) to determine background yields.  Signal yields come from
     # N*(1-A).
-    f_bg    = lambda x: legendre_polynomial(x, (result.x[3], result.x[4]))
-    xlim    = (result.x[1] - 2*result.x[2], result.x[1] + 2*result.x[2])
-    N_b     = result.x[0]*N*integrate.quad(f_bg, xlim[0], xlim[1])[0]
-    sig_b   = N_b/np.sqrt(N*result.x[0])
-    N_s     = N*(1 - result.x[0]) 
-    sig_s   = N*comb_sigma[0]
+    N       = N1 + N2
+    A       = (result.x[0]*N1 + result.x[1]*N2)/N
+    f_bg1   = lambda x: legendre_polynomial(x, (result.x[4], result.x[5])) 
+    f_bg2   = lambda x: legendre_polynomial(x, (result.x[6], result.x[7]))
+    xlim    = (result.x[2] - 2*result.x[3], result.x[2] + 2*result.x[3])
+    print xlim
+    N_b1    = result.x[0]*N1*integrate.quad(f_bg1, xlim[0], xlim[1])[0]
+    N_b2    = result.x[1]*N2*integrate.quad(f_bg2, xlim[0], xlim[1])[0]
+    sig_b   = (N_b1 + N_b2)/np.sqrt(N*A)
+    N_s     = N*(1 - A) 
+    sig_s   = np.sqrt(N_s) #N*comb_sigma[0]
 
-    print 'N_b = {0:.2f} +\- {1:.2f}'.format(N_b, sig_b)
+    print 'N_b = {0:.2f} +\- {1:.2f}'.format(N_b1+N_b2, sig_b)
     print 'N_s = {0:.2f} +\- {1:.2f}'.format(N_s, sig_s)
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple p-value ###
     print ''
     print 'Calculating local p-value and significance...'
-    toys    = rng.normal(N_b, sig_b, int(1e8))
+    toys    = rng.normal(N_b1 + N_b2, sig_b, int(1e8))
     pvars   = rng.poisson(toys)
-    pval    = pvars[pvars > N_b + N_s].size/1e8
+    pval    = pvars[pvars > N_b1 + N_b2 + N_s].size/1e8
     print 'local p-value = {0}'.format(pval)
     print 'local significance = {0:.2f}'.format(np.abs(norm.ppf(pval)))
 
     ### Make plots ###
-    fit_plot(combined_model, data, result.x, channel)
+    #fit_plot(combined_model, data, result.x, channel)
 
-    '''
     print ''
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
