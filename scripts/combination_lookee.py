@@ -11,7 +11,7 @@ if __name__ == '__main__':
     xlimits = (12., 70.)
     nscan   = 100
     nsims   = 10
-    scan_vals = [(n1, n2) for n1 in np.linspace(-0.9, 0.9, nscan) for n2 in np.linspace(0.02, 0.15, nscan)]
+    scan_vals = np.array([(n1, n2) for n1 in np.linspace(-0.9, 0.9, nscan) for n2 in np.linspace(0.02, 0.15, nscan)])
 
     params      = {'A1':0.89, 'A2':0.96, 'mu':-0.42, 'width':0.05, 'a1':0.31, 'a2':0.12, 'b1':0.21, 'b2':0.08} 
     bg_params   = {'a1':0.21, 'a2':0.02, 'b1':0.17, 'b2':0.06} 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     for i, scan in enumerate(scan_vals):
         # Remove edge effects
         if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
-            qscan.append((scan[0], scan[1], 0.))
+            qscan.append(0.)
             continue
 
         # Carry out combined fit minimizing the nll sum
@@ -61,20 +61,17 @@ if __name__ == '__main__':
                                )
 
         qtest = 2*(llbg - combination_bg_sig_obj(scan_result.x, data))
-        qscan.append((scan[0], scan[1], qtest))
+        qscan.append(qtest)
         if qtest > qmax: 
             qmax = qtest
 
     # convert scan value to physical values and prepare colormesh
-    qscan   = np.array(qscan)
-    mass    = qscan[:,0].reshape(nscan,nscan)
-    mass    = scale_data(mass, invert=True)
-    width   = qscan[:,1].reshape(nscan,nscan)
-    width   = width*(xlimits[1] - xlimits[0])/2.
-    qnll    = qscan[:,2].reshape(nscan,nscan) 
+    x       = scan_vals[:,0].reshape((nscan, nscan))
+    y       = scan_vals[:,1].reshape((nscan, nscan))
+    qscan   = np.array(qscan).reshape((nscan, nscan))
 
     fig, ax = plt.subplots()
-    cmap = ax.pcolormesh(mass, width, qnll, cmap='viridis', vmin=0., vmax=25.)
+    cmap = ax.pcolormesh(x, y, qscan, cmap='viridis', vmin=0., vmax=25.)
     fig.colorbar(cmap)
     ax.set_xlabel('M_{mumu} [GeV]')
     ax.set_ylabel('width [GeV]')
@@ -99,38 +96,49 @@ if __name__ == '__main__':
     phi2 = []
     u1, u2 = 1., 2.
     for i, sim in enumerate(zip(sims1, sims2)):
-        llbg = combination_bg_obj([bg_params['a1'][0], bg_params['a2'][0], bg_params['b1'][0], bg_params['b2'][0]], sim)
+        llbg = combination_bg_obj(bg_params.values(), sim)
         qscan = []
         for j, scan in enumerate(scan_vals):
             if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
-                qscan[i/nscan][i%nscan] = 0.
+                qscan.append(0.)
                 continue
             bnds[2] = (scan[0], scan[0])
             bnds[3] = (scan[1], scan[1])
             scan_result = minimize(regularization, 
-                                   (1., 1., scan[0], scan[1], params['a1'][0], params['a2'][0], params['b1'][0], params['b2'][0]),
+                                   (1., 1., scan[0], scan[1], params['a1'], params['a2'], params['b1'], params['b2']),
                                    method = 'SLSQP',
                                    #jac    = True,
                                    args   = (sim, combination_bg_sig_obj),
                                    bounds = bnds
                                    )
-            qscan[j/nscan][j%nscan] = 2*(llbg - combination_bg_sig_obj(scan_result.x, sim))
+            qtest = 2*(llbg - combination_bg_sig_obj(scan_result.x, sim))
+            qscan.append(qtest)
 
         ### Doing calculations
-        phi1.append(calculate_euler_characteristic((qscan > u1) + 0.))
-        phi2.append(calculate_euler_characteristic((qscan > u2) + 0.))
+        qscan_re = np.array(qscan).reshape(nscan, nscan)
+        A_u1 = (qscan_re > u1) + 0.
+        A_u2 = (qscan_re > u2) + 0.
+        phi1.append(calculate_euler_characteristic(A_u1))
+        phi2.append(calculate_euler_characteristic(A_u2))
         
-        a = (qscan > 1.) + 0.
         if i < 9: 
-            im = axes1[i/3][i%3].imshow(qscan, cmap='viridis', interpolation='none', origin='lower', vmin=0., vmax=10.)
-            axes2[i/3][i%3].imshow((qscan > u1) + 0., cmap='Greys', interpolation='none', origin='lower')
-            axes3[i/3][i%3].imshow((qscan > u2) + 0., cmap='Greys', interpolation='none', origin='lower')
+            cmap = axes1[i/3][i%3].pcolormesh(mass, width, qscan_re, cmap='viridis', vmin=0., vmax=10.)
+            axes2[i/3][i%3].pcolormesh(mass, width, A_u1, cmap='Greys')
+            axes3[i/3][i%3].pcolormesh(mass, width, A_u2, cmap='Greys')
 
     fig1.subplots_adjust(right=0.8)
-    cbar_ax = fig1.add_axes([0.85, 0.15, 0.05, 0.7])
-    fig1.colorbar(im, cax=cbar_ax)
+    fig1.colorbar(cmap)
+    axes1.set_xlabel('M_{mumu} [GeV]')
+    axes1.set_ylabel('width [GeV]')
+    fig.savefig('figures/qscan_data_combination.png')
     fig1.savefig('figures/qscan_toys_combination.png')
+
+    axes2.set_xlabel('M_{mumu} [GeV]')
+    axes2.set_ylabel('width [GeV]')
     fig2.savefig('figures/qscan_u1_combination.png')
+
+    axes3.set_xlabel('M_{mumu} [GeV]')
+    axes3.set_ylabel('width [GeV]')
     fig3.savefig('figures/qscan_u2_combination.png')
     plt.close()
 

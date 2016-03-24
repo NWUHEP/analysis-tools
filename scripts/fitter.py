@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
     # get data and convert variables to be on the range [-1, 1]
     print 'Getting data and scaling to lie in range [-1, 1].'
-    channel     = '1b1c'
+    channel     = '1b1f'
     ntuple      = pd.read_csv('data/ntuple_{0}.csv'.format(channel))
     data        = ntuple['dimuon_mass'].values
     data_scaled = np.apply_along_axis(scale_data, 0, data, xlow=12, xhigh=70)
