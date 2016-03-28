@@ -47,6 +47,7 @@ from scipy.stats import norm
 def expected_euler(u, n1, n2):
    """return expected Euler characteristic for given level u and coefficients n1, n2"""
    return chi2.sf(u, 1) + np.exp(-u/2)*(n1+n2*np.sqrt(u))
+   #return chi2.sf(u, 1) + n1*np.exp(-u/2)
 
 def _equations(p,exp_phi_1, exp_phi_2,u1, u2):
    """set of equations to solve to find n1, n2"""

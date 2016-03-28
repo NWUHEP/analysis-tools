@@ -13,9 +13,9 @@ if __name__ == '__main__':
     ### Config 
     channel = '1b1f'
     xlimits = (12., 70.)
-    nscan   = (50, 40)
+    nscan   = (100, 1)
     nsims   = 200
-    scan_vals = np.array([(n1, n2) for n1 in np.linspace(-0.9, 0.9, nscan[0]) for n2 in np.linspace(0.02, 0.08, nscan[1])])
+    #scan_vals = np.array([(n1, n2) for n1 in np.linspace(-0.9, 0.9, nscan[0]) for n2 in np.linspace(0.02, 0.08, nscan[1])])
 
     if channel == '1b1f':
         params          = {'A':0.88, 'mu':-0.422, 'width':0.054, 'a1':0.319, 'a2':0.133} 
@@ -27,6 +27,8 @@ if __name__ == '__main__':
         params_err      = {'A':0.017, 'mu':-.026, 'width':0.02, 'a1':0.042, 'a2':0.051} 
         bg_params       = {'a1':0.173, 'a2':0.055}
         bg_params_err   = {'a1':0.039, 'a2':0.049}
+
+    scan_vals = np.array([(n1, params['width']) for n1 in np.linspace(-0.9, 0.9, nscan[0])]) 
 
     ### Get data and scale
     ntuple  = pd.read_csv('data/ntuple_{0}.csv'.format(channel))
@@ -41,11 +43,16 @@ if __name__ == '__main__':
     ### scan over test data
     bnds    = [(0., 1.05), # A
                2*(params['mu'], ), 2*(params['width'], ), # mean, sigma
-               (params['a1']-params_err['a1'], params['a1']+params_err['a1']), # a1 +- sig_a1
-               (params['a2']-params_err['a2'], params['a2']+params_err['a2'])  # a2 +- sig_a2
+               (0.9*params['a1'], 1.1*params['a1']), # a1 
+               (0.9*params['a2'], 1.1*params['a2'])  # a2 
+               #(params['a1']-params_err['a1'], params['a1']+params_err['a1']), # a1 +- sig_a1
+               #(params['a2']-params_err['a2'], params['a2']+params_err['a2'])  # a2 +- sig_a2
                ]
-    bg_bnds = [(bg_params['a1']-bg_params_err['a1'], bg_params['a1']+bg_params_err['a1']), # a1 +- sig_a1
-               (params['a2']-params_err['a2'], params['a2']+params_err['a2'])  # a2 +- sig_a2
+    bg_bnds = [(0.9*bg_params['a1'], 1.1*bg_params['a1']), # a1 
+               (0.9*bg_params['a2'], 1.1*bg_params['a2'])  # a2 
+            
+               #(bg_params['a1']-bg_params_err['a1'], bg_params['a1']+bg_params_err['a1']), # a1 +- sig_a1
+               #(bg_params['a2']-bg_params_err['a2'], bg_params['a2']+bg_params_err['a2'])  # a2 +- sig_a2
                ]
     nll_bg    = bg_objective(bg_params.values(), data)
 
@@ -94,6 +101,7 @@ if __name__ == '__main__':
     fig3, axes3 = plt.subplots(3, 3)
 
     phiscan = []
+    qmax_mc = []
     phi1 = []
     phi2 = []
     u1, u2 = 1., 2.
@@ -105,21 +113,26 @@ if __name__ == '__main__':
                              bounds = bg_bnds
                              )
         nll_bg = bg_objective(bg_result.x, sim)
+        qmax_mc.append(0)
         qscan = []
         print 'Scan {0} started...'.format(i+1)
         for j, scan in enumerate(scan_vals):
             if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
                 qscan.append(0.)
                 continue
-            bnds[1] = (scan[0], scan[0])
+
+            bnds[1] = 2*(scan[0], )
             bnds[2] = (scan[1], scan[1])
             result = minimize(regularization, 
-                                   (1., scan[0], scan[1], bg_result.x[0], bg_result.x[1]),
+                                   (1., scan[0], scan[1], params['a1'], params['a2']),
                                    method = 'SLSQP',
                                    args   = (sim, bg_sig_objective, 1., 1.),
                                    bounds = bnds
                                    )
-            qscan.append(2*np.abs(nll_bg - bg_sig_objective(result.x, sim)))
+
+            qtest = 2*np.abs(nll_bg - bg_sig_objective(result.x, sim))
+            qscan.append(qtest)
+            if qtest > qmax_mc[-1]: qmax_mc[-1] = qtest
 
         ### Doing calculations
         qscan = np.array(qscan).reshape(nscan)
@@ -134,18 +147,19 @@ if __name__ == '__main__':
 
     phiscan = np.array(phiscan)
 
+    '''
     #fig1.subplots_adjust(right=0.8)
     #fig1.colorbar(cmap)
     fig1.savefig('figures/qscan_toys_{0}.png'.format(channel))
     fig2.savefig('figures/qscan_u1_{0}.png'.format(channel))
     fig3.savefig('figures/qscan_u2_{0}.png'.format(channel))
     plt.close()
+    '''
 
     ### Calculate LEE correction ###
     exp_phi1, exp_phi2 = np.mean(phi1), np.mean(phi2)
     print 'E[phi_1] = {0}'.format(exp_phi1)
     print 'E[phi_2] = {0}'.format(exp_phi2)
     do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)
-
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
 
