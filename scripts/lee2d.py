@@ -47,7 +47,6 @@ from scipy.stats import norm
 def expected_euler(u, n1, n2):
    """return expected Euler characteristic for given level u and coefficients n1, n2"""
    return chi2.sf(u, 1) + np.exp(-u/2)*(n1+n2*np.sqrt(u))
-   #return chi2.sf(u, 1) + n1*np.exp(-u/2)
 
 def _equations(p,exp_phi_1, exp_phi_2,u1, u2):
    """set of equations to solve to find n1, n2"""
@@ -82,7 +81,7 @@ def do_LEE_correction(max_local_sig, u1, u2, exp_phi_1, exp_phi_2):
    print ' n1, n2 =', n1, n2
    print ' local p_value = %f,  local significance = %f' %(norm.cdf(-max_local_sig), max_local_sig)
    print 'global p_value = %f, global significance = %f' %(this_global_p, -norm.ppf(this_global_p))
-   return this_global_p
+   return n1, n2, this_global_p
 
 
 def calculate_euler_characteristic(a):

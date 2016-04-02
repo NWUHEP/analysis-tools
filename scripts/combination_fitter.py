@@ -31,42 +31,6 @@ def combination_bg_sig_obj(params, X):
     ll          = -np.sum(np.log(pdf1)) - np.sum(np.log(pdf2))
     return ll
 
-### Plotting scripts ###
-def fit_plot(pdf, data, params, suffix):
-    N       = data.size
-    nbins   = 29.
-    binning = 2.
-    x = np.linspace(-1, 1, num=10000)
-    y = (N*binning/nbins)*pdf(x, params) 
-    x = scale_data(x, invert=True)
-
-    h = plt.hist(data, bins=nbins, range=[12., 70.], normed=False, histtype='step')
-    bincenters  = (h[1][1:] + h[1][:-1])/2.
-    binerrs     = np.sqrt(h[0]) 
-
-    plt.clf()
-    plt.errorbar(bincenters, h[0], yerr=binerrs, fmt='o')
-    plt.plot(x, y, linewidth=2.)
-    if suffix == '1b1f':
-        plt.title('mumu + 1 b jet + 1 forward jet')
-    elif suffix == '1b1c':
-        plt.title('mumu + 1 b jet + 1 central jet + MET < 40 + deltaPhi(mumu,bj)')
-    plt.xlabel('M_mumu [GeV]')
-    plt.ylabel('entries / 2 GeV')
-    plt.xlim([12., 70.])
-    plt.ylim([0., np.max(y)*1.8])
-    plt.savefig('figures/dimuon_mass_fit_{0}.pdf'.format(suffix))
-    plt.close()
-
-    #plt.rc('text', usetex=True)
-    #fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
-    #ax1 = axes[0]
-    #ax1.errorbar(bincenters, h[0], yerr=binerrs, fmt='o')
-    #ax1.plot(x, y)
-    #ax1.set_xlabel('M_{\mu\mu} [GeV]')
-    #ax1.set_ylabel('entries/2 GeV')
-    #fig.show()
-
 if __name__ == '__main__':
     # Start the timer
     start = timer()
@@ -169,16 +133,13 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple p-value ###
-    print ''
-    print 'Calculating local p-value and significance...'
-    toys    = rng.normal(N_b1 + N_b2, sig_b, int(1e8))
-    pvars   = rng.poisson(toys)
-    pval    = pvars[pvars > N_b1 + N_b2 + N_s].size/1e8
-    print 'local p-value = {0}'.format(pval)
-    print 'local significance = {0:.2f}'.format(np.abs(norm.ppf(pval)))
+    calc_local_pvalue(N_b1+N_b2, N_s, sig_b)
 
     ### Make plots ###
-    #fit_plot(combined_model, data, result.x, channel)
+    result_1b1f = result.x[np.array([0,2,3,4,5])]
+    result_1b1c = result.x[np.array([1,2,3,6,7])]
+    fit_plot(scale_data(data_1b1f, invert=True), combined_model, result_1b1f, legendre_polynomial, bg_result.x[:2], '1b1f_combined')
+    fit_plot(scale_data(data_1b1c, invert=True), combined_model, result_1b1c, legendre_polynomial, bg_result.x[2:], '1b1c_combined')
 
     print ''
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
