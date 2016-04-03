@@ -133,7 +133,7 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple p-value ###
-    calc_local_pvalue(N_b1+N_b2, N_s, sig_b)
+    calc_local_pvalue(N_b1+N_b2, N_s, sig_b, 1e8)
 
     ### Make plots ###
     result_1b1f = result.x[np.array([0,2,3,4,5])]

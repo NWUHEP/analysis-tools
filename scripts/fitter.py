@@ -142,10 +142,11 @@ if __name__ == '__main__':
     # get data and convert variables to be on the range [-1, 1]
     print 'Getting data and scaling to lie in range [-1, 1].'
     minalgo     = 'SLSQP'
-    channel     = '1b1f'
+    channel     = '1b1c'
     xlimits     = (12, 70)
 
     data, n_total = get_data('data/ntuple_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    print 'Analyzing {0} events...'.format(n_total)
 
     # fit background only model
     print 'Performing background only fit with second order Legendre polynomial normalized to unity.'
@@ -224,7 +225,7 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple local p-value ###
-    calc_local_pvalue(N_b, N_s, sig_b)
+    calc_local_pvalue(N_b, N_s, sig_b, 1e8)
 
     ### Make plots ###
     fit_plot(scale_data(data, invert=True), combined_model, result.x, legendre_polynomial, bg_result.x, channel)

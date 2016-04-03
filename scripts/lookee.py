@@ -35,16 +35,17 @@ def validation_plot(phi_scan, qmax, N1, N2, channel):
     perr = pval*(herr/hval)
     plt.close()
 
-    plt.plot(u, exp_phi, 'k-')
-    plt.plot(u, exp_phi_u(u, N1, N2), 'r--')
-    plt.plot(hbins[1:], pval, 'b-')
-    plt.fill_between(hbins[1:], pval-perr, pval+perr, color='b', alpha=0.25, interpolate=True)
+    fig, ax = plt.subplots()
+    ax.plot(u, exp_phi, 'k-')
+    ax.plot(u, exp_phi_u(u, N1, N2), 'r--')
+    ax.plot(hbins[1:], pval, 'b-')
+    ax.fill_between(hbins[1:], pval-perr, pval+perr, color='b', alpha=0.25, interpolate=True)
 
-    plt.yscale('log')
-    plt.ylim(1e-4, 10)
-    plt.ylabel('P[max(q) > u]')
-    plt.xlabel('u')
-    plt.savefig('figures/GV_validate_{0}.png'.format(channel))
+    ax.set_yscale('log')
+    ax.set_ylim(1e-4, 10)
+    ax.set_ylabel('P[max(q) > u]')
+    ax.set_xlabel('u')
+    fig.savefig('figures/GV_validate_{0}.png'.format(channel))
     plt.close()
 
 
@@ -56,7 +57,8 @@ if __name__ == '__main__':
     channel     = '1b1f'
     xlimits     = (12., 70.)
     nscan       = (30, 30)
-    nsims       = 100
+    nsims       = 10
+    ndim        = 2
     make_plots  = True
 
     if channel == '1b1f':
@@ -70,8 +72,16 @@ if __name__ == '__main__':
         bg_params       = {'a1':0.173, 'a2':0.055}
         bg_params_err   = {'a1':0.039, 'a2':0.049}
 
-    scan_vals = np.array([(n1, n2) for n1 in np.linspace(-0.9, 0.9, nscan[0]) for n2 in np.linspace(0.02, 0.08, nscan[1])])
-    #scan_vals = np.array([(n1, params['width']) for n1 in np.linspace(-0.9, 0.9, nscan[0])]) 
+    scan_bnds = [(-0.9, 0.9), (0.04, 0.1)]
+    if ndim == 1:
+        nscan = (nscan[0], 1)
+        scan_vals = np.array([(n1, params['width']) for n1 in np.linspace(scan_bnds[0][0], scan_bnds[0][1], nscan[0])]) 
+    elif ndim == 2:
+        scan_vals = np.array([(n1, n2) 
+                             for n1 in np.linspace(scan_bnds[0][0], scan_bnds[0][1], nscan[0]) 
+                             for n2 in np.linspace(scan_bnds[1][0], scan_bnds[1][1], nscan[1])])
+
+    scan_div = ((scan_bnds[0][1] - scan_bnds[0][0])/nscan[0], (scan_bnds[1][1] - scan_bnds[1][0])/nscan[1])
 
     ### Get data and scale
     data, n_total = get_data('data/ntuple_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
@@ -96,8 +106,8 @@ if __name__ == '__main__':
             qscan.append(0.)
             continue
 
-        bnds[1] = (scan[0], scan[0])
-        bnds[2] = (scan[1], scan[1])
+        bnds[1] = (scan[0], scan[0]+scan_div[0])
+        bnds[2] = (scan[1], scan[1]+scan_div[1])
         result = minimize(regularization, 
                           (1., scan[0], scan[1], params['a1'], params['a2']),
                           method = 'SLSQP',
@@ -157,8 +167,8 @@ if __name__ == '__main__':
                 qscan.append(0.)
                 continue
 
-            bnds[1] = (scan[0], scan[0])
-            bnds[2] = (scan[1], scan[1])
+            bnds[1] = (scan[0], scan[0]+scan_div[0])
+            bnds[2] = (scan[1], scan[1]+scan_div[1])
             result = minimize(regularization, 
                                    (1., scan[0], scan[1], bg_result.x[0], bg_result.x[1]),
                                    method = 'SLSQP',
@@ -185,12 +195,12 @@ if __name__ == '__main__':
         phi1.append(calculate_euler_characteristic((qscan > u1) + 0.))
         phi2.append(calculate_euler_characteristic((qscan > u2) + 0.))
         
-        if make_plots and i < 9: 
+        if make_plots and i < 9 and ndim == 2: 
             cmap = axes1[i/3][i%3].pcolormesh(x, y, qscan, cmap='viridis', vmin=0.)
             axes2[i/3][i%3].imshow((qscan > u1) + 0., cmap='Greys', interpolation='none', origin='lower')
             axes3[i/3][i%3].imshow((qscan > u2) + 0., cmap='Greys', interpolation='none', origin='lower')
 
-    if make_plots:
+    if make_plots and ndim == 2:
         #fig1.subplots_adjust(right=0.8)
         #fig1.colorbar(cmap)
         fig1.savefig('figures/qscan_toys_{0}.png'.format(channel))
@@ -203,10 +213,12 @@ if __name__ == '__main__':
     exp_phi1, exp_phi2 = np.mean(phi1), np.mean(phi2)
     print 'E[phi_1] = {0}'.format(exp_phi1)
     print 'E[phi_2] = {0}'.format(exp_phi2)
-    N1, N2, p_global = do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)
-    #N1, global_p = lee_1D(np.sqrt(qmax), u1, exp_phi1)
-
-    validation_plot(phiscan, qmax_mc, N1, N2, channel)
+    if ndim == 1:
+        N1, global_p = lee_1D(np.sqrt(qmax), u1, exp_phi1)
+        validation_plot(phiscan, qmax_mc, N1, 0., channel+'_1D')
+    elif ndim == 2:
+        N1, N2, p_global = do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)
+        validation_plot(phiscan, qmax_mc, N1, N2, channel+'_2D')
 
     # Save scan data
     outfile = open('data/lee_scan_{0}_{1}.pkl'.format(channel, nsims), 'w')
