@@ -29,6 +29,7 @@ def scale_data(x, xlow=12., xhigh=70., invert=False):
 def get_data(filename, varname, xlim):
     ntuple  = pd.read_csv(filename)
     data    = ntuple[varname].values
+    data    = data[np.all([(data > xlim[0]), (data < xlim[1])], axis=0)]
     data    = np.apply_along_axis(scale_data, 0, data, xlow=xlim[0], xhigh=xlim[1])
     n_total = data.size
 
@@ -92,6 +93,7 @@ def calc_local_pvalue(N_bg, N_sig, var_bg, ntoys=1e7):
 def fit_plot(data, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
     N       = data.size
     nbins   = 29.
+    #nbins   = 54
     binning = 2.
 
     x       = np.linspace(-1, 1, num=10000)
@@ -134,6 +136,19 @@ def fit_plot(data, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
     fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
     plt.close()
 
+'''
+class bump_fitter:
+    def __init__(self, data, bgpdf=None, sigpdf=None):
+        self.data   = data
+        self.bgpdf  = bgpdf
+        self.sigpdf = sigpdf
+         
+class model:
+    def __init__(self, f, params=None):
+        self.func   = func
+        self.params = params 
+'''
+
 if __name__ == '__main__':
     # Start the timer
     start = timer()
@@ -142,10 +157,10 @@ if __name__ == '__main__':
     # get data and convert variables to be on the range [-1, 1]
     print 'Getting data and scaling to lie in range [-1, 1].'
     minalgo     = 'SLSQP'
-    channel     = '1b1c'
-    xlimits     = (12, 70)
+    channel     = '1b1f'
+    xlimits     = (12., 70.)
 
-    data, n_total = get_data('data/ntuple_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    data, n_total = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
     print 'Analyzing {0} events...'.format(n_total)
 
     # fit background only model
@@ -190,14 +205,14 @@ if __name__ == '__main__':
     pct_sigma   = np.abs(comb_sigma/result.x)
     mu          = scale_data(result.x[1], invert=True) 
     sig_mu      = mu*pct_sigma[1]
-    width       = result.x[2]*(70. - 12.)/2. 
+    width       = result.x[2]*(100. - 12.)/2. 
     sig_width   = width*pct_sigma[2]
 
     if pout:
         print '\n'
         print 'RESULTS'
         print '-------'
-        print 'A        = {0:.3f} +/- {1:.3f}'.format(result.x[0], comb_sigma[0])
+        print 'A        = {0:.3f} +/- {1:.3f}'.format(1 - result.x[0], comb_sigma[0])
         print 'mu       = {0:.3f} +/- {1:.3f}'.format(mu, sig_mu)
         print 'width    = {0:.3f} +/- {1:.3f}'.format(width, sig_width)
         print 'a1       = {0:.3f} +/- {1:.3f}'.format(result.x[3], comb_sigma[3])

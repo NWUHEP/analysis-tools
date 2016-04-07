@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from fitter import *
+
 # global options
 np.set_printoptions(precision=3.)
 
