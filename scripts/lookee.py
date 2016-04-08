@@ -8,40 +8,66 @@ from scipy.special import gamma
 from scipy.misc import comb, factorial
 import pickle
 
-def rho_g(k, j, u):
+def rho_g(j, k, u):
     '''
     From therem 15.10.1 from Random Fields and Geometry (Adler)
-    k: d.o.f. of chi2 random field
     j: number of nuisance parameters (search dimensions)
+    k: d.o.f. of chi2 random field
     u: threshold for excursions in the field
     '''
     coeff_num       = u**((k - j)/2.) * np.exp(-u/2.) 
     coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k-2.)/2.)
     indicate        = lambda m,l: (k >= j - m - 2.*l) + 0.
-    sum_fraction    = lambda m,l: ((-1.)**(j-1.+m+l)*factorial(j-1)) / (factorial(m)*factorial(l)*2.**l)
-    m_sum           = lambda l: np.sum([indicate(m,l)*comb(k-l, j-1.-m-2.*l)*sum_fraction(m,l) for m in np.arange(0, int(j-1.-2.*l))])   
-    l_sum           = np.sum([m_sum(l) for l in np.arange(0., np.ceil((j-1)/2))]) 
+    sum_fraction    = lambda m,l: ((-1.)**(j-1.+m+l)*gamma(j-1)) / (gamma(m)*gamma(l)*2.**l)
+    m_sum           = lambda l: np.sum([indicate(m,l)*comb(k-l, j-1.-m-2.*l)*sum_fraction(m,l) for m in np.arange(0, 1 + int(j-1.-2.*l))])   
+    l_sum           = np.sum([m_sum(l) for l in np.arange(0., 1 + np.floor((j-1)/2))]) 
 
     return (coeff_num/coeff_den)*l_sum
 
-def exp_phi_u(u, n1, n2, s=1, d=1):
-    if d == 1: 
-        n2 = 0.
+def exp_phi_u(u, n_j, k=1):
+    '''
+    1 or 2 dimensional expressions for chi2 random field EC expectation
+    
+    Parameters
+    ----------
+    u: array of scan thresholds
+    n_j: array of coefficients
+    k: nDOF of chi2 field
+    '''
+    return chi2.sf(u,k) + np.sum([n*rho_g(j, k, u) for n,j in enumerate(n_j)])
 
-    if s == 1:
-        expansion = (n1 + n2*np.sqrt(u))
-    elif s == 2:
-        expansion = (n1*np.sqrt(u) + n2*(u-1))
+def lee_objective(a, Y, dY, X):
+    return (Y - exp_phi_u(X, a[1], a[2], j=1, k=a[0]))**2/dY 
 
-    return chi2.sf(u,s) + np.exp(-u/2.)*expansion
+def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
+    '''
+    Carries GV style look elsewhere corrections with a twist.  Allows for an
+    arbitrary number of search dimensions/nuisance parameters and allows the
+    number of degrees of freedom of the chi2 random field to be a parameter of
+    the model.  Cool shit.
 
-def lee1D(max_local_sig, u, exp_phi, s=1):
+    Parameters
+    ----------
+    max_local_sig: observed local significance (assumes sqrt(-2*nllr))
+    u: array of scan thresholds
+    phiscan: scan of EC for values in u
+    j = numbers of search dimensions to calculate
+    k = assumed numbers of degrees of freedom of chi2 field
+    '''
+    exp_phi = np.mean(phiscan, axis=0)
+    var_phi = np.var(phiscan, axis=0)
+    
+    result = minimize(lee_objective, 
+                      [k] + j*[1.],
+                      method = 'SLSQP',
+                      args   = (exp_phi, var_phi, u),
+                      #bounds = bnds
+                      )
+    k = result.x[0]
+    n = result.x[1:]
+    p_global = exp_phi_u(max_local_sig**2, n, k)
 
-   eq  = lambda x: exp_phi - exp_phi_u(u, x, 0., s, 1.)
-   n1, = fsolve(eq, 1)
-   p_global = exp_phi_u(max_local_sig**2, n1, 0, s)
-
-   return n1, p_global
+    return n, p_global
 
 def validation_plots(u, phi_scan, qmax, N1, N2, s, channel):
     '''Check that the GV tails look okay'''
@@ -90,7 +116,7 @@ if __name__ == '__main__':
     channel     = '1b1f'
     xlimits     = (12., 70.)
     nscan       = (50, 30)
-    nsims       = 100
+    nsims       = 10
     ndim        = 1
     u1, u2      = 1., 2.
     make_plots  = True
@@ -178,11 +204,12 @@ if __name__ == '__main__':
         fig2, axes2 = plt.subplots(3, 3)
         fig3, axes3 = plt.subplots(3, 3)
 
-    phiscan = []
-    qmax_mc = []
-    phi1 = []
-    phi2 = []
-    u_0 = np.linspace(0., 20., 10000.)
+    paramscan   = []
+    phiscan     = []
+    qmax_mc     = []
+    phi1        = []
+    phi2        = []
+    u_0         = np.linspace(0., 20., 1000.)
     for i, sim in enumerate(sims):
         if not i%10: 
             print 'Carrying out scan {0}...'.format(i+1)
@@ -256,7 +283,7 @@ if __name__ == '__main__':
     print 'E[phi_2] = {0} +/- {1}'.format(exp_phi2, np.sqrt(var_phi2))
 
     if ndim == 1:
-        N1, p_global = lee1D(np.sqrt(qmax), u1, exp_phi1, s=1)
+        N1, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=1, k=1)
         print 'n1 = {0}'.format(N1)
         print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
         print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
@@ -268,11 +295,10 @@ if __name__ == '__main__':
         var_phi = phiscan.var(axis=0) 
         lee_results = []
         for u, phi in zip(u_0, exp_phi):
-            lee_results.append(lee1D(np.sqrt(qmax), u, phi, s=1))
+            lee_results.append(lee1D(np.sqrt(qmax), u, phi, k=1))
 
         lee_results = np.array(lee_results).transpose()
 
-        
     elif ndim == 2:
         N1, N2, p_global = do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)
         validation_plots(u_0, phiscan, qmax_mc, N1, N2, channel+'_2D')

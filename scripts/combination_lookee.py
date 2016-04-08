@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     print 'Scanning ll ratio over data...'
     qscan = []
-    qmax  = 0. #2*(nll_bg - combination_bg_sig_obj(params.values(), data))
+    qdata = 0. #2*(nll_bg - combination_bg_sig_obj(params.values(), data))
     for i, scan in enumerate(scan_vals):
         # Remove edge effects
         if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
@@ -72,8 +72,8 @@ if __name__ == '__main__':
 
         qtest = 2*(nll_bg - combination_bg_sig_obj(result.x, data))
         qscan.append(qtest)
-        if qtest > qmax: 
-            qmax = qtest
+        if qtest > qdata: 
+            qdata = qtest
 
     # convert scan value to physical values and prepare colormesh
     x       = scan_vals[:,0].reshape(nscan)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         fig.savefig('figures/qscan_data_combination.png')
         plt.close()
 
-    print 'q_max = {0}'.format(qmax)
+    print 'q_max = {0}'.format(qdata)
 
     ### Make some pseudo-data ###
     print 'Scanning ll ratio over {0} pseudo-datasets...'.format(nsims)
@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
         qscan       = []
         params_best = []
-        qmax_mc.append(0)
+        qmax = 0
         for j, scan in enumerate(scan_vals):
             if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
                 qscan.append(0.)
@@ -140,11 +140,13 @@ if __name__ == '__main__':
                               )
             qtest = 2*(nll_bg - combination_bg_sig_obj(result.x, sim))
             qscan.append(qtest)
-            if qtest > qmax_mc[-1]: 
+            if qtest > qmax: 
                 params_best = result.x
-                qmax_mc[-1] = qtest
-
+                qmax = qtest
     
+        qmax_mc.append(qmax)
+        paramscan.append(params_best)
+
         if make_plots and i < 10:
             sim_1b1f = scale_data(sim[0], invert=True)
             sim_1b1c = scale_data(sim[1], invert=True)
