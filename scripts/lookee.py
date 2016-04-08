@@ -18,7 +18,7 @@ def rho_g(j, k, u):
     coeff_num       = u**((k - j)/2.) * np.exp(-u/2.) 
     coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k-2.)/2.)
     indicate        = lambda m,l: (k >= j - m - 2.*l) + 0.
-    sum_fraction    = lambda m,l: ((-1.)**(j-1.+m+l)*gamma(j-1)) / (gamma(m)*gamma(l)*2.**l)
+    sum_fraction    = lambda m,l: ((-1.)**(j-1.+m+l)*factorial(j-1)) / (factorial(m)*factorial(l)*2.**l)
     m_sum           = lambda l: np.sum([indicate(m,l)*comb(k-l, j-1.-m-2.*l)*sum_fraction(m,l) for m in np.arange(0, 1 + int(j-1.-2.*l))])   
     l_sum           = np.sum([m_sum(l) for l in np.arange(0., 1 + np.floor((j-1)/2))]) 
 
@@ -34,10 +34,10 @@ def exp_phi_u(u, n_j, k=1):
     n_j: array of coefficients
     k: nDOF of chi2 field
     '''
-    return chi2.sf(u,k) + np.sum([n*rho_g(j, k, u) for n,j in enumerate(n_j)])
+    return chi2.sf(u,k) + np.sum([n*rho_g(j+1, k, u) for j,n in enumerate(n_j)], axis=0)
 
 def lee_objective(a, Y, dY, X):
-    return (Y - exp_phi_u(X, a[1], a[2], j=1, k=a[0]))**2/dY 
+    return np.sum(((Y - exp_phi_u(X, a[1:], k=a[0]))/dY)**2) 
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
     '''
@@ -56,10 +56,18 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
     '''
     exp_phi = np.mean(phiscan, axis=0)
     var_phi = np.var(phiscan, axis=0)
+
+    ### Remove points where exp_phi = 0 ###
+    veto = exp_phi > 0.
+    exp_phi = exp_phi[veto]
+    var_phi = var_phi[veto]
+    u       = u[veto]
     
+    bnds = [(0, None)] + j*[(None, None)]
     result = minimize(lee_objective, 
                       [k] + j*[1.],
-                      method = 'SLSQP',
+                      #method = 'SLSQP',
+                      method = 'Nelder-Mead',
                       args   = (exp_phi, var_phi, u),
                       #bounds = bnds
                       )
@@ -67,14 +75,14 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
     n = result.x[1:]
     p_global = exp_phi_u(max_local_sig**2, n, k)
 
-    return n, p_global
+    return k, n, p_global
 
-def validation_plots(u, phi_scan, qmax, N1, N2, s, channel):
+def validation_plots(u, phiscan, qmax, N1, N2, s, channel):
     '''Check that the GV tails look okay'''
-    phi_scan    = np.array(phi_scan)
-    exp_phi     = np.mean(phi_scan, axis=0)
-    var_phi     = np.var(phi_scan, axis=0)
-    qmax        = np.array(qmax)
+    phiscan = np.array(phiscan)
+    exp_phi = np.mean(phiscan, axis=0)
+    var_phi = np.var(phiscan, axis=0)
+    qmax    = np.array(qmax)
 
     hval, hbins, _ = plt.hist(qmax, bins=21, cumulative=True)
     hval = hval.max() - hval
@@ -85,7 +93,7 @@ def validation_plots(u, phi_scan, qmax, N1, N2, s, channel):
 
     fig, ax = plt.subplots()
     ax.plot(u, exp_phi, 'k-', linewidth=2.)
-    ax.plot(u, exp_phi_u(u, N1, N2, s), 'r--', linewidth=2.)
+    ax.plot(u, exp_phi_u(u, [N1, N2], s), 'r--', linewidth=2.)
     ax.plot(hbins[1:], pval, 'b-', linewidth=2.)
     ax.fill_between(hbins[1:], pval-perr, pval+perr, color='b', alpha=0.25, interpolate=True)
 
@@ -94,6 +102,7 @@ def validation_plots(u, phi_scan, qmax, N1, N2, s, channel):
     ax.set_ylabel('P[max(q) > u]')
     ax.set_xlabel('u')
     fig.savefig('figures/GV_validate_{0}.png'.format(channel))
+    fig.savefig('figures/GV_validate_{0}.pdf'.format(channel))
     plt.close()
 
 def excursion_plot_1d(x, qscan, u1, suffix, path):
@@ -116,7 +125,7 @@ if __name__ == '__main__':
     channel     = '1b1f'
     xlimits     = (12., 70.)
     nscan       = (50, 30)
-    nsims       = 10
+    nsims       = 10000
     ndim        = 1
     u1, u2      = 1., 2.
     make_plots  = True
@@ -283,21 +292,23 @@ if __name__ == '__main__':
     print 'E[phi_2] = {0} +/- {1}'.format(exp_phi2, np.sqrt(var_phi2))
 
     if ndim == 1:
-        N1, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=1, k=1)
-        print 'n1 = {0}'.format(N1)
+        k, nvals, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=1, k=1)
+        print 'k = {0:.2f}'.format(k)
+        for i,n in enumerate(nvals):
+            print 'N{0} = {1:.2f}'.format(i, n)
         print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
         print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
-        validation_plots(u_0, phiscan, qmax_mc, N1, 0., 1., channel+'_1D')
+        validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., 1., channel+'_1D')
 
         ### Scan over u ###
-        exp_phi = phiscan.mean(axis=0) 
-        var_phi = phiscan.var(axis=0) 
-        lee_results = []
-        for u, phi in zip(u_0, exp_phi):
-            lee_results.append(lee1D(np.sqrt(qmax), u, phi, k=1))
+        #exp_phi = phiscan.mean(axis=0) 
+        #var_phi = phiscan.var(axis=0) 
+        #lee_results = []
+        #for u, phi in zip(u_0, exp_phi):
+        #    lee_results.append(lee1n(np.sqrt(qmax), u, phi, k=1))
 
-        lee_results = np.array(lee_results).transpose()
+        #lee_results = np.array(lee_results).transpose()
 
     elif ndim == 2:
         N1, N2, p_global = do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)

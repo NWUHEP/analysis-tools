@@ -107,8 +107,6 @@ if __name__ == '__main__':
     paramscan   = []
     phiscan     = []
     qmax_mc     = []
-    phi1        = []
-    phi2        = []
     u_0         = np.linspace(0., 20., 1000.)
     for i, sim in enumerate(zip(sims1, sims2)):
         if not i%10: 
@@ -164,8 +162,6 @@ if __name__ == '__main__':
         ### Doing calculations
         qscan = np.array(qscan).reshape(nscan)
         phiscan.append([calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
-        phi1.append(calculate_euler_characteristic((qscan > u1) + 0.))
-        phi2.append(calculate_euler_characteristic((qscan > u2) + 0.))
         
         #if make_plots and i < 9: 
         #    cmap = axes1[i/3][i%3].pcolormesh(mass, width, qscan, cmap='viridis', vmin=0., vmax=10.)
@@ -191,20 +187,13 @@ if __name__ == '__main__':
     #    fig3.savefig('figures/qscan_u2_combination.png')
     #    plt.close()
 
-
-    ### Calculate LEE correction ###
-    exp_phi1, exp_phi2 = np.mean(phi1), np.mean(phi2)
-    var_phi1, var_phi2 = np.var(phi1), np.var(phi2)
-
-    print 'u1 = {0}, u2 = {1}'.format(u1, u2)
-    print 'E[phi_1] = {0:.2f} +/- {1:.2f}'.format(exp_phi1, np.sqrt(var_phi1))
-    print 'E[phi_2] = {0:.2f} +/- {1:.2f}'.format(exp_phi2, np.sqrt(var_phi2))
-
     if ndim == 1:
-        N1, p_global = lee1D(np.sqrt(qmax), u1, exp_phi1, s=2)
-        validation_plots(u_0, phiscan, qmax_mc, N1, 0., s=2, channel='combined_1D')
-        print 'n1 = {0}'.format(N1)
-        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
+        k, nvals, p_global = lee_nD(np.sqrt(qdata), u_0, phiscan, j=1, k=2)
+        validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., k, 'combined_1D')
+        print 'k = {0:.2f}'.format(k)
+        for i,n in enumerate(nvals):
+            print 'N{0} = {1:.2f}'.format(i, n)
+        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qdata)), np.sqrt(qdata))
         print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     elif ndim == 2:

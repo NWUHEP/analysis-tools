@@ -10,6 +10,7 @@ import numpy.random as rng
 import matplotlib.pyplot as plt
 import numdifftools as nd
 
+#from scipy import stats
 from scipy.stats import chi2, norm 
 from scipy import integrate
 from scipy.optimize import minimize
