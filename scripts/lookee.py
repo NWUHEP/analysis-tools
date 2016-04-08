@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import sys
+
 from fitter import *
 from toy_MC import *
 from lee2d import *
@@ -11,6 +13,9 @@ import pickle
 def rho_g(j, k, u):
     '''
     From therem 15.10.1 from Random Fields and Geometry (Adler)
+
+    Parameters
+    ----------
     j: number of nuisance parameters (search dimensions)
     k: d.o.f. of chi2 random field
     u: threshold for excursions in the field
@@ -37,9 +42,25 @@ def exp_phi_u(u, n_j, k=1):
     return chi2.sf(u,k) + np.sum([n*rho_g(j+1, k, u) for j,n in enumerate(n_j)], axis=0)
 
 def lee_objective(a, Y, dY, X):
-    return np.sum(((Y - exp_phi_u(X, a[1:], k=a[0]))/dY)**2) 
+    '''
+    Defines the objective function for regressing the <EC> of our chi2 field.
+    The minimization should be done on the quadratic cost weighted by the
+    inverse of the variance on the measurement.  There is an additional term
+    which will enforce preference for the fit result being greater than the
+    data point.  The reasoning is that we would like to have an upper bound on
+    our tails (that is, we are being conservative here).
 
-def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
+    Parameters
+    ----------
+    a: list of parameters
+    Y: target data
+    dY: variance on the data
+    X: independent variable values corresponding to values of Y
+    '''
+    ephi = exp_phi_u(X, a[1:], k=a[0])
+    return np.sum((Y - ephi)**2/dY) + np.sum(ephi > Y)/Y.size 
+
+def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     '''
     Carries GV style look elsewhere corrections with a twist.  Allows for an
     arbitrary number of search dimensions/nuisance parameters and allows the
@@ -58,15 +79,14 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
     var_phi = np.var(phiscan, axis=0)
 
     ### Remove points where exp_phi = 0 ###
-    veto = exp_phi > 0.
-    exp_phi = exp_phi[veto]
-    var_phi = var_phi[veto]
-    u       = u[veto]
+    mask = exp_phi > 0.
+    exp_phi = exp_phi[mask]
+    var_phi = var_phi[mask]
+    u       = u[mask]
     
     bnds = [(0, None)] + j*[(None, None)]
     result = minimize(lee_objective, 
                       [k] + j*[1.],
-                      #method = 'SLSQP',
                       method = 'Nelder-Mead',
                       args   = (exp_phi, var_phi, u),
                       #bounds = bnds
@@ -79,24 +99,37 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1):
 
 def validation_plots(u, phiscan, qmax, N1, N2, s, channel):
     '''Check that the GV tails look okay'''
+
+    ### Get the mean and variance from the phi scan ###
     phiscan = np.array(phiscan)
     exp_phi = np.mean(phiscan, axis=0)
     var_phi = np.var(phiscan, axis=0)
     qmax    = np.array(qmax)
 
-    hval, hbins, _ = plt.hist(qmax, bins=21, cumulative=True)
+
+    ### Construct the survival function spectrum from maximum q of each scan ###
+    hval, hbins, _ = plt.hist(qmax, bins=30, range=(0.,30.), cumulative=True)
     hval = hval.max() - hval
     herr = np.sqrt(hval)
     pval = hval/hval.max()
     perr = pval*(herr/hval)
+    pval = np.concatenate(([1], pval))
+    perr = np.concatenate(([0], perr))
     plt.close()
 
-    fig, ax = plt.subplots()
-    ax.plot(u, exp_phi, 'k-', linewidth=2.)
-    ax.plot(u, exp_phi_u(u, [N1, N2], s), 'r--', linewidth=2.)
-    ax.plot(hbins[1:], pval, 'b-', linewidth=2.)
-    ax.fill_between(hbins[1:], pval-perr, pval+perr, color='b', alpha=0.25, interpolate=True)
+    ### Remove points where values are 0 ###
+    pmask = pval > 0.
+    emask = exp_phi > 0.
 
+    ### Make the plots ###
+    fig, ax = plt.subplots()
+    ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
+    ax.plot(u, exp_phi_u(u, [N1, N2], s), 'r--', linewidth=2.)
+    ax.plot(hbins[pmask], pval[pmask], 'b-', linewidth=2.)
+    ax.fill_between(hbins, pval-perr, pval+perr, color='b', alpha=0.25, interpolate=True)
+
+    ### Stylize ###
+    ax.legend(['E[phi(A)] (measured)', 'E[phi(A)] (theory)', '1 -  CDF(q(theta))'])
     ax.set_yscale('log')
     ax.set_ylim(1e-4, 10)
     ax.set_ylabel('P[max(q) > u]')
@@ -120,14 +153,20 @@ def excursion_plot_1d(x, qscan, u1, suffix, path):
 if __name__ == '__main__':
     start = timer()
 
+    ### Get command line arguments
+    if len(sys.argv) > 2:
+        channel = str(sys.argv[1])
+        nsims   = int(sys.argv[2])
+        ndim    = int(sys.argv[3])
+    else:
+        channel = '1b1f'
+        nsims   = 100
+        ndim    = 1
+
     ### Config 
     minalgo     = 'SLSQP'
-    channel     = '1b1f'
     xlimits     = (12., 70.)
     nscan       = (50, 30)
-    nsims       = 10000
-    ndim        = 1
-    u1, u2      = 1., 2.
     make_plots  = True
 
     if channel == '1b1f':
@@ -164,7 +203,8 @@ if __name__ == '__main__':
     ### scan over test data
     bnds    = [(0., 1.0), # A
                2*(params['mu'], ), 2*(params['width'], ), # mean, sigma
-               (-1., 1.), (-1., 1.) # a1, a2 
+               #(0., None), (0., None) # a1, a2 
+               (None, None), (None, None) # a1, a2 
                ]
     nll_bg = bg_objective(bg_params.values(), data)
 
@@ -194,7 +234,7 @@ if __name__ == '__main__':
     y       = 0.5*(xlimits[1] - xlimits[0])*scan_vals[:,1].reshape(nscan)
     qscan   = np.array(qscan).reshape(nscan)
 
-    if make_plots:
+    if make_plots and ndim == 2:
         fig, ax = plt.subplots()
         cmap = ax.pcolormesh(x, y, qscan, cmap='viridis', vmin=0.)#, vmax=25.)
         fig.colorbar(cmap)
@@ -208,10 +248,8 @@ if __name__ == '__main__':
     bg_pdf  = lambda x: 0.5 + bg_params['a1']*x + 0.5*bg_params['a2']*(3*x**2 -1)
     sims = mc_generator(bg_pdf, n_total, nsims)
 
-    if make_plots:
+    if make_plots and ndim == 2:
         fig1, axes1 = plt.subplots(3, 3)
-        fig2, axes2 = plt.subplots(3, 3)
-        fig3, axes3 = plt.subplots(3, 3)
 
     paramscan   = []
     phiscan     = []
@@ -266,56 +304,28 @@ if __name__ == '__main__':
         ### Doing calculations
         qscan = np.array(qscan).reshape(nscan)
         phiscan.append([calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
-        phi1.append(calculate_euler_characteristic((qscan > u1) + 0.))
-        phi2.append(calculate_euler_characteristic((qscan > u2) + 0.))
         
         if make_plots and i < 9 and ndim == 2: 
             cmap = axes1[i/3][i%3].pcolormesh(x, y, qscan, cmap='viridis', vmin=0., vmax=10.)
-            axes2[i/3][i%3].imshow((qscan > u1) + 0., cmap='Greys', interpolation='none', origin='lower')
-            axes3[i/3][i%3].imshow((qscan > u2) + 0., cmap='Greys', interpolation='none', origin='lower')
 
     phiscan = np.array(phiscan)
     if make_plots and ndim == 2:
         fig1.savefig('figures/qscan_toys_{0}.png'.format(channel))
-        fig2.savefig('figures/qscan_u1_{0}.png'.format(channel))
-        fig3.savefig('figures/qscan_u2_{0}.png'.format(channel))
-
-    plt.close()
-
+        plt.close()
 
     ### Calculate LEE correction ###
-    exp_phi1, exp_phi2 = np.mean(phi1), np.mean(phi2)
-    var_phi1, var_phi2 = np.var(phi1), np.var(phi2)
+    k, nvals, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
+    validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., k, channel+'_1D')
 
-    print 'u1 = {0}, u2 = {1}'.format(u1, u2)
-    print 'E[phi_1] = {0} +/- {1}'.format(exp_phi1, np.sqrt(var_phi1))
-    print 'E[phi_2] = {0} +/- {1}'.format(exp_phi2, np.sqrt(var_phi2))
-
-    if ndim == 1:
-        k, nvals, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=1, k=1)
-        print 'k = {0:.2f}'.format(k)
-        for i,n in enumerate(nvals):
-            print 'N{0} = {1:.2f}'.format(i, n)
-        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
-        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
-
-        validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., 1., channel+'_1D')
-
-        ### Scan over u ###
-        #exp_phi = phiscan.mean(axis=0) 
-        #var_phi = phiscan.var(axis=0) 
-        #lee_results = []
-        #for u, phi in zip(u_0, exp_phi):
-        #    lee_results.append(lee1n(np.sqrt(qmax), u, phi, k=1))
-
-        #lee_results = np.array(lee_results).transpose()
-
-    elif ndim == 2:
-        N1, N2, p_global = do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)
-        validation_plots(u_0, phiscan, qmax_mc, N1, N2, channel+'_2D')
+    print 'k = {0:.2f}'.format(k)
+    for i,n in enumerate(nvals):
+        print 'N{0} = {1:.2f}'.format(i, n)
+    print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
+    print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     # Save scan data
     outfile = open('data/lee_scan_{0}_{1}.pkl'.format(channel, nsims), 'w')
+    pickle.dump(paramscan, outfile)
     pickle.dump(qmax_mc, outfile)
     pickle.dump(phiscan, outfile)
     outfile.close()

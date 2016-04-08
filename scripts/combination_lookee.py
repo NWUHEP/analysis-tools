@@ -8,13 +8,20 @@ from lee2d import *
 if __name__ == '__main__':
     start = timer()
 
+    ### Get command line arguments
+    if len(sys.argv) > 2:
+        channel = str(sys.argv[1])
+        nsims   = int(sys.argv[2])
+        ndim    = int(sys.argv[3])
+    else:
+        channel = 'combined'
+        nsims   = 100
+        ndim    = 1
+
     ### Config 
     minalgo = 'SLSQP'
     xlimits = (12., 70.)
     nscan   = (50, 30)
-    nsims   = 1000
-    ndim    = 1
-    u1, u2  = 3., 6.
     make_plots = True
 
     ### Parameters from fitting combined spectra
@@ -80,7 +87,7 @@ if __name__ == '__main__':
     y       = scan_vals[:,1].reshape(nscan)
     qscan   = np.array(qscan).reshape(nscan)
 
-    if make_plots:
+    if make_plots and ndim == 2:
         fig, ax = plt.subplots()
         cmap = ax.pcolormesh(x, y, qscan, cmap='viridis', vmin=0., vmax=25.)
         fig.colorbar(cmap)
@@ -99,10 +106,8 @@ if __name__ == '__main__':
     bg_pdf2 = lambda x: 0.5 + bg_params['b1']*x + 0.5*bg_params['b2']*(3*x**2 -1)
     sims2   = mc_generator(bg_pdf2, data_1b1c.size, nsims)
 
-    #if make_plots:
-    #    fig1, axes1 = plt.subplots(3, 3)
-    #    fig2, axes2 = plt.subplots(3, 3)
-    #    fig3, axes3 = plt.subplots(3, 3)
+    if make_plots and ndim == 2:
+        fig1, axes1 = plt.subplots(3, 3)
 
     paramscan   = []
     phiscan     = []
@@ -170,43 +175,28 @@ if __name__ == '__main__':
 
     phiscan = np.array(phiscan)
 
-    #if make_plots:
-    #    fig1.subplots_adjust(right=0.8)
-    #    fig1.colorbar(cmap)
-    #    axes1.set_xlabel('M_{mumu} [GeV]')
-    #    axes1.set_ylabel('width [GeV]')
-    #    fig.savefig('figures/qscan_data_combination.png')
-    #    fig1.savefig('figures/qscan_toys_combination.png')
+    if make_plots and ndim == 2:
+        fig1.subplots_adjust(right=0.8)
+        fig1.colorbar(cmap)
+        axes1.set_xlabel('M_{mumu} [GeV]')
+        axes1.set_ylabel('width [GeV]')
+        fig.savefig('figures/qscan_data_combination.png')
+        fig1.savefig('figures/qscan_toys_combination.png')
 
-    #    axes2.set_xlabel('M_{mumu} [GeV]')
-    #    axes2.set_ylabel('width [GeV]')
-    #    fig2.savefig('figures/qscan_u1_combination.png')
+    k, nvals, p_global = lee_nD(np.sqrt(qdata), u_0, phiscan, j=ndim, k=2)
+    validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., k, 'combined_1D')
 
-    #    axes3.set_xlabel('M_{mumu} [GeV]')
-    #    axes3.set_ylabel('width [GeV]')
-    #    fig3.savefig('figures/qscan_u2_combination.png')
-    #    plt.close()
-
-    if ndim == 1:
-        k, nvals, p_global = lee_nD(np.sqrt(qdata), u_0, phiscan, j=1, k=2)
-        validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., k, 'combined_1D')
-        print 'k = {0:.2f}'.format(k)
-        for i,n in enumerate(nvals):
-            print 'N{0} = {1:.2f}'.format(i, n)
-        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qdata)), np.sqrt(qdata))
-        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
-
-    elif ndim == 2:
-        N1, N2, p_global = do_LEE_correction(np.sqrt(qmax), u1, u2, exp_phi1, exp_phi2)
-        validation_plots(u_0, phiscan, qmax_mc, N1, N2, s=2, channel='combined_2D')
-        print 'n1 = {0}, n2 = {0}'.format(N1, N2)
-        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
-        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
+    print 'k = {0:.2f}'.format(k)
+    for i,n in enumerate(nvals):
+        print 'N{0} = {1:.2f}'.format(i, n)
+    print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qdata)), np.sqrt(qdata))
+    print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     # Save scan data
     outfile = open('data/lee_scan_combination_{0}.pkl'.format(nsims), 'w')
     pickle.dump(qmax_mc, outfile)
     pickle.dump(phiscan, outfile)
+    pickle.dump(paramscan, outfile)
     outfile.close()
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
