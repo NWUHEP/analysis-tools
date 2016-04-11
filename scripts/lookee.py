@@ -4,15 +4,34 @@ import sys
 
 from fitter import *
 from toy_MC import *
-from lee2d import *
 
+from scipy.optimize import fsolve
+from scipy.stats import chi2, norm
+from scipy.ndimage.morphology import *
+from scipy.ndimage import *
 from scipy.special import gamma
 from scipy.misc import comb, factorial
 import pickle
 
+def calculate_euler_characteristic(a):
+   '''Calculate the Euler characteristic for level set a'''
+   face_filter=np.zeros((2,2))+1
+   right_edge_filter = np.array([[1,1]])
+   bottom_edge_filter = right_edge_filter.T
+   
+   n_faces = np.sum(convolve(a,face_filter,mode='constant')>3)
+   n_edges = np.sum(convolve(a,right_edge_filter,mode='constant')>1)
+   n_edges += np.sum(convolve(a,bottom_edge_filter,mode='constant')>1)
+   n_vertices = np.sum(a>0)
+   
+   EC = n_vertices-n_edges+n_faces
+   #print '%d-%d+%d=%d' %(n_vertices,n_edges,n_faces,EulerCharacteristic) 
+   
+   return EC
+
 def rho_g(j, k, u):
     '''
-    From therem 15.10.1 from Random Fields and Geometry (Adler)
+    From theorem 15.10.1 from Random Fields and Geometry (Adler)
 
     Parameters
     ----------
@@ -57,8 +76,16 @@ def lee_objective(a, Y, dY, X):
     dY: variance on the data
     X: independent variable values corresponding to values of Y
     '''
-    ephi = exp_phi_u(X, a[1:], k=a[0])
-    return np.sum((Y - ephi)**2/dY) + np.sum(ephi > Y)/Y.size 
+
+    ### Remove X = 0, this stops ephi -> inf
+    mask = X > 0.
+    X    = X[mask]
+    Y    = Y[mask]
+    dY   = dY[mask]
+
+    ephi = exp_phi_u(X, a[1:], k = a[0])
+    cost = np.sum((Y - ephi)**2/dY) + np.sum(ephi > Y)/Y.size + np.sum(np.abs(a)) + np.sum(a**2)
+    return cost
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     '''
@@ -73,31 +100,41 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     u: array of scan thresholds
     phiscan: scan of EC for values in u
     j = numbers of search dimensions to calculate
-    k = assumed numbers of degrees of freedom of chi2 field
+    k = assumed numbers of degrees of freedom of chi2 field. If not specified
+        it will be a floating parmeter in the LEE estimation (recommended)
     '''
     exp_phi = np.mean(phiscan, axis=0)
     var_phi = np.var(phiscan, axis=0)
 
     ### Remove points where exp_phi = 0 ###
-    mask = exp_phi > 0.
-    exp_phi = exp_phi[mask]
-    var_phi = var_phi[mask]
-    u       = u[mask]
+    phimask = exp_phi > 0.
+    exp_phi = exp_phi[phimask]
+    var_phi = var_phi[phimask]
+    u       = u[phimask]
     
-    bnds = [(0, None)] + j*[(None, None)]
-    result = minimize(lee_objective, 
-                      [k] + j*[1.],
-                      method = 'Nelder-Mead',
-                      args   = (exp_phi, var_phi, u),
-                      #bounds = bnds
-                      )
-    k = result.x[0]
-    n = result.x[1:]
+    if not k:
+        print 'd.o.f. not specified => fit the EC with scan free parameters N_j and k...'
+        bnds   = [(0, None)] + j*[(0., None)]
+        p_init = [1.] + j*[1.,]
+        result = minimize(lee_objective,
+                          p_init,
+                          method = 'Nelder-Mead',
+                          args   = (exp_phi, var_phi, u),
+                          #bounds = bnds
+                          )
+        k = result.x[0]
+        n = result.x[1:]
+    else:
+        print 'd.o.f. specified => fit the EC scan with free parameters N_j and k={0}...'.format(k)
+        umask   = (u>2.5)*(u <3.5)
+        eq      = lambda n: exp_phi[umask] - exp_phi_u(u[umask], n, k=k)
+        n       = fsolve(eq, j*(1,))
+
     p_global = exp_phi_u(max_local_sig**2, n, k)
 
     return k, n, p_global
 
-def validation_plots(u, phiscan, qmax, N1, N2, s, channel):
+def validation_plots(u, phiscan, qmax, Nvals, kvals, channel):
     '''Check that the GV tails look okay'''
 
     ### Get the mean and variance from the phi scan ###
@@ -124,12 +161,16 @@ def validation_plots(u, phiscan, qmax, N1, N2, s, channel):
     ### Make the plots ###
     fig, ax = plt.subplots()
     ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
-    ax.plot(u, exp_phi_u(u, [N1, N2], s), 'r--', linewidth=2.)
-    ax.plot(hbins[pmask], pval[pmask], 'b-', linewidth=2.)
-    ax.fill_between(hbins, pval-perr, pval+perr, color='b', alpha=0.25, interpolate=True)
+    ax.plot(hbins[pmask], pval[pmask], 'm-', linewidth=2.)
+    ax.fill_between(hbins, pval-perr, pval+perr, color='m', alpha=0.25, interpolate=True)
+    for N ,k in zip(Nvals, kvals):
+        ax.plot(u, exp_phi_u(u, N, k), '--', linewidth=2.)
+
 
     ### Stylize ###
-    ax.legend(['E[phi(A)] (measured)', 'E[phi(A)] (theory)', '1 -  CDF(q(theta))'])
+    ax.legend(['E[phi(A)] (measured)', '1 -  CDF(q(theta))'] 
+            + ['E[phi(A)] (theory; k={0})'.format(k) if type(k) == int 
+                else 'E[phi(A)] (theory; k={0:.2f})'.format(k) for k in kvals])
     ax.set_yscale('log')
     ax.set_ylim(1e-4, 10)
     ax.set_ylabel('P[max(q) > u]')
@@ -164,10 +205,10 @@ if __name__ == '__main__':
         ndim    = 1
 
     ### Config 
-    minalgo     = 'SLSQP'
-    xlimits     = (12., 70.)
-    nscan       = (50, 30)
-    make_plots  = True
+    minalgo    = 'SLSQP'
+    xlimits    = (12., 70.)
+    nscan      = (50, 30)
+    make_plots = True
 
     if channel == '1b1f':
         params          = {'A':0.88, 'mu':-0.422, 'width':0.054, 'a1':0.319, 'a2':0.133} 
@@ -193,7 +234,6 @@ if __name__ == '__main__':
         scan_div = ((scan_bnds[0][1] - scan_bnds[0][0])/nscan[0], (scan_bnds[1][1] - scan_bnds[1][0])/nscan[1])
 
     ### Get data and scale
-    #data, n_total = get_data('data/ntuple_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
     data, n_total = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
 
     #######################
@@ -253,7 +293,7 @@ if __name__ == '__main__':
 
     paramscan   = []
     phiscan     = []
-    qmax_mc     = []
+    qmaxscan    = []
     phi1        = []
     phi2        = []
     u_0         = np.linspace(0., 20., 1000.)
@@ -271,7 +311,7 @@ if __name__ == '__main__':
 
         qscan       = []
         params_best = []
-        qmax_mc.append(0)
+        qmaxscan.append(0)
         for j, scan in enumerate(scan_vals):
             if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
                 qscan.append(0.)
@@ -288,9 +328,9 @@ if __name__ == '__main__':
 
             qtest = 2*(nll_bg - bg_sig_objective(result.x, sim))
             qscan.append(qtest)
-            if qtest > qmax_mc[-1]: 
+            if qtest > qmaxscan[-1]: 
                 params_best = result.x
-                qmax_mc[-1] = qtest
+                qmaxscan[-1] = qtest
 
         if False: #make_plots and i < 9:
             sim = scale_data(sim, invert=True)
@@ -308,14 +348,20 @@ if __name__ == '__main__':
         if make_plots and i < 9 and ndim == 2: 
             cmap = axes1[i/3][i%3].pcolormesh(x, y, qscan, cmap='viridis', vmin=0., vmax=10.)
 
-    phiscan = np.array(phiscan)
+    qmaxscan    = np.array(qmaxscan)
+    phiscan     = np.array(phiscan)
+    paramscan   = np.array(paramscan)
+
     if make_plots and ndim == 2:
         fig1.savefig('figures/qscan_toys_{0}.png'.format(channel))
         plt.close()
 
     ### Calculate LEE correction ###
-    k, nvals, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
-    validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., k, channel+'_1D')
+    #k1, nvals1, p_global    = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
+    #k2, nvals2, p_global    = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
+    k, nvals, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
+    validation_plots(u_0, phiscan, qmaxscan, [nvals], [k], '{0}_{1}D'.format(channel, ndim))
+    #validation_plots(u_0, phiscan, qmaxscan, [nvals1, nvals2, nvals], [k1, k2, k], '{0}_{1}D'.format(channel, ndim))
 
     print 'k = {0:.2f}'.format(k)
     for i,n in enumerate(nvals):
@@ -325,9 +371,10 @@ if __name__ == '__main__':
 
     # Save scan data
     outfile = open('data/lee_scan_{0}_{1}.pkl'.format(channel, nsims), 'w')
-    pickle.dump(paramscan, outfile)
-    pickle.dump(qmax_mc, outfile)
+    pickle.dump(u_0, outfile)
+    pickle.dump(qmaxscan, outfile)
     pickle.dump(phiscan, outfile)
+    pickle.dump(paramscan, outfile)
     outfile.close()
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))

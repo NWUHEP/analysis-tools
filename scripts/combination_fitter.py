@@ -21,13 +21,13 @@ def combination_bg_sig_obj(params, X):
     Expects the list of parameters to be ordered as follow:
     A_1, A_2, mu, sigma, a1, a2, b1, b2
     '''
-    pdf_bg1     = legendre_polynomial(X[0], (params[4], params[5]))
-    pdf_sig1    = gaussian(X[0], (params[2], params[3]))
+    pdf_bg1     = legendre_polynomial(X[0], params[6:8])
+    pdf_sig1    = gaussian(X[0], params[2:4])
     pdf1        = params[0]*pdf_bg1 + (1-params[0])*pdf_sig1
 
-    pdf_bg2     = legendre_polynomial(X[1], (params[6], params[7]))
-    pdf_sig2    = gaussian(X[1], (params[2], params[3]))
-    pdf2        = params[1]*pdf_bg2 + (1-params[1])*pdf_sig2
+    pdf_bg2     = legendre_polynomial(X[1], params[8:10])
+    pdf_sig2    = gaussian(X[1], params[4:6])
+    pdf2        = (1 - params[1])*pdf_bg2 + params[1]*pdf_sig2
 
     ll          = -np.sum(np.log(pdf1)) - np.sum(np.log(pdf2))
     return ll
@@ -48,6 +48,9 @@ if __name__ == '__main__':
     data_1b1c   = np.apply_along_axis(scale_data, 0, data_1b1c, xlow=12, xhigh=70)
     N2          = data_1b1c.size
 
+    data = (data_1b1f, data_1b1c)
+
+
     # fit background only model
     print 'Performing background only fit with second order Legendre polynomial normalized to unity.'
     bnds = [(0., 2.), (0., 0.5), # a1, a2
@@ -56,9 +59,9 @@ if __name__ == '__main__':
                          [0.5, 0.05, 0.5, 0.05], 
                          method = 'SLSQP', 
                          bounds = bnds,
-                         args   = ([data_1b1f, data_1b1c], combination_bg_obj)
+                         args   = (data, combination_bg_obj)
                          )
-    bg_sigma, bg_corr = get_corr(combination_bg_obj, bg_result.x, [data_1b1f, data_1b1c])   
+    bg_sigma, bg_corr = get_corr(combination_bg_obj, bg_result.x, data)   
 
     print '\n'
     print 'RESULTS'
@@ -74,24 +77,29 @@ if __name__ == '__main__':
 
     # fit signal+background model
     print 'Performing background plus signal fit with second order Legendre polynomial normalized to unity plus a Gaussian kernel.'
-    bnds = [(0., 1.05), (0., 1.05),# A1, A2
-            (-0.8, -0.2), (0., 0.4), # mean, sigma
-            (0., 2.), (0., 0.5), # a1, a2
-            (0., 2.), (0., 0.5)] # b1, b2
-    result = minimize(regularization, 
-                      [1., 1., -0.4, 0.1, bg_result.x[0], bg_result.x[1], bg_result.x[2], bg_result.x[3]], 
+    bnds = [(0., 1.05), (0., 1.05),     # A1, A2
+            (-0.8, -0.2), (0., 0.4),    # mean1, sigma1
+            (-0.8, -0.2), (0., 0.4),    # mean2, sigma2
+            (0., 2.), (0., 0.5),        # a1, a2
+            (0., 2.), (0., 0.5)]        # b1, b2
+
+    inits = [1., 1., 
+            -0.4, 0.1, -0.4, 0.1, 
+            bg_result.x[0], bg_result.x[1], bg_result.x[2], bg_result.x[3]], 
+    result = minimize(regularization, inits,
                       method = 'SLSQP',
                       #jac    = True,
-                      args   = ([data_1b1f, data_1b1c], combination_bg_sig_obj),
+                      args   = (data, combination_bg_sig_obj),
                       bounds = bnds
                       )
-    comb_sigma, comb_corr = get_corr(combination_bg_sig_obj, result.x, [data_1b1f, data_1b1c])   
-    qtest = np.sqrt(2*np.abs(combination_bg_sig_obj(result.x, [data_1b1f, data_1b1c]) - combination_bg_obj(bg_result.x, [data_1b1f, data_1b1c])))
+    comb_sigma, comb_corr = get_corr(combination_bg_sig_obj, result.x, data)   
+    qtest = np.sqrt(2*np.abs(combination_bg_sig_obj(result.x, data)
+                            - combination_bg_obj(bg_result.x, data)))
 
     # Convert back to physical mass values
     pct_sigma   = np.abs(comb_sigma/result.x)
-    mu          = scale_data(result.x[2], invert=True) 
-    sig_mu      = mu*pct_sigma[1]
+    mu1         = scale_data(result.x[2], invert=True) 
+    sig_mu1     = mu1*pct_sigma[1]
     width       = result.x[3]*(70. - 12.)/2. 
     sig_width   = width*pct_sigma[2]
 
@@ -100,8 +108,10 @@ if __name__ == '__main__':
     print '-------'
     print 'A1       = {0:.3f} +/- {1:.3f}'.format(result.x[0], comb_sigma[0])
     print 'A2       = {0:.3f} +/- {1:.3f}'.format(result.x[1], comb_sigma[1])
-    print 'mu       = {0:.3f} +/- {1:.3f}'.format(mu, sig_mu)
-    print 'width    = {0:.3f} +/- {1:.3f}'.format(width, sig_width)
+    print 'mu1      = {0:.3f} +/- {1:.3f}'.format(mu1, sig_mu1)
+    print 'width1   = {0:.3f} +/- {1:.3f}'.format(width1, sig_width1)
+    print 'mu2      = {0:.3f} +/- {1:.3f}'.format(mu2, sig_mu2)
+    print 'width2   = {0:.3f} +/- {1:.3f}'.format(width2, sig_width2)
     print 'a1       = {0:.3f} +/- {1:.3f}'.format(result.x[4], comb_sigma[4])
     print 'a2       = {0:.3f} +/- {1:.3f}'.format(result.x[5], comb_sigma[5])
     print 'b1       = {0:.3f} +/- {1:.3f}'.format(result.x[6], comb_sigma[6])

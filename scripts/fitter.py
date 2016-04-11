@@ -188,7 +188,7 @@ if __name__ == '__main__':
         print'\n'
 
     # fit signal+background model
-    print 'Performing background plus signal fit with second order Legendre polynomial normalized to unity plus a Gaussian kernel.'
+    print 'Performing background plus signal fit with second order normalized Legendre polynomial plus a Gaussian kernel.'
     bnds = [(0., 1.05), # A
             (-0.8, -0.2), (0., 0.4), # mean, sigma
             (0., 2.), (0., 0.5)] # a1, a2

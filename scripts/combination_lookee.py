@@ -16,7 +16,7 @@ if __name__ == '__main__':
     else:
         channel = 'combined'
         nsims   = 100
-        ndim    = 1
+        ndim    = 2
 
     ### Config 
     minalgo = 'SLSQP'
@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     paramscan   = []
     phiscan     = []
-    qmax_mc     = []
+    qmaxscan    = []
     u_0         = np.linspace(0., 20., 1000.)
     for i, sim in enumerate(zip(sims1, sims2)):
         if not i%10: 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
                 params_best = result.x
                 qmax = qtest
     
-        qmax_mc.append(qmax)
+        qmaxscan.append(qmax)
         paramscan.append(params_best)
 
         if make_plots and i < 10:
@@ -173,7 +173,9 @@ if __name__ == '__main__':
         #    axes2[i/3][i%3].pcolormesh(mass, width, A_u1, cmap='Greys')
         #    axes3[i/3][i%3].pcolormesh(mass, width, A_u2, cmap='Greys')
 
-    phiscan = np.array(phiscan)
+    qmaxscan    = np.array(qmaxscan)
+    phiscan     = np.array(phiscan)
+    paramscan   = np.array(paramscan)
 
     if make_plots and ndim == 2:
         fig1.subplots_adjust(right=0.8)
@@ -183,18 +185,20 @@ if __name__ == '__main__':
         fig.savefig('figures/qscan_data_combination.png')
         fig1.savefig('figures/qscan_toys_combination.png')
 
-    k, nvals, p_global = lee_nD(np.sqrt(qdata), u_0, phiscan, j=ndim, k=2)
-    validation_plots(u_0, phiscan, qmax_mc, nvals[0], 0., k, 'combined_1D')
 
+    k, nvals, p_global = lee_nD(np.sqrt(qdata), u_0, phiscan, j=ndim, k=1)
+    validation_plots(u_0, phiscan, qmaxscan, nvals[0], 0., 1, 'combined_1D')
     print 'k = {0:.2f}'.format(k)
     for i,n in enumerate(nvals):
         print 'N{0} = {1:.2f}'.format(i, n)
     print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qdata)), np.sqrt(qdata))
     print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
+
     # Save scan data
     outfile = open('data/lee_scan_combination_{0}.pkl'.format(nsims), 'w')
-    pickle.dump(qmax_mc, outfile)
+    pickle.dump(u_0, outfile)
+    pickle.dump(qmaxscan, outfile)
     pickle.dump(phiscan, outfile)
     pickle.dump(paramscan, outfile)
     outfile.close()
