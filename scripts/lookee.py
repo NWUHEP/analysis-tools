@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import pickle
 
 from fitter import *
 from toy_MC import *
@@ -11,7 +12,6 @@ from scipy.ndimage.morphology import *
 from scipy.ndimage import *
 from scipy.special import gamma
 from scipy.misc import comb, factorial
-import pickle
 
 def calculate_euler_characteristic(a):
    '''Calculate the Euler characteristic for level set a'''
@@ -29,7 +29,7 @@ def calculate_euler_characteristic(a):
    
    return EC
 
-def rho_g(j, k, u):
+def rho_g(u, j=1, k=1):
     '''
     From theorem 15.10.1 from Random Fields and Geometry (Adler)
 
@@ -39,12 +39,15 @@ def rho_g(j, k, u):
     k: d.o.f. of chi2 random field
     u: threshold for excursions in the field
     '''
+
     coeff_num       = u**((k - j)/2.) * np.exp(-u/2.) 
     coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k-2.)/2.)
-    indicate        = lambda m,l: (k >= j - m - 2.*l) + 0.
-    sum_fraction    = lambda m,l: ((-1.)**(j-1.+m+l)*factorial(j-1)) / (factorial(m)*factorial(l)*2.**l)
-    m_sum           = lambda l: np.sum([indicate(m,l)*comb(k-l, j-1.-m-2.*l)*sum_fraction(m,l) for m in np.arange(0, 1 + int(j-1.-2.*l))])   
-    l_sum           = np.sum([m_sum(l) for l in np.arange(0., 1 + np.floor((j-1)/2))]) 
+    indicate        = lambda m,l: float(k >= j - m - 2.*l)
+    sum_fraction    = lambda m,l: ((-1.)**(j - 1. + m + l) * factorial(j - 1)) / (factorial(m)*factorial(l)*2.**l)
+    m_terms         = lambda l: np.array([indicate(m,l) * comb(k-l, j-1.-m-2.*l) * sum_fraction(m,l) * u**(m+l) 
+                                        for m in np.arange(0, 1 + int(j-1.-2.*l))])
+    m_sum           = lambda l: np.sum(m_terms(l), axis=0)
+    l_sum           = np.sum([m_sum(l) for l in np.arange(0., 1 + np.floor((j-1)/2))], axis=0) 
 
     return (coeff_num/coeff_den)*l_sum
 
@@ -58,7 +61,7 @@ def exp_phi_u(u, n_j, k=1):
     n_j: array of coefficients
     k: nDOF of chi2 field
     '''
-    return chi2.sf(u,k) + np.sum([n*rho_g(j+1, k, u) for j,n in enumerate(n_j)], axis=0)
+    return chi2.sf(u,k) + np.sum([n*rho_g(u, j+1, k) for j,n in enumerate(n_j)], axis=0)
 
 def lee_objective(a, Y, dY, X):
     '''
@@ -77,15 +80,13 @@ def lee_objective(a, Y, dY, X):
     X: independent variable values corresponding to values of Y
     '''
 
-    ### Remove X = 0, this stops ephi -> inf
-    mask = X > 0.
-    X    = X[mask]
-    Y    = Y[mask]
-    dY   = dY[mask]
+    ephi    = exp_phi_u(X, a[1:], k = a[0])
+    qcost   = np.sum((Y - ephi)**2/dY)
+    ubound  = np.sum(ephi < Y)/Y.size 
+    L1_reg  = np.sum(np.abs(a)) 
+    L2_reg  = np.sum(a**2)
 
-    ephi = exp_phi_u(X, a[1:], k = a[0])
-    cost = np.sum((Y - ephi)**2/dY) + np.sum(ephi > Y)/Y.size + np.sum(np.abs(a)) + np.sum(a**2)
-    return cost
+    return qcost + 0.5*ubound
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     '''
@@ -103,32 +104,37 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     k = assumed numbers of degrees of freedom of chi2 field. If not specified
         it will be a floating parmeter in the LEE estimation (recommended)
     '''
-    exp_phi = np.mean(phiscan, axis=0)
-    var_phi = np.var(phiscan, axis=0)
+    exp_phi = phiscan.mean(axis=0)
+    var_phi = phiscan.var(axis=0)
 
-    ### Remove points where exp_phi = 0 ###
-    phimask = exp_phi > 0.
+    ### Remove points where exp_phi > 0 ###
+    phimask = (exp_phi > 0.)
     exp_phi = exp_phi[phimask]
     var_phi = var_phi[phimask]
     u       = u[phimask]
+
+    ### if variance on phi is 0, use the poisson error on dY ###
+    var_phi[var_phi==0] = 1./np.sqrt(phiscan.shape[0])
     
     if not k:
         print 'd.o.f. not specified => fit the EC with scan free parameters N_j and k...'
-        bnds   = [(0, None)] + j*[(0., None)]
+        bnds   = [(1, None)] + j*[(0., None)]
         p_init = [1.] + j*[1.,]
         result = minimize(lee_objective,
                           p_init,
-                          method = 'Nelder-Mead',
+                          method = 'SLSQP',
                           args   = (exp_phi, var_phi, u),
-                          #bounds = bnds
+                          bounds = bnds
                           )
         k = result.x[0]
         n = result.x[1:]
     else:
         print 'd.o.f. specified => fit the EC scan with free parameters N_j and k={0}...'.format(k)
-        umask   = (u>2.5)*(u <3.5)
-        eq      = lambda n: exp_phi[umask] - exp_phi_u(u[umask], n, k=k)
-        n       = fsolve(eq, j*(1,))
+        mask  = np.arange(1, 1 + j)*100
+        xvals = u[mask]
+        ephis = exp_phi[mask]
+        eq    = lambda n: [ephi - exp_phi_u(x, n, k=k) for ephi,x in zip(ephis, xvals)]
+        n     = fsolve(eq, j*(1,))
 
     p_global = exp_phi_u(max_local_sig**2, n, k)
 
@@ -160,28 +166,28 @@ def validation_plots(u, phiscan, qmax, Nvals, kvals, channel):
 
     ### Make the plots ###
     fig, ax = plt.subplots()
-    ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
     ax.plot(hbins[pmask], pval[pmask], 'm-', linewidth=2.)
+    ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
     ax.fill_between(hbins, pval-perr, pval+perr, color='m', alpha=0.25, interpolate=True)
     for N ,k in zip(Nvals, kvals):
         ax.plot(u, exp_phi_u(u, N, k), '--', linewidth=2.)
 
 
     ### Stylize ###
-    ax.legend(['E[phi(A)] (measured)', '1 -  CDF(q(theta))'] 
-            + ['E[phi(A)] (theory; k={0})'.format(k) if type(k) == int 
-                else 'E[phi(A)] (theory; k={0:.2f})'.format(k) for k in kvals])
+    ax.legend([r'$1 -  \mathrm{CDF}(q(\theta))$', r'$\overline{\phi}_{\mathrm{sim.}}$'] 
+            + [r'$\overline{{\phi}}_{{ \mathrm{{th.}} }}; k={0}$'.format(k) if type(k) == int 
+                else r'$\overline{{\phi}}_{{ \mathrm{{th.}} }}; k={0:.2f}$'.format(k) for k in kvals])
     ax.set_yscale('log')
     ax.set_ylim(1e-4, 10)
-    ax.set_ylabel('P[max(q) > u]')
-    ax.set_xlabel('u')
+    ax.set_ylabel(r'$\mathbb{\mathrm{P}}[q_{\mathrm{max}} > u]$')
+    ax.set_xlabel(r'$u$')
     fig.savefig('figures/GV_validate_{0}.png'.format(channel))
     fig.savefig('figures/GV_validate_{0}.pdf'.format(channel))
     plt.close()
 
 def excursion_plot_1d(x, qscan, u1, suffix, path):
     fig, ax = plt.subplots()
-    ax.set_xlabel('M_mumu [GeV]')
+    ax.set_xlabel(r'$M_{\mu\mu}$ [GeV]')
     ax.set_ylabel('q')
     ax.set_xlim([12., 70.])
     ax.plot(x, qscan, 'r-', linewidth=2.)
@@ -230,7 +236,6 @@ if __name__ == '__main__':
         scan_vals = np.array([(n1, n2) 
                              for n1 in np.linspace(scan_bnds[0][0], scan_bnds[0][1], nscan[0]) 
                              for n2 in np.linspace(scan_bnds[1][0], scan_bnds[1][1], nscan[1])])
-
         scan_div = ((scan_bnds[0][1] - scan_bnds[0][0])/nscan[0], (scan_bnds[1][1] - scan_bnds[1][0])/nscan[1])
 
     ### Get data and scale
@@ -243,7 +248,6 @@ if __name__ == '__main__':
     ### scan over test data
     bnds    = [(0., 1.0), # A
                2*(params['mu'], ), 2*(params['width'], ), # mean, sigma
-               #(0., None), (0., None) # a1, a2 
                (None, None), (None, None) # a1, a2 
                ]
     nll_bg = bg_objective(bg_params.values(), data)
@@ -296,7 +300,8 @@ if __name__ == '__main__':
     qmaxscan    = []
     phi1        = []
     phi2        = []
-    u_0         = np.linspace(0., 20., 1000.)
+    u_0         = np.linspace(0.01, 25., 2500.)
+    
     for i, sim in enumerate(sims):
         if not i%10: 
             print 'Carrying out scan {0}...'.format(i+1)
@@ -332,7 +337,7 @@ if __name__ == '__main__':
                 params_best = result.x
                 qmaxscan[-1] = qtest
 
-        if False: #make_plots and i < 9:
+        if make_plots and i < 9:
             sim = scale_data(sim, invert=True)
             fit_plot(sim, combined_model, params_best, 
                      legendre_polynomial, bg_result.x, 
@@ -357,11 +362,11 @@ if __name__ == '__main__':
         plt.close()
 
     ### Calculate LEE correction ###
-    #k1, nvals1, p_global    = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
-    #k2, nvals2, p_global    = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
-    k, nvals, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
-    validation_plots(u_0, phiscan, qmaxscan, [nvals], [k], '{0}_{1}D'.format(channel, ndim))
-    #validation_plots(u_0, phiscan, qmaxscan, [nvals1, nvals2, nvals], [k1, k2, k], '{0}_{1}D'.format(channel, ndim))
+    k1, nvals1, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
+    k2, nvals2, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
+    k, nvals, p_global   = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
+    #validation_plots(u_0, phiscan, qmaxscan, [nvals], [k], '{0}_{1}D'.format(channel, ndim))
+    validation_plots(u_0, phiscan, qmaxscan, [nvals1, nvals2, nvals], [k1, k2, k], '{0}_{1}D'.format(channel, ndim))
 
     print 'k = {0:.2f}'.format(k)
     for i,n in enumerate(nvals):

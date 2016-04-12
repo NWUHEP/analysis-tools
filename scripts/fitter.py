@@ -2,7 +2,6 @@
 
 import pickle
 from timeit import default_timer as timer
-from multiprocessing import Process
 
 import pandas as pd
 import numpy as np
@@ -115,40 +114,19 @@ def fit_plot(data, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
     ax.plot(x, y_bg2, 'r-.', linewidth=2.) 
 
     if suffix[:4] == '1b1f':
-        ax.set_title('mumu + 1 b jet + 1 forward jet')
+        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
         ax.set_ylim([0., 25.])
     elif suffix[:4] == '1b1c':
-        ax.set_title('mumu + 1 b jet + 1 central jet + MET < 40 + deltaPhi(mumu,bj)')
+        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 central jet + MET < 40 + $\Delta\phi (\mu\mu ,bj)$')
         ax.set_ylim([0., 50.])
-    ax.set_xlabel('M_mumu [GeV]')
+    ax.set_xlabel(r'$m_{mumu}$ [GeV]')
     ax.set_ylabel('entries / 2 GeV')
     ax.set_xlim([12., 70.])
-
-    #plt.rc('text', usetex=True)
-    #fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
-    #ax1 = axes[0]
-    #ax1.errorbar(bincenters, h[0], yerr=binerrs, fmt='o')
-    #ax1.plot(x, y)
-    #ax1.set_xlabel('M_{\mu\mu} [GeV]')
-    #ax1.set_ylabel('entries/2 GeV')
-    #fig.show()
 
     fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
     fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
     plt.close()
 
-'''
-class bump_fitter:
-    def __init__(self, data, bgpdf=None, sigpdf=None):
-        self.data   = data
-        self.bgpdf  = bgpdf
-        self.sigpdf = sigpdf
-         
-class model:
-    def __init__(self, f, params=None):
-        self.func   = func
-        self.params = params 
-'''
 
 if __name__ == '__main__':
     # Start the timer
