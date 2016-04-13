@@ -137,13 +137,13 @@ class NLLFitter:
                           #args   = (self.data, self.nll)
                           )
         print 'Fit finished with status: {0}'.format(result.status)
-        print 'Calculating covariance of parameters...'
-        sigma, corr          = self.get_corr(result.x)
-        self.model.params    = result.x
-        self.model.param_err = sigma
-        self.model.corr      = corr
-
-        self.print_results()
+        if result.status == 0:
+            print 'Calculating covariance of parameters...'
+            sigma, corr          = self.get_corr(result.x)
+            self.model.params    = result.x
+            self.model.param_err = sigma
+            self.model.corr      = corr
+            self.print_results()
 
         return result
 
@@ -180,6 +180,13 @@ if __name__ == '__main__':
     bg_model.set_bounds([(0., 1.), (0., 1.)])
 
     bg_fitter = NLLFitter(bg_model, data)
-    result = bg_fitter.fit([0.5, 0.05])
+    bg_result = bg_fitter.fit([0.5, 0.05])
 
-    #sig_model   = lambda x, a: stats.norm.pdf(x, a[0], a[1])
+    sig_pdf   = lambda x, a: a[0]*bg_pdf(x, a[1:3]) + (1 - a[0])*norm.pdf(x, a[3], a[4])
+    sig_model = Model(sig_pdf, ['A', 'a1', 'a2', 'mu', 'sigma'])
+    sig_model.set_bounds([(0., 1.05), 
+                          (0., 1.), (0., 1.), 
+                          (-0.8, -0.2), (0., 0.5)])
+
+    sig_fitter = NLLFitter(sig_model, data)
+    sig_result = sig_fitter.fit((0.01, bg_result.x[0], bg_result.x[1], -0.3, 0.1))
