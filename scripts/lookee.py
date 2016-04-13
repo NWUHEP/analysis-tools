@@ -31,7 +31,7 @@ def calculate_euler_characteristic(a):
 
 def rho_g(u, j=1, k=1):
     '''
-    From theorem 15.10.1 from Random Fields and Geometry (Adler)
+    From theorem 15.10.1 from Random Fields and Geometry (Adler and Taylor)
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def lee_objective(a, Y, dY, X):
     L1_reg  = np.sum(np.abs(a)) 
     L2_reg  = np.sum(a**2)
 
-    return qcost + 0.5*ubound
+    return qcost #+ 0.5*ubound
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     '''
@@ -122,9 +122,9 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
         p_init = [1.] + j*[1.,]
         result = minimize(lee_objective,
                           p_init,
-                          method = 'SLSQP',
+                          method = 'Nelder-Mead',
                           args   = (exp_phi, var_phi, u),
-                          bounds = bnds
+                          #bounds = bnds
                           )
         k = result.x[0]
         n = result.x[1:]
@@ -298,10 +298,7 @@ if __name__ == '__main__':
     paramscan   = []
     phiscan     = []
     qmaxscan    = []
-    phi1        = []
-    phi2        = []
-    u_0         = np.linspace(0.01, 25., 2500.)
-    
+    u_0         = np.linspace(0.01, 25., 1250.)
     for i, sim in enumerate(sims):
         if not i%10: 
             print 'Carrying out scan {0}...'.format(i+1)

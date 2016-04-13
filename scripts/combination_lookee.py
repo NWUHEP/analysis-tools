@@ -112,7 +112,7 @@ if __name__ == '__main__':
     paramscan   = []
     phiscan     = []
     qmaxscan    = []
-    u_0         = np.linspace(0., 20., 1000.)
+    u_0         = np.linspace(0.01, 25., 1250.)
     for i, sim in enumerate(zip(sims1, sims2)):
         if not i%10: 
             print 'Carrying out scan {0}...'.format(i+1)
