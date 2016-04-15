@@ -64,7 +64,7 @@ if __name__ == '__main__':
     print 'b2       = {0:.3f} +/- {1:.3f}'.format(bg_result.x[3], bg_sigma[3])
     print'\n'
     #print 'correlation matrix:'
-    #print bg_corr
+    print bg_corr
     #print'\n'
 
     # fit signal+background model

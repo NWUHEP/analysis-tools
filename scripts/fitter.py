@@ -98,7 +98,7 @@ def fit_plot(data, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
 
     x       = np.linspace(-1, 1, num=10000)
     y_sig   = (N*binning/nbins)*sig_pdf(x, params) 
-    y_bg1   = (params[0]*N*binning/nbins)*bg_pdf(x, params[-2:]) 
+    y_bg1   = ((1 - params[0])*N*binning/nbins)*bg_pdf(x, params[-2:]) 
     y_bg2   = (N*binning/nbins)*bg_pdf(x, bg_params) 
     x       = scale_data(x, invert=True)
 
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     pct_sigma   = np.abs(comb_sigma/result.x)
     mu          = scale_data(result.x[1], invert=True) 
     sig_mu      = mu*pct_sigma[1]
-    width       = result.x[2]*(100. - 12.)/2. 
+    width       = result.x[2]*(70. - 12.)/2. 
     sig_width   = width*pct_sigma[2]
 
     if pout:
