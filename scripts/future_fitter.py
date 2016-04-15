@@ -8,6 +8,8 @@ import numdifftools as nd
 from scipy.stats import chi2, norm 
 from scipy.optimize import minimize
 
+from collections import OrderedDict
+
 from fitter import get_data, scale_data, fit_plot
 
 # global options
@@ -165,7 +167,7 @@ class CombinedModel():
 
 class NLLFitter: 
     '''
-    Class for carrying out PDF estimation using unbinned log likelihood
+    Class for carrying out PDF estimation using unbinned negative log likelihood minimization.
 
     Parameters
     ==========
@@ -311,15 +313,17 @@ if __name__ == '__main__':
         print 'Making plot of fit results.'
         fit_plot(scale_data(data, invert=True), sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
 
+
     ### Prepare data for combined fit
     ### Parameter naming is important.  If a parameter name is the same between
     ### multiple models it will be fixed between each model. 
+
     bg_models['1b1f'].parnames  = ['a1', 'a2']
     bg_models['1b1c'].parnames  = ['b1', 'b2']
     combined_bg_model   = CombinedModel([bg_models[ch] for ch in channels])
 
-    sig_models['1b1f'].parnames = ['A1', 'mu', 'sigma', 'a1', 'a2']
-    sig_models['1b1c'].parnames = ['A2', 'mu', 'sigma', 'b1', 'b2']
+    sig_models['1b1f'].parnames = ['A1', 'mu1', 'sigma1', 'a1', 'a2']
+    sig_models['1b1c'].parnames = ['A2', 'mu2', 'sigma2', 'b1', 'b2']
     combined_sig_model = CombinedModel([sig_models[ch] for ch in channels])
 
     ### Perform combined bg fit
@@ -328,8 +332,9 @@ if __name__ == '__main__':
     
     ### Perform combined signal+bg fit
     combination_sig_fitter = NLLFitter(combined_sig_model, [datas[ch] for ch in channels], scaledict=sdict)
-    param_init = (-0.3, bg_result.x[0], 0.01, bg_result.x[1], bg_result.x[2], bg_result.x[3], 0.01, 0.01)
+    param_init = (-0.3, bg_result.x[0], -0.3, bg_result.x[0], 0.01, bg_result.x[1], bg_result.x[2], bg_result.x[3], 0.01, 0.01)
     combination_sig_fitter.fit(param_init)
 
+    #fit_plot(scale_data(data['1b1f'], invert=True), sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
