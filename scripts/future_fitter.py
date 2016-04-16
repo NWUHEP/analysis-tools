@@ -57,9 +57,15 @@ class Model:
             params = zip(self.parnames, self.params)
 
         if as_dict:
-            return dict(params)
+            return OrderedDict(params)
         else:
             return params
+
+    def get_pdf(self):
+        '''
+        Returns the pdf as a function with current values of parameters
+        '''
+        return lambda x: self.model(x, self.params)
 
     def update_params(self, params, param_err):
         self.params    = params
@@ -112,11 +118,11 @@ class CombinedModel():
         names and values are tuples with the first entry being the parameter
         value and the second being the uncertainty on the parameter.
         '''
-        params = {}
-        bounds = {}
+        params = OrderedDict() 
+        bounds = OrderedDict() 
         for m in self.models:
             p = m.get_params()
-            b = dict(zip(m.parnames, m.bounds))
+            b = OrderedDict(zip(m.parnames, m.bounds))
 
             bounds.update(b)
             params.update(p)
@@ -138,7 +144,7 @@ class CombinedModel():
             params = zip(self.parnames, self.params)
 
         if as_dict:
-            return dict(params)
+            return OrderedDict(params)
         else:
             return params
             
@@ -156,7 +162,7 @@ class CombinedModel():
         if np.any(a) == None:
             params = self.get_params()
         else:
-            params = dict(zip(self.parnames, a)) 
+            params = OrderedDict(zip(self.parnames, a)) 
 
         nll = 0.
         for m, x in zip(self.models, X):
@@ -210,6 +216,8 @@ class NLLFitter:
             print 'Performing fit with initial parameters:'
 
             for n,p in self.model.get_params().iteritems():
+                if n in self.scaledict.keys():
+                    p = self.scaledict[n](p)
                 print '{0}\t= {1:.3f}'.format(n, p)
 
         result = minimize(self.regularization, init_params,
@@ -236,10 +244,6 @@ class NLLFitter:
     def print_results(self):
         '''
         Pretty print model parameters
-
-        Parameters
-        ==========
-        scaledict: (optional) dictionary of functions for scaling parameters
         '''
         print '\n'
         print 'RESULTS'
@@ -270,8 +274,11 @@ if __name__ == '__main__':
     channels = ['1b1f', '1b1c']
     xlimits  = (12., 70.)
     sdict    = {'mu': lambda x: scale_data(x, invert = True),
-                'sigma': lambda x: x*(xlimits[1] - xlimits[0])/2.
+                'sigma': lambda x: x*(xlimits[1] - xlimits[0])/2.,
                }
+
+    bg_pdf  = lambda x, a:  0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
+    sig_pdf = lambda x, a: (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
 
     ### Fits for individual channels
     datas      = {}
@@ -284,13 +291,7 @@ if __name__ == '__main__':
         datas[channel] = data
         print 'Analyzing {0} events...'.format(n_total)
 
-        ### scale dictionary for pretty printing ###
-        sdict = {'mu': lambda x: scale_data(x, invert=True), 
-                 'sigma': lambda x: x*(xlimits[1] - xlimits[0])/2.
-                }
-
         ### Define bg model and carry out fit ###
-        bg_pdf   = lambda x, a:  0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
         bg_model = Model(bg_pdf, ['a1', 'a2'])
         bg_model.set_bounds([(0., 1.), (0., 1.)])
         bg_models[channel] = bg_model
@@ -299,7 +300,6 @@ if __name__ == '__main__':
         bg_result = bg_fitter.fit([0.5, 0.05])
 
         ### Define bg+sig model and carry out fit ###
-        sig_pdf   = lambda x, a: (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
         sig_model = Model(sig_pdf, ['A', 'mu', 'sigma', 'a1', 'a2'])
         sig_model.set_bounds([(0., .5), 
                               (-0.8, -0.2), (0., 0.5),
@@ -322,8 +322,8 @@ if __name__ == '__main__':
     bg_models['1b1c'].parnames  = ['b1', 'b2']
     combined_bg_model   = CombinedModel([bg_models[ch] for ch in channels])
 
-    sig_models['1b1f'].parnames = ['A1', 'mu1', 'sigma1', 'a1', 'a2']
-    sig_models['1b1c'].parnames = ['A2', 'mu2', 'sigma2', 'b1', 'b2']
+    sig_models['1b1f'].parnames = ['A1', 'mu', 'sigma', 'a1', 'a2']
+    sig_models['1b1c'].parnames = ['A2', 'mu', 'sigma', 'b1', 'b2']
     combined_sig_model = CombinedModel([sig_models[ch] for ch in channels])
 
     ### Perform combined bg fit
@@ -332,9 +332,15 @@ if __name__ == '__main__':
     
     ### Perform combined signal+bg fit
     combination_sig_fitter = NLLFitter(combined_sig_model, [datas[ch] for ch in channels], scaledict=sdict)
-    param_init = (-0.3, bg_result.x[0], -0.3, bg_result.x[0], 0.01, bg_result.x[1], bg_result.x[2], bg_result.x[3], 0.01, 0.01)
-    combination_sig_fitter.fit(param_init)
+    param_init = combined_sig_model.get_params().values()
+    sig_result = combination_sig_fitter.fit(param_init)
 
-    #fit_plot(scale_data(data['1b1f'], invert=True), sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
+    ### Plot results.  Overlay signal+bg fit, bg-only fit, and data
+    fit_plot(scale_data(datas['1b1f'], invert=True), 
+                        sig_pdf, sig_models['1b1f'].params,    
+                        bg_pdf, bg_models['1b1f'].params, '1b1f_combined')
+    fit_plot(scale_data(datas['1b1c'], invert=True), 
+                        sig_pdf, sig_models['1b1c'].params,    
+                        bg_pdf, bg_models['1b1c'].params, '1b1c_combined')
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

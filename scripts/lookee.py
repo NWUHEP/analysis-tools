@@ -3,8 +3,9 @@
 import sys
 import pickle
 
-from fitter import *
-from toy_MC import *
+#from fitter import *
+import future_fitter as ff
+import toy_MC as mc
 
 from scipy.optimize import fsolve
 from scipy.stats import chi2, norm
@@ -290,7 +291,7 @@ if __name__ == '__main__':
     ### Make some pseudo-data ###
     print 'Scanning ll ratio over {0} pseudo-datasets...'.format(nsims)
     bg_pdf  = lambda x: 0.5 + bg_params['a1']*x + 0.5*bg_params['a2']*(3*x**2 -1)
-    sims = mc_generator(bg_pdf, n_total, nsims)
+    sims = mc.mc_generator(bg_pdf, n_total, nsims)
 
     if make_plots and ndim == 2:
         fig1, axes1 = plt.subplots(3, 3)
