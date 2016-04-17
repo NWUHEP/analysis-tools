@@ -190,6 +190,9 @@ class NLLFitter:
        self.verbose   = verbose
        self.lmult     = (1., 1.)
 
+    def set_data(self, data):
+        self.data = data    
+
     def regularization(self, a):
         nll = self.model.nll(self.data, a)
         return nll + self.lmult[0] * np.sum(np.abs(a)) + self.lmult[1] * np.sum(a**2)
@@ -209,7 +212,7 @@ class NLLFitter:
 
         return sig, mcorr
 
-    def fit(self, init_params):
+    def fit(self, init_params, calculate_corr=True):
 
         self.model.update_params(init_params, init_params)
         if self.verbose:
@@ -231,8 +234,10 @@ class NLLFitter:
         if result.status == 0:
             if self.verbose:
                 print 'Calculating covariance of parameters...'
-
-            sigma, corr = self.get_corr(result.x)
+            if calculate_corr:
+                sigma, corr = self.get_corr(result.x)
+            else:
+                sigma, corr = 0., 0
             self.model.update_params(result.x, sigma)
             self.model.corr = corr
 
@@ -295,7 +300,6 @@ if __name__ == '__main__':
         bg_model = Model(bg_pdf, ['a1', 'a2'])
         bg_model.set_bounds([(0., 1.), (0., 1.)])
         bg_models[channel] = bg_model
-
         bg_fitter = NLLFitter(bg_model, data)
         bg_result = bg_fitter.fit([0.5, 0.05])
 
@@ -305,7 +309,6 @@ if __name__ == '__main__':
                               (-0.8, -0.2), (0., 0.5),
                               (0., 1.), (0., 1.)])
         sig_models[channel] = sig_model
-
         sig_fitter = NLLFitter(sig_model, data, scaledict=sdict)
         sig_result = sig_fitter.fit((0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1]))
 

@@ -3,16 +3,18 @@
 import sys
 import pickle
 
-#from fitter import *
-import future_fitter as ff
-import toy_MC as mc
+import numpy as np
+import matplotlib.pyplot as plt
 
+from fitter import *
 from scipy.optimize import fsolve
 from scipy.stats import chi2, norm
 from scipy.ndimage.morphology import *
 from scipy.ndimage import *
 from scipy.special import gamma
 from scipy.misc import comb, factorial
+
+import toy_MC as mc
 
 def calculate_euler_characteristic(a):
    '''Calculate the Euler characteristic for level set a'''
