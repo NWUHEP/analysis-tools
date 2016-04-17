@@ -1,0 +1,15 @@
+# Image files #
+###############
+*.png
+*.pdf
+
+# Data formats #
+################
+*.pkl
+*.root
+
+# directories #
+###############
+
+slides
+document
