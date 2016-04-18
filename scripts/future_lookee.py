@@ -43,6 +43,64 @@ class ScanParameters:
         Return an array of tuples to be scanned over.
         '''
         return list(product(*self.scans)), self.div
+
+def q_scan(bg_fitter, sig_fitter, 
+           scan_params, sims, 
+           u=np.linspace(0.01, 25., 1250.), make_plots=False):
+
+    print 'Scanning ll ratio over {0} pseudo-datasets...'.format(nsims)
+
+    scan_vals, scan_div = scan_params.get_scan_vals()
+    paramscan, phiscan, qmaxscan  = [], [], []
+    for i, sim in enumerate(sims):
+        if not i%10: 
+            print 'Carrying out scan {0}...'.format(i+1)
+            
+        ### Use simulated data for fits (of course) ###
+        bg_fitter.data  = sim
+        sig_fitter.data = sim
+
+        ### Fit background model ###
+        bg_result = bg_fitter.fit([0.5, 0.05], calculate_corr=False)
+        bg_nll    = bg_fitter.model.nll(sim, bg_result.x)
+
+        qscan       = []
+        params_best = []
+        qmaxscan.append(0)
+        for scan in scan_vals:
+            if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
+                qscan.append(0.)
+                continue
+
+            ### Set scan values and fit signal model ###
+            sig_fitter.model.bounds[1] = (scan[0], scan[0]+scan_div[0])
+            sig_fitter.model.bounds[2] = (scan[1], scan[1]+scan_div[1])
+            sig_result = sig_fitter.fit((0.01, scan[0], scan[1], bg_result.x[0], bg_result.x[1]),
+                                         calculate_corr=False)
+            sig_nll    = sig_fitter.model.nll(sim, sig_result.x)
+
+            qtest = np.max(2*(bg_nll - sig_nll), 0)
+            qscan.append(qtest)
+            if qtest > qmaxscan[-1]: 
+                params_best = sig_result.x
+                qmaxscan[-1] = qtest
+
+        if make_plots and i < 9:
+            sim = of.scale_data(sim, invert=True)
+            of.fit_plot(sim,
+                        sig_pdf, params_best,    
+                        bg_pdf, bg_model.params,
+                        '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')
+
+        ### Doing calculations
+        qscan = np.array(qscan).reshape(scan_params.nscans)
+        phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
+
+    qmaxscan    = np.array(qmaxscan)
+    phiscan     = np.array(phiscan)
+    paramscan   = np.array(paramscan)
+    return u, qmaxscan, phiscan, paramscan
+
         
 if __name__ == '__main__':
 
@@ -95,7 +153,7 @@ if __name__ == '__main__':
     ### Define scan values here ### 
     scan_params = ScanParameters(names = ['mu', 'sigma'],
                                  bounds = [(-0.9, 0.9), (0.05, 0.05)],
-                                 nscans = [50, 1]
+                                 nscans = [50, 30]
                                 )
     scan_vals, scan_div = scan_params.get_scan_vals()
 
