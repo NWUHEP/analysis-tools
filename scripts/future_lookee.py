@@ -14,7 +14,7 @@ from scipy.stats import norm
 import nllfitter.fitter as of
 import nllfitter.future_fitter as ff
 import nllfitter.lookee as lee
-import toy_MC as mc
+import nllfitter.toy_MC as mc
 
 class ScanParameters:
     '''
@@ -22,6 +22,9 @@ class ScanParameters:
 
     Parameters
     ==========
+    names: name of parameters to scan over
+    bounds: values to scan between (should be an array with 2 values)
+    nscans: number of scan points to consider
     '''
     def __init__(self, names, bounds, nscans, fixed=False):
         self.names  = names
@@ -113,7 +116,7 @@ if __name__ == '__main__':
         ndim    = int(sys.argv[3])
     else:
         channel = '1b1f'
-        nsims   = 100
+        nsims   = 10
         ndim    = 1
 
     #####################
@@ -121,11 +124,13 @@ if __name__ == '__main__':
     #####################
 
     minalgo    = 'SLSQP'
+    channels   = ['1b1f']
     xlimits    = (12., 70.)
     make_plots = True
 
     ### Get data and scale
-    data, n_total = of.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    data_1b1f, n_total_1b1f = of.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    data_1b1c, n_total_1b1c = of.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
 
     #########################
     ### Define fit models ###
@@ -201,7 +206,7 @@ if __name__ == '__main__':
 
         if make_plots and i < 9:
             sim = of.scale_data(sim, invert=True)
-            of.fit_plot(sim,
+            of.fit_plot(sim, xlimits,
                         sig_pdf, params_best,    
                         bg_pdf, bg_model.params,
                         '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')

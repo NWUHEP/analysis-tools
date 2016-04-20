@@ -93,12 +93,12 @@ def calc_local_pvalue(N_bg, N_sig, var_bg, ntoys=1e7):
 def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
     N       = data.size
     #nbins   = int((xlim[1] - xlim[0])/2.)
-    nbins   = 40
+    nbins   = 29
     binning = 2.
 
     x       = np.linspace(-1, 1, num=10000)
     y_sig   = (N*binning/nbins)*sig_pdf(x, params) 
-    y_bg1   = ((1 - params[0])*N*binning/nbins)*bg_pdf(x, params[-3:]) 
+    y_bg1   = ((1 - params[0])*N*binning/nbins)*bg_pdf(x, params[-2:]) 
     y_bg2   = (N*binning/nbins)*bg_pdf(x, bg_params) 
     x       = scale_data(x, xlow=xlim[0], xhigh=xlim[1],invert=True)
 
