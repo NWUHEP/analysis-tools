@@ -11,9 +11,9 @@ from scipy.stats import norm
 #import numpy.random as rng
 #import matplotlib.pyplot as plt
 
-import fitter as of
-import future_fitter as ff
-import lookee as lee
+import nllfitter.fitter as of
+import nllfitter.future_fitter as ff
+import nllfitter.lookee as lee
 import toy_MC as mc
 
 class ScanParameters:

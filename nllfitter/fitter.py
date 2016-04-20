@@ -90,19 +90,19 @@ def calc_local_pvalue(N_bg, N_sig, var_bg, ntoys=1e7):
     return pval
 
 ### Plotter ###
-def fit_plot(data, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
+def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
     N       = data.size
-    nbins   = 29.
-    #nbins   = 54
+    #nbins   = int((xlim[1] - xlim[0])/2.)
+    nbins   = 40
     binning = 2.
 
     x       = np.linspace(-1, 1, num=10000)
     y_sig   = (N*binning/nbins)*sig_pdf(x, params) 
-    y_bg1   = ((1 - params[0])*N*binning/nbins)*bg_pdf(x, params[-2:]) 
+    y_bg1   = ((1 - params[0])*N*binning/nbins)*bg_pdf(x, params[-3:]) 
     y_bg2   = (N*binning/nbins)*bg_pdf(x, bg_params) 
-    x       = scale_data(x, invert=True)
+    x       = scale_data(x, xlow=xlim[0], xhigh=xlim[1],invert=True)
 
-    h = plt.hist(data, bins=nbins, range=[12., 70.], normed=False, histtype='step')
+    h = plt.hist(data, bins=nbins, range=xlim, normed=False, histtype='step')
     bincenters  = (h[1][1:] + h[1][:-1])/2.
     binerrs     = np.sqrt(h[0]) 
     plt.close()
@@ -121,11 +121,11 @@ def fit_plot(data, sig_pdf, params, bg_pdf, bg_params, suffix, path='figures'):
         ax.set_ylim([0., 50.])
     ax.set_xlabel(r'$m_{mumu}$ [GeV]')
     ax.set_ylabel('entries / 2 GeV')
-    ax.set_xlim([12., 70.])
+    ax.set_xlim(xlim)
 
     fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
     fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
-    plt.close()
+    plt.show()
 
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ from scipy.optimize import minimize
 
 from collections import OrderedDict
 
-from fitter import get_data, scale_data, fit_plot
+from nllfitter.fitter import get_data, scale_data, fit_plot
 
 # global options
 np.set_printoptions(precision=3.)
@@ -314,7 +314,7 @@ if __name__ == '__main__':
 
         ### Plots!!! ###
         print 'Making plot of fit results.'
-        fit_plot(scale_data(data, invert=True), sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
+        fit_plot(scale_data(data, invert=True), xlimits, sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
 
 
     ### Prepare data for combined fit
@@ -339,10 +339,10 @@ if __name__ == '__main__':
     sig_result = combination_sig_fitter.fit(param_init)
 
     ### Plot results.  Overlay signal+bg fit, bg-only fit, and data
-    fit_plot(scale_data(datas['1b1f'], invert=True), 
+    fit_plot(scale_data(datas['1b1f'], invert=True), xlimits,
                         sig_pdf, sig_models['1b1f'].params,    
                         bg_pdf, bg_models['1b1f'].params, '1b1f_combined')
-    fit_plot(scale_data(datas['1b1c'], invert=True), 
+    fit_plot(scale_data(datas['1b1c'], invert=True), xlimits,
                         sig_pdf, sig_models['1b1c'].params,    
                         bg_pdf, bg_models['1b1c'].params, '1b1c_combined')
     print ''
