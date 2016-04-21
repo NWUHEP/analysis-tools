@@ -268,6 +268,7 @@ class NLLFitter:
         print self.model.corr
         print '\n'
 
+
 if __name__ == '__main__':
 
     ### Start the timer
