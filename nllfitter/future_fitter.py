@@ -1,3 +1,5 @@
+from __future__ import division
+
 from timeit import default_timer as timer
 
 import pandas as pd
@@ -14,6 +16,20 @@ from nllfitter.fitter import get_data, scale_data, fit_plot
 
 # global options
 np.set_printoptions(precision=3.)
+
+def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
+    
+    xvals = np.linspace(xlim[0], xlim[1], npoints)
+
+    #Calculate CDFs 
+    data_cdf = np.array([data[data < x].size for x in xvals]).astype(float)
+    data_cdf = data_cdf/data.size
+
+    model_pdf = model_pdf(xvals)
+    model_cdf = np.cumsum(model_pdf)*(xlim[1] - xlim[0])/npoints
+
+    return np.abs(model_cdf - data_cdf)
+
 
 class Model:
     '''
