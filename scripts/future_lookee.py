@@ -126,7 +126,7 @@ if __name__ == '__main__':
     minalgo    = 'SLSQP'
     channels   = ['1b1f', '1b1c']
     xlimits    = (12., 70.)
-    make_plots = True
+    make_plots = False
 
     bg_pdf  = lambda x, a:  0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
     sig_pdf = lambda x, a: (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
@@ -167,8 +167,8 @@ if __name__ == '__main__':
     combination_bg_fitter      = ff.NLLFitter(combined_bg_model, [datas[ch] for ch in channels], verbose = False)
     bg_result = combination_bg_fitter.fit([0.5, 0.05, 0.5, 0.05])
 
-    sig_models['1b1f'].parnames = ['A1', 'mu', 'sigma', 'a1', 'a2']
-    sig_models['1b1c'].parnames = ['A2', 'mu', 'sigma', 'b1', 'b2']
+    sig_models['1b1f'].parnames = ['A1', 'mu1', 'sigma', 'a1', 'a2']
+    sig_models['1b1c'].parnames = ['A2', 'mu2', 'sigma', 'b1', 'b2']
     combined_sig_model          = ff.CombinedModel([sig_models[ch] for ch in channels])
     combination_sig_fitter      = ff.NLLFitter(combined_sig_model, [datas[ch] for ch in channels], verbose = False)
     param_init = combined_sig_model.get_params().values()
@@ -180,9 +180,13 @@ if __name__ == '__main__':
     #######################################################
 
     ### Define scan values here ### 
-    scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                 bounds = [(-0.85, 0.85), (0.05, 0.05)],
-                                 nscans = [25, 1]
+    #scan_params = ScanParameters(names = ['mu', 'sigma'],
+    #                             bounds = [(-0.85, 0.85), (0.05, 0.05)],
+    #                             nscans = [25, 1]
+    #                            )
+    scan_params = ScanParameters(names = ['mu1', 'mu2'],
+                                 bounds = [(-0.85, 0.85), (-0.85, 0.85)],
+                                 nscans = [25, 25]
                                 )
     scan_vals, scan_div = scan_params.get_scan_vals()
 
@@ -211,7 +215,7 @@ if __name__ == '__main__':
 
             ### Set scan values and fit signal model ###
             combined_sig_model.bounds[1] = (scan[0], scan[0]+scan_div[0])
-            #combined_sig_model.bounds[2] = (scan[1], scan[1]+scan_div[1])
+            combined_sig_model.bounds[2] = (scan[1], scan[1])#+scan_div[1])
 
             param_init = combined_sig_model.get_params().values()
             sig_result = combination_sig_fitter.fit((0.01, 
@@ -219,6 +223,7 @@ if __name__ == '__main__':
                                                      scan[0], 0.05,
                                                      bg_result.x[0], bg_result.x[1],
                                                      0.01,
+                                                     scan[1],
                                                      bg_result.x[2], bg_result.x[3]), 
                                                      calculate_corr=False)
             sig_nll    = combined_sig_model.nll(sim, sig_result.x)
@@ -230,12 +235,11 @@ if __name__ == '__main__':
                 qmaxscan[-1] = qtest
 
         if make_plots and i < 9:
-            sim = of.scale_data(sim, invert=True)
             of.fit_plot(of.scale_data(sim[0], invert=True), xlimits,
                         sig_pdf, params_best,    
                         bg_pdf, bg_model.params,
                         '{0}_{1}'.format('1b1f_combined',i+1), path='figures/scan_fits')
-            of.fit_plot(of.scale_data(sim[0], invert=True), xlimits,
+            of.fit_plot(of.scale_data(sim[1], invert=True), xlimits,
                         sig_pdf, params_best,    
                         bg_pdf, bg_model.params,
                         '{0}_{1}'.format('1b1c_combined',i+1), path='figures/scan_fits')
