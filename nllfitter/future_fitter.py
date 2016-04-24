@@ -30,6 +30,14 @@ def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
 
     return np.abs(model_cdf - data_cdf)
 
+def calculate_likelihood_ratio(bg_model, s_model, data):
+    '''
+    '''
+    bg_nll = bg_model.nll(data)
+    s_nll = s_model.nll(data)
+
+    return 2*(bg_nll - s_nll)
+
 
 class Model:
     '''
@@ -248,12 +256,13 @@ class NLLFitter:
             print 'Fit finished with status: {0}'.format(result.status)
 
         if result.status == 0:
-            if self.verbose:
-                print 'Calculating covariance of parameters...'
             if calculate_corr:
+                if self.verbose:
+                    print 'Calculating covariance of parameters...'
                 sigma, corr = self.get_corr(result.x)
             else:
-                sigma, corr = 0., 0
+                sigma, corr = result.x, 0.
+
             self.model.update_params(result.x, sigma)
             self.model.corr = corr
 
@@ -303,9 +312,9 @@ if __name__ == '__main__':
     sig_pdf = lambda x, a: (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
 
     ### Fits for individual channels
-    datas      = {}
-    bg_models  = {} 
-    sig_models = {} 
+    datas      = OrderedDict()
+    bg_models  = OrderedDict() 
+    sig_models = OrderedDict() 
     for channel in channels:
 
         print 'Getting data for {0} channel and scaling to lie in range [-1, 1].'.format(channel)
@@ -329,11 +338,13 @@ if __name__ == '__main__':
         sig_fitter = NLLFitter(sig_model, data, scaledict=sdict)
         sig_result = sig_fitter.fit((0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1]))
 
+        q = calculate_likelihood_ratio(bg_model, sig_model, data)
+        print '{0}: q = {1:.2f}'.format(channel, q)
         ### Plots!!! ###
         print 'Making plot of fit results.'
         fit_plot(scale_data(data, invert=True), xlimits, sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
 
-
+    
     ### Prepare data for combined fit
     ### Parameter naming is important.  If a parameter name is the same between
     ### multiple models it will be fixed between each model. 
@@ -348,19 +359,20 @@ if __name__ == '__main__':
 
     ### Perform combined bg fit
     combination_bg_fitter = NLLFitter(combined_bg_model, [datas[ch] for ch in channels])
-    bg_result = combination_bg_fitter.fit([0.5, 0.05, 0.5, 0.05])
+    param_init = combined_bg_model.get_params().values()
+    bg_result = combination_bg_fitter.fit(param_init)
     
     ### Perform combined signal+bg fit
     combination_sig_fitter = NLLFitter(combined_sig_model, [datas[ch] for ch in channels], scaledict=sdict)
     param_init = combined_sig_model.get_params().values()
     sig_result = combination_sig_fitter.fit(param_init)
 
+    q = calculate_likelihood_ratio(combined_bg_model, combined_sig_model, datas.values())
+    print 'combined: q = {0:.2f}'.format(q)
     ### Plot results.  Overlay signal+bg fit, bg-only fit, and data
-    fit_plot(scale_data(datas['1b1f'], invert=True), xlimits,
-                        sig_pdf, sig_models['1b1f'].params,    
-                        bg_pdf, bg_models['1b1f'].params, '1b1f_combined')
-    fit_plot(scale_data(datas['1b1c'], invert=True), xlimits,
-                        sig_pdf, sig_models['1b1c'].params,    
-                        bg_pdf, bg_models['1b1c'].params, '1b1c_combined')
+    for ch in channels:
+        fit_plot(scale_data(datas[ch], invert=True), xlimits,
+                            sig_pdf, sig_models[ch].params,    
+                            bg_pdf, bg_models[ch].params, '{0}_combined'.format(ch))
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

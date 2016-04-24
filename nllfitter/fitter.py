@@ -136,7 +136,7 @@ if __name__ == '__main__':
     # get data and convert variables to be on the range [-1, 1]
     print 'Getting data and scaling to lie in range [-1, 1].'
     minalgo     = 'SLSQP'
-    channel     = '1b1f'
+    channel     = '1b1c'
     xlimits     = (12., 70.)
 
     data, n_total = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
@@ -219,10 +219,10 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple local p-value ###
-    calc_local_pvalue(N_b, N_s, sig_b, 1e8)
+    calc_local_pvalue(N_b, N_s, sig_b, 1e6)
 
     ### Make plots ###
-    fit_plot(scale_data(data, invert=True), combined_model, result.x, legendre_polynomial, bg_result.x, channel)
+    #fit_plot(scale_data(data, invert=True), combined_model, result.x, legendre_polynomial, bg_result.x, channel)
 
     print ''
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))

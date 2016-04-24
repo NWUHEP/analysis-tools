@@ -113,11 +113,9 @@ if __name__ == '__main__':
 
     ### Get command line arguments
     if len(sys.argv) > 2:
-        channel = str(sys.argv[1])
-        nsims   = int(sys.argv[2])
-        ndim    = int(sys.argv[3])
+        nsims   = int(sys.argv[1])
+        ndim    = int(sys.argv[2])
     else:
-        channel = '1b1f'
         nsims   = 10
         ndim    = 1
 
@@ -137,43 +135,54 @@ if __name__ == '__main__':
     ### Define fit models ###
     #########################
 
+    datas      = OrderedDict()
     sims       = OrderedDict()
     bg_models  = OrderedDict() 
     sig_models = OrderedDict() 
     for channel in channels:
 
         data, n_total = of.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+        datas[channel] = data
 
         bg_model = ff.Model(bg_pdf, ['a1', 'a2'])
         bg_model.set_bounds([(-1., 1.), (-1., 1.)])
         bg_models[channel] = bg_model
+        bg_fitter = ff.NLLFitter(bg_model, data, verbose=False)
+        bg_result = bg_fitter.fit([0.5, 0.05])
 
         sig_model = ff.Model(sig_pdf, ['A', 'mu', 'sigma', 'a1', 'a2'])
         sig_model.set_bounds([(0., .5), 
-                              (-0.8, -0.2), (0., 0.5),
+                              (-0.8, -0.2), (0.04, 0.1),
                               (-1., 1.), (-1., 1.)])
         sig_models[channel] = sig_model
+        sig_fitter = ff.NLLFitter(sig_model, data, verbose=False)
+        _ = sig_fitter.fit((0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1]))
 
-        sims[channel] = mc.mc_generator(bg_model.pdf, n_total, nsims)
+        pdf = bg_model.pdf
+        sims[channel] = mc.mc_generator(pdf, n_total, ntoys=nsims)
 
-    bg_models['1b1f'].parnames  = ['a1', 'a2']
-    bg_models['1b1c'].parnames  = ['b1', 'b2']
-    combined_bg_model   = ff.CombinedModel([bg_models[ch] for ch in channels])
-    combination_bg_fitter = ff.NLLFitter(combined_bg_model, None)
+    bg_models['1b1f'].parnames = ['a1', 'a2']
+    bg_models['1b1c'].parnames = ['b1', 'b2']
+    combined_bg_model          = ff.CombinedModel([bg_models[ch] for ch in channels])
+    combination_bg_fitter      = ff.NLLFitter(combined_bg_model, [datas[ch] for ch in channels], verbose = False)
+    bg_result = combination_bg_fitter.fit([0.5, 0.05, 0.5, 0.05])
 
     sig_models['1b1f'].parnames = ['A1', 'mu', 'sigma', 'a1', 'a2']
     sig_models['1b1c'].parnames = ['A2', 'mu', 'sigma', 'b1', 'b2']
-    combined_sig_model = ff.CombinedModel([sig_models[ch] for ch in channels])
-    combination_sig_fitter = ff.NLLFitter(combined_sig_model, None)
+    combined_sig_model          = ff.CombinedModel([sig_models[ch] for ch in channels])
+    combination_sig_fitter      = ff.NLLFitter(combined_sig_model, [datas[ch] for ch in channels], verbose = False)
+    param_init = combined_sig_model.get_params().values()
+    sig_result = combination_sig_fitter.fit(param_init)
 
+    qmax = ff.calculate_likelihood_ratio(combined_bg_model, combined_sig_model, datas.values()) 
     #######################################################
     ### Scan over search dimensions/nuisance parameters ###
     #######################################################
 
     ### Define scan values here ### 
     scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                 bounds = [(-0.9, 0.9), (0.05, 0.05)],
-                                 nscans = [50, 30]
+                                 bounds = [(-0.85, 0.85), (0.05, 0.05)],
+                                 nscans = [25, 1]
                                 )
     scan_vals, scan_div = scan_params.get_scan_vals()
 
@@ -181,7 +190,7 @@ if __name__ == '__main__':
     phiscan     = []
     qmaxscan    = []
     u_0         = np.linspace(0.01, 25., 1250.)
-    for i, sim in enumerate(sims):
+    for i, sim in enumerate(zip(sims['1b1f'], sims['1b1c'])):
         if not i%10: 
             print 'Carrying out scan {0}...'.format(i+1)
             
@@ -190,9 +199,7 @@ if __name__ == '__main__':
         combination_sig_fitter.set_data(sim)
 
         ### Fit background model ###
-        bg_result = combination_bg_fitter.fit([0.5, 0.05, 0.5, 0.05])
-        #bg_result = bg_fitter.fit([0.5, 0.05], calculate_corr=False)
-        bg_nll    = bg_model.nll(sim, bg_result.x)
+        bg_result = combination_bg_fitter.fit([0.5, 0.05, 0.5, 0.05], calculate_corr=False)
 
         qscan       = []
         params_best = []
@@ -203,14 +210,20 @@ if __name__ == '__main__':
                 continue
 
             ### Set scan values and fit signal model ###
-            sig_model.bounds[1] = (scan[0], scan[0]+scan_div[0])
-            sig_model.bounds[2] = (scan[1], scan[1]+scan_div[1])
-            param_init = combined_sig_model.get_params().values()
-            sig_result = combination_sig_fitter.fit(param_init)
-            sig_result = sig_fitter.fit((0.01, scan[0], scan[1], bg_result.x[0], bg_result.x[1]), calculate_corr=False)
-            sig_nll    = sig_model.nll(sim, sig_result.x)
+            combined_sig_model.bounds[1] = (scan[0], scan[0]+scan_div[0])
+            #combined_sig_model.bounds[2] = (scan[1], scan[1]+scan_div[1])
 
-            qtest = np.max(2*(bg_nll - sig_nll), 0)
+            param_init = combined_sig_model.get_params().values()
+            sig_result = combination_sig_fitter.fit((0.01, 
+                                                     #scan[0], scan[1], 
+                                                     scan[0], 0.05,
+                                                     bg_result.x[0], bg_result.x[1],
+                                                     0.01,
+                                                     bg_result.x[2], bg_result.x[3]), 
+                                                     calculate_corr=False)
+            sig_nll    = combined_sig_model.nll(sim, sig_result.x)
+
+            qtest = ff.calculate_likelihood_ratio(combined_bg_model, combined_sig_model, sim) 
             qscan.append(qtest)
             if qtest > qmaxscan[-1]: 
                 params_best = sig_result.x
@@ -218,10 +231,14 @@ if __name__ == '__main__':
 
         if make_plots and i < 9:
             sim = of.scale_data(sim, invert=True)
-            of.fit_plot(sim, xlimits,
+            of.fit_plot(of.scale_data(sim[0], invert=True), xlimits,
                         sig_pdf, params_best,    
                         bg_pdf, bg_model.params,
-                        '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')
+                        '{0}_{1}'.format('1b1f_combined',i+1), path='figures/scan_fits')
+            of.fit_plot(of.scale_data(sim[0], invert=True), xlimits,
+                        sig_pdf, params_best,    
+                        bg_pdf, bg_model.params,
+                        '{0}_{1}'.format('1b1c_combined',i+1), path='figures/scan_fits')
 
         ### Doing calculations
         qscan = np.array(qscan).reshape(scan_params.nscans)
@@ -235,13 +252,13 @@ if __name__ == '__main__':
     ### Calculate LEE correction ###
     ################################
 
-    qmax = 18.3
-    k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
-    k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
+    #k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
+    #k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
     k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
     lee.validation_plots(u_0, phiscan, qmaxscan, 
-                         [nvals1, nvals2, nvals], [k1, k2, k], 
-                         '{0}_{1}D'.format(channel, ndim))
+                         #[nvals1, nvals2, nvals], [k1, k2, k], 
+                         [nvals], [k], 
+                         'combined_{1}D'.format(channel, ndim))
 
     print 'k = {0:.2f}'.format(k)
     for i,n in enumerate(nvals):
