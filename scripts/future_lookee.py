@@ -117,7 +117,7 @@ if __name__ == '__main__':
         ndim    = int(sys.argv[2])
     else:
         nsims   = 10
-        ndim    = 1
+        ndim    = 2
 
     #####################
     ### Configuration ###
@@ -167,8 +167,8 @@ if __name__ == '__main__':
     combination_bg_fitter      = ff.NLLFitter(combined_bg_model, [datas[ch] for ch in channels], verbose = False)
     bg_result = combination_bg_fitter.fit([0.5, 0.05, 0.5, 0.05])
 
-    sig_models['1b1f'].parnames = ['A1', 'mu1', 'sigma', 'a1', 'a2']
-    sig_models['1b1c'].parnames = ['A2', 'mu2', 'sigma', 'b1', 'b2']
+    sig_models['1b1f'].parnames = ['A1', 'mu', 'sigma', 'a1', 'a2']
+    sig_models['1b1c'].parnames = ['A2', 'mu', 'sigma', 'b1', 'b2']
     combined_sig_model          = ff.CombinedModel([sig_models[ch] for ch in channels])
     combination_sig_fitter      = ff.NLLFitter(combined_sig_model, [datas[ch] for ch in channels], verbose = False)
     param_init = combined_sig_model.get_params().values()
@@ -180,14 +180,14 @@ if __name__ == '__main__':
     #######################################################
 
     ### Define scan values here ### 
-    #scan_params = ScanParameters(names = ['mu', 'sigma'],
-    #                             bounds = [(-0.85, 0.85), (0.05, 0.05)],
-    #                             nscans = [25, 1]
-    #                            )
-    scan_params = ScanParameters(names = ['mu1', 'mu2'],
-                                 bounds = [(-0.85, 0.85), (-0.85, 0.85)],
-                                 nscans = [25, 25]
+    scan_params = ScanParameters(names = ['mu', 'sigma'],
+                                 bounds = [(-0.85, 0.85), (0.04, 1.)],
+                                 nscans = [25, 20]
                                 )
+    #scan_params = ScanParameters(names = ['mu1', 'mu2'],
+    #                             bounds = [(-0.8, 0.8), (-0.8, 0.8)],
+    #                             nscans = [25, 25]
+    #                            )
     scan_vals, scan_div = scan_params.get_scan_vals()
 
     paramscan   = []
@@ -215,15 +215,15 @@ if __name__ == '__main__':
 
             ### Set scan values and fit signal model ###
             combined_sig_model.bounds[1] = (scan[0], scan[0]+scan_div[0])
-            combined_sig_model.bounds[2] = (scan[1], scan[1])#+scan_div[1])
+            combined_sig_model.bounds[2] = (scan[1], scan[1]+scan_div[1])
 
             param_init = combined_sig_model.get_params().values()
             sig_result = combination_sig_fitter.fit((0.01, 
-                                                     #scan[0], scan[1], 
-                                                     scan[0], 0.05,
+                                                     scan[0], scan[1], 
+                                                     #scan[0], 0.05,
                                                      bg_result.x[0], bg_result.x[1],
                                                      0.01,
-                                                     scan[1],
+                                                     #scan[1],
                                                      bg_result.x[2], bg_result.x[3]), 
                                                      calculate_corr=False)
             sig_nll    = combined_sig_model.nll(sim, sig_result.x)
