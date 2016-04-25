@@ -271,7 +271,7 @@ if __name__ == '__main__':
     print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     # Save scan data
-    outfile = open('data/lee_scan_{0}_{1}.pkl'.format(channel, nsims), 'w')
+    outfile = open('data/lee_scan_{0}_{1}.pkl'.format('combined', nsims), 'w')
     pickle.dump(u_0, outfile)
     pickle.dump(qmaxscan, outfile)
     pickle.dump(phiscan, outfile)
