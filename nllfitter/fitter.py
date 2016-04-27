@@ -14,7 +14,6 @@ from scipy.stats import chi2, norm
 from scipy import integrate
 from scipy.optimize import minimize
 
-from numba import jit
 
 # global options
 np.set_printoptions(precision=3.)
@@ -78,7 +77,7 @@ def get_corr(f_obj, params, data):
     return sig, mcorr
 
 ### toy MC p-value calculator ###
-def calc_local_pvalue(N_bg, N_sig, var_bg, ntoys=1e7):
+def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
     print ''
     print 'Calculating local p-value and significance based on {0}...'.format(ntoys)
     toys    = rng.normal(N_bg, var_bg, int(ntoys))
@@ -136,7 +135,7 @@ if __name__ == '__main__':
     # get data and convert variables to be on the range [-1, 1]
     print 'Getting data and scaling to lie in range [-1, 1].'
     minalgo     = 'SLSQP'
-    channel     = '1b1c'
+    channel     = '1b1f'
     xlimits     = (12., 70.)
 
     data, n_total = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
@@ -219,7 +218,7 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(qtest)
 
     ### Simple local p-value ###
-    calc_local_pvalue(N_b, N_s, sig_b, 1e6)
+    calc_local_pvalue(N_b, sig_b, N_s, sig_s, 1e6)
 
     ### Make plots ###
     #fit_plot(scale_data(data, invert=True), combined_model, result.x, legendre_polynomial, bg_result.x, channel)

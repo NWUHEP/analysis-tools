@@ -1,5 +1,7 @@
 from fitter import *
 
+import emcee
+
 ### For monte carlo studies ###
 def mc_generator(pdf, samp_per_toy=100, ntoys=1, domain=(-1.,1.)):
     '''Rejection sampling with broadcasting gives approximately the requested number of toys'''
@@ -22,6 +24,50 @@ def mc_generator(pdf, samp_per_toy=100, ntoys=1, domain=(-1.,1.)):
     #    x = np.concatenate((x, mc_generator(pdf, samp_per_toy, (ntoys-x.shape[0]), domain)))
 
     return x
+
+def lnprob(x, pdf, bounds):
+    if np.any(x < bounds[0]) or np.any(x > bounds[1]):
+        return -np.inf
+    else:
+        return np.log(pdf(x))
+
+def emcee_generator_1D(pdf, samples_per_toy=100, ntoys=10, bounds=(-1, 1)):
+    '''
+    Wrapper for emcee the MCMC hammer
+
+    Parameters
+    ==========
+    pdf: distribution to be samples
+    samples_per_toy: number of draws to be assigned to each pseudo-experiment
+    ntoys: number of toy models to produce
+    bounds: (xmin, xmax) for values of X
+    '''
+    ndim = 1
+    nwalkers = 100
+    #lnprob = lambda x: np.log(pdf(x))*np.any(x > bounds[0])*np.any(x < bounds[1])
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[pdf, bounds])
+
+    p0 = [np.random.rand(1) for i in xrange(nwalkers)]
+    pos, prob, state = sampler.run_mcmc(p0, 100)
+    sampler.reset()
+    sampler.run_mcmc(pos, 1000, rstate0=state)
+
+    # Print out the mean acceptance fraction. In general, acceptance_fraction
+    # has an entry for each walker so, in this case, it is a 250-dimensional
+    # vector.
+    print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
+    
+    # Estimate the integrated autocorrelation time for the time series in each
+    # parameter.
+    print("Autocorrelation time:", sampler.get_autocorr_time())
+    
+    # Finally, you can plot the projected histograms of the samples using
+    # matplotlib as follows (as long as you have it installed).
+
+    plt.hist(sampler.flatchain[:,0], 100)
+    plt.show()
+
+    return sampler.flatchain[:, 0]
 
 def local_sig(p, ntoys, samp_per_toy):
     bg_pdf  = lambda x: 0.5 + p['a1']*x + 0.5*p['a2']*(3*x**2 -1)
