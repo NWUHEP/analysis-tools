@@ -1,18 +1,17 @@
 from __future__ import division
 
 from timeit import default_timer as timer
+from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
 import numdifftools as nd
-
 #from scipy import stats
 from scipy.stats import chi2, norm 
 from scipy.optimize import minimize
 
-from collections import OrderedDict
-
-from nllfitter.fitter import get_data, scale_data, fit_plot
+from nllfitter.fit_tools import get_data, scale_data, fit_plot, bg_pdf, sig_pdf
+from lmfit import Parameters
 
 # global options
 np.set_printoptions(precision=3.)
@@ -41,59 +40,62 @@ def calculate_likelihood_ratio(bg_model, s_model, data):
 
 class Model:
     '''
-    Class for carrying model information.  Needs to be provided with function
-    for the background and signal models in the format p(data, parameters)
+    Model class that will be passed to NLLFitter to fit to a dataset.  Requires
+    that the model pdf be specified and the model parameters.  The model
+    parameters should be provided in a lmfit Parameters class object
 
     Parameters
     ==========
     model  : a function describing the model that takes argurements (params, data)
-    params : names of parameters
-    parinit : (optional) initial values for the parameters.  Useful when dealing with nonstandard pdfs.
+    parameters: lmfit Parameter object
     '''
     def __init__(self, model, params, parinit=None):
         
-        self.model     = model
-        self.parnames  = params
-        self.params    = np.array(len(params)*[1.,])
-        self.param_err = np.array(len(params)*[1.,])
-        self.corr      = None
+        self.model      = model
+        self.parameters = params
+        self.corr       = None
 
-        self.bounds       = np.size(params)*[(None, None), ]
-        self.constaints   = None
-    
-    def set_bounds(self, bounds):
-        '''Returns bounds for fit'''
-        self.bounds = bounds
-
-    def set_constraints(self, cons):
-        '''Returns constraints on fit'''
-        self.contraints = cons
-
-    def get_params(self, as_dict=True, include_errors=False):
+    def set_bounds(self, param_name, bounds):
         '''
-        Returns a dictionary of parameters where the keys are the parameter
-        names and values are tuples with the first entry being the parameter
-        value and the second being the uncertainty on the parameter.
-        '''
-        if include_errors:
-            params = zip(self.parnames, zip(self.params, self.param_err))
-        else:
-            params = zip(self.parnames, self.params)
+        Set bounds for given parameter.
 
-        if as_dict:
-            return OrderedDict(params)
-        else:
-            return params
+        Parameters:
+        ===========
+        param_name: name of parameter to be updated
+        bounds: tuple with first entry being the min and second being the max
+        '''
+        self.parameters[param_name].set(min=bounds[0])
+        self.parameters[param_name].set(max=bounds[1])
+
+    def set_constraints(self, param_name, cons):
+        '''
+        Set constraint expression for given parameter.
+
+        Parameters:
+        ===========
+        param_name: name of parameter to be updated
+        cons: string expression specifying constraint on give parameter
+        '''
+        self.parameters[param_name].set(expr=cons)
+
+    def get_params(self):
+        '''
+        Returns parameters object
+        '''
+        return self.parameters
 
     def get_pdf(self):
         '''
         Returns the pdf as a function with current values of parameters
         '''
-        return lambda x: self.model(x, self.params)
+        return lambda x: self.model(x, self.parameters)
 
     def update_params(self, params, param_err):
-        self.params    = params
-        self.param_err = param_err
+        '''
+        Updates the values and errors of each of the parameters.
+        '''
+        for pname in self.parameters.keys():
+            self.parameters[pname].set(value=params[pname])
 
     def pdf(self, X, a=None):
         '''
@@ -301,78 +303,45 @@ if __name__ == '__main__':
     verbose = True
 
     ### get data and convert variables to be on the range [-1, 1]
-    minalgo  = 'SLSQP'
-    channels = ['1b1f', '1b1c']
-    xlimits  = (12., 70.)
+    xlimits  = (100., 180.)
     sdict    = {'mu': lambda x: scale_data(x, invert = True),
-                'sigma': lambda x: x*(xlimits[1] - xlimits[0])/2.,
+                'sigma': lambda x: x*(xlimits[1] - xlimits[0])/2.
                }
 
-    bg_pdf  = lambda x, a:  0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
-    sig_pdf = lambda x, a: (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
+    print 'Getting data and scaling to lie in range [-1, 1].'.format(channel)
+    data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    print 'Analyzing {0} events...'.format(n_total)
 
-    ### Fits for individual channels
-    datas      = OrderedDict()
-    bg_models  = OrderedDict() 
-    sig_models = OrderedDict() 
-    for channel in channels:
+    ### Define bg model and carry out fit ###
+    bg_params = Parameters()
+#                      (Name , Value , Vary , Min  , Max  , Expr)
+    bg_params.add_many(('a1' , 0.    , True , None , None , None),
+                       ('a2' , 0.    , True , None , None , None),
+                       ('a3' , 0.    , True , None , None , None))
+    bg_model = Model(bg_pdf, bg_params)
+    bg_model.set_bounds([(None, None), (None, None), (None, None)])
+    bg_fitter = NLLFitter(bg_model, data)
+    bg_result = bg_fitter.fit([0.5, 0.05, 0.05])
 
-        print 'Getting data for {0} channel and scaling to lie in range [-1, 1].'.format(channel)
-        data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-        datas[channel] = data
-        print 'Analyzing {0} events...'.format(n_total)
+    ### Define bg+sig model and carry out fit ###
+    sig_model = Model(sig_pdf, ['A', 'mu', 'sigma', 'a1', 'a2'])
+    sig_model.set_bounds([(0., .5), 
+                          (-0.9, -0.2), (0., 1.),
+                          (None, None), (None, None), (None, None)
+                         ])
+    sig_fitter = NLLFitter(sig_model, data, scaledict=sdict)
+    sig_result = sig_fitter.fit((0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1], bg_result.x[2]))
 
-        ### Define bg model and carry out fit ###
-        bg_model = Model(bg_pdf, ['a1', 'a2'])
-        bg_model.set_bounds([(0., 1.), (0., 1.)])
-        bg_models[channel] = bg_model
-        bg_fitter = NLLFitter(bg_model, data)
-        bg_result = bg_fitter.fit([0.5, 0.05])
+    q = calculate_likelihood_ratio(bg_model, sig_model, data)
+    print '{0}: q = {1:.2f}'.format(channel, q)
 
-        ### Define bg+sig model and carry out fit ###
-        sig_model = Model(sig_pdf, ['A', 'mu', 'sigma', 'a1', 'a2'])
-        sig_model.set_bounds([(0., .5), 
-                              (-0.8, -0.2), (0., 0.5),
-                              (0., 1.), (0., 1.)])
-        sig_models[channel] = sig_model
-        sig_fitter = NLLFitter(sig_model, data, scaledict=sdict)
-        sig_result = sig_fitter.fit((0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1]))
+    ### Plots!!! ###
+    print 'Making plot of fit results.'
+    fit_plot(scale_data(data, invert=True), xlimits, sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
 
-        q = calculate_likelihood_ratio(bg_model, sig_model, data)
-        print '{0}: q = {1:.2f}'.format(channel, q)
-        ### Plots!!! ###
-        print 'Making plot of fit results.'
-        fit_plot(scale_data(data, invert=True), xlimits, sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
-
-    
-    ### Prepare data for combined fit
-    ### Parameter naming is important.  If a parameter name is the same between
-    ### multiple models it will be fixed between each model. 
-
-    bg_models['1b1f'].parnames  = ['a1', 'a2']
-    bg_models['1b1c'].parnames  = ['b1', 'b2']
-    combined_bg_model   = CombinedModel([bg_models[ch] for ch in channels])
-
-    sig_models['1b1f'].parnames = ['A1', 'mu', 'sigma', 'a1', 'a2']
-    sig_models['1b1c'].parnames = ['A2', 'mu', 'sigma', 'b1', 'b2']
-    combined_sig_model = CombinedModel([sig_models[ch] for ch in channels])
-
-    ### Perform combined bg fit
-    combination_bg_fitter = NLLFitter(combined_bg_model, [datas[ch] for ch in channels])
-    param_init = combined_bg_model.get_params().values()
-    bg_result = combination_bg_fitter.fit(param_init)
-    
-    ### Perform combined signal+bg fit
-    combination_sig_fitter = NLLFitter(combined_sig_model, [datas[ch] for ch in channels], scaledict=sdict)
-    param_init = combined_sig_model.get_params().values()
-    sig_result = combination_sig_fitter.fit(param_init)
-
-    q = calculate_likelihood_ratio(combined_bg_model, combined_sig_model, datas.values())
-    print 'combined: q = {0:.2f}'.format(q)
     ### Plot results.  Overlay signal+bg fit, bg-only fit, and data
-    for ch in channels:
-        fit_plot(scale_data(datas[ch], invert=True), xlimits,
-                            sig_pdf, sig_models[ch].params,    
-                            bg_pdf, bg_models[ch].params, '{0}_combined'.format(ch))
+    fit_plot(scale_data(data, invert=True), xlimits,
+                        sig_pdf, sig_model.params,    
+                        bg_pdf, bg_model.params, '{0}'.format(channel))
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

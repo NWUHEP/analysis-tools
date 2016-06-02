@@ -2,11 +2,11 @@
 
 import sys
 import pickle
+from timeit import default_timer as timer
 
 import numpy as np
 import matplotlib.pyplot as plt
-
-from fitter import *
+from scipy.optimize import minimize
 from scipy.optimize import fsolve
 from scipy.stats import chi2, norm
 from scipy.ndimage.morphology import *
@@ -14,7 +14,8 @@ from scipy.ndimage import *
 from scipy.special import gamma
 from scipy.misc import comb, factorial
 
-import toy_MC as mc
+import nllfitter.fitter as of
+import nllfitter.toy_MC as mc
 
 def calculate_euler_characteristic(a):
    '''Calculate the Euler characteristic for level set a'''
@@ -66,7 +67,7 @@ def exp_phi_u(u, n_j, k=1):
     '''
     return chi2.sf(u,k) + np.sum([n*rho_g(u, j+1, k) for j,n in enumerate(n_j)], axis=0)
 
-def lee_objective(a, Y, dY, X):
+def lee_objective(a, Y, dY, X, k0):
     '''
     Defines the objective function for regressing the <EC> of our chi2 field.
     The minimization should be done on the quadratic cost weighted by the
@@ -89,9 +90,9 @@ def lee_objective(a, Y, dY, X):
     L1_reg  = np.sum(np.abs(a)) 
     L2_reg  = np.sum(a**2)
 
-    return qcost #+ 0.5*ubound
+    return qcost + (a[0] - k0)**2 + 0.5*ubound
 
-def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
+def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     '''
     Carries GV style look elsewhere corrections with a twist.  Allows for an
     arbitrary number of search dimensions/nuisance parameters and allows the
@@ -119,14 +120,14 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=None):
     ### if variance on phi is 0, use the poisson error on dY ###
     var_phi[var_phi==0] = 1./np.sqrt(phiscan.shape[0])
     
-    if not k:
+    if do_fit:
         print 'd.o.f. not specified => fit the EC with scan free parameters N_j and k...'
         bnds   = [(1, None)] + j*[(0., None)]
         p_init = [1.] + j*[1.,]
         result = minimize(lee_objective,
                           p_init,
                           method = 'Nelder-Mead',
-                          args   = (exp_phi, var_phi, u),
+                          args   = (exp_phi, var_phi, u, k),
                           #bounds = bnds
                           )
         k = result.x[0]
@@ -194,6 +195,7 @@ def excursion_plot_1d(x, qscan, u1, suffix, path):
     ax.set_xlabel(r'$M_{\mu\mu}$ [GeV]')
     ax.set_ylabel('q')
     ax.set_xlim([12., 70.])
+    ax.set_ylim([0., 25.])
     ax.plot(x, qscan, 'r-', linewidth=2.)
     ax.plot([12., 70.], [u1, u1], 'k-', linewidth=2.)
 
@@ -231,11 +233,12 @@ if __name__ == '__main__':
         bg_params       = {'a1':0.173, 'a2':0.055}
         bg_params_err   = {'a1':0.039, 'a2':0.049}
 
-    scan_bnds = [(-0.9, 0.9), (0.04, 0.1)]
+    scan_bnds = [(-0.8, 0.8), (0.04, 0.1)]
     if ndim == 1:
         nscan = (nscan[0], 1)
         scan_vals = np.array([(n1, params['width']) for n1 in np.linspace(scan_bnds[0][0], scan_bnds[0][1], nscan[0])]) 
         scan_div = ((scan_bnds[0][1] - scan_bnds[0][0])/nscan[0], 0.)
+
     elif ndim == 2:
         scan_vals = np.array([(n1, n2) 
                              for n1 in np.linspace(scan_bnds[0][0], scan_bnds[0][1], nscan[0]) 
@@ -243,22 +246,22 @@ if __name__ == '__main__':
         scan_div = ((scan_bnds[0][1] - scan_bnds[0][0])/nscan[0], (scan_bnds[1][1] - scan_bnds[1][0])/nscan[1])
 
     ### Get data and scale
-    data, n_total = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    data, n_total = of.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
 
     #######################
     ### Calculate LEE2D ###
     #######################
 
     ### scan over test data
-    bnds    = [(0., 1.0), # A
-               2*(params['mu'], ), 2*(params['width'], ), # mean, sigma
-               (None, None), (None, None) # a1, a2 
-               ]
-    nll_bg = bg_objective(bg_params.values(), data)
+    bnds = [(0., 1.), # A
+            2*(params['mu'], ), 2*(params['width'], ), # mean, sigma
+            (None, None), (None, None) # a1, a2 
+            ]
 
     print 'Scanning ll ratio over data...'
-    qscan = []
-    qmax  = 2*(nll_bg - bg_sig_objective(params.values(), data))
+    qscan  = []
+    nll_bg = of.bg_objective(bg_params.values(), data)
+    qmax   = 0.
     for i, scan in enumerate(scan_vals):
         # Remove edge effects
         if scan[0] - 3*scan[1] < -1 or scan[0] + 3*scan[1] > 1: 
@@ -266,30 +269,37 @@ if __name__ == '__main__':
             continue
 
         bnds[1] = (scan[0], scan[0]+scan_div[0])
-        bnds[2] = (scan[1], scan[1]+scan_div[1])
-        result = minimize(regularization, 
+        #bnds[2] = (scan[1], scan[1]+scan_div[1])
+        bnds[2] = (0.04, 0.1)
+        result = minimize(of.regularization, 
                           (1., scan[0], scan[1], params['a1'], params['a2']),
                           method = 'SLSQP',
-                          args   = (data, bg_sig_objective, 1., 1.),
+                          args   = (data, of.bg_sig_objective, 0., 0.),
                           bounds = bnds
                           )
-        qtest = 2*(nll_bg - bg_sig_objective(result.x, data))
+        nll_sig = of.bg_sig_objective(result.x, data)
+        qtest = 2*(nll_bg - nll_sig)
         qscan.append(qtest)
-        if qtest > qmax: qmax = qtest
+        if qtest > qmax: 
+            qmax = qtest
 
     print 'Scan over data done: qmax = {0:.1f}'.format(qmax)
-    x       = scale_data(scan_vals[:,0].reshape(nscan), invert=True)
+    x       = of.scale_data(scan_vals[:,0].reshape(nscan), invert=True)
     y       = 0.5*(xlimits[1] - xlimits[0])*scan_vals[:,1].reshape(nscan)
     qscan   = np.array(qscan).reshape(nscan)
 
-    if make_plots and ndim == 2:
-        fig, ax = plt.subplots()
-        cmap = ax.pcolormesh(x, y, qscan, cmap='viridis', vmin=0.)#, vmax=25.)
-        fig.colorbar(cmap)
-        ax.set_xlabel('M_{mumu} [GeV]')
-        ax.set_ylabel('width [GeV]')
-        fig.savefig('figures/qscan_data_{0}.png'.format(channel))
-        plt.close()
+    if make_plots:
+        if ndim == 1:
+            excursion_plot_1d(np.linspace(xlimits[0], xlimits[1], nscan[0]), qscan, 2.,
+                             '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')
+        elif ndim == 2:
+            fig, ax = plt.subplots()
+            cmap = ax.pcolormesh(x, y, qscan, cmap='viridis', vmin=0.)#, vmax=25.)
+            fig.colorbar(cmap)
+            ax.set_xlabel('M_{mumu} [GeV]')
+            ax.set_ylabel('width [GeV]')
+            fig.savefig('figures/qscan_data_{0}.png'.format(channel))
+            plt.close()
 
     ### Make some pseudo-data ###
     print 'Scanning ll ratio over {0} pseudo-datasets...'.format(nsims)
@@ -307,49 +317,52 @@ if __name__ == '__main__':
         if not i%10: 
             print 'Carrying out scan {0}...'.format(i+1)
 
-        bg_result = minimize(regularization, 
+        bg_result = minimize(of.regularization, 
                              (bg_params['a1'], bg_params['a2']),
                              method = 'SLSQP',
-                             args   = (sim, bg_objective, 1., 1.),
+                             args   = (sim, of.bg_objective, 1., 1.),
                              bounds = bnds[-2:]
                              )
-        nll_bg = bg_objective(bg_result.x, sim)
+        nll_bg = of.bg_objective(bg_result.x, sim)
 
         qscan       = []
         params_best = []
         qmaxscan.append(0)
         for j, scan in enumerate(scan_vals):
-            if scan[0] - 2*scan[1] < -1 or scan[0] + 2*scan[1] > 1: 
+            if scan[0] - 3*scan[1] < -1 or scan[0] + 3*scan[1] > 1: 
                 qscan.append(0.)
                 continue
 
             bnds[1] = (scan[0], scan[0]+scan_div[0])
-            bnds[2] = (scan[1], scan[1]+scan_div[1])
-            result = minimize(regularization, 
-                                   (1., scan[0], scan[1], bg_result.x[0], bg_result.x[1]),
-                                   method = 'SLSQP',
-                                   args   = (sim, bg_sig_objective),
-                                   bounds = bnds
-                                   )
+            #bnds[2] = (scan[1], scan[1]+scan_div[1])
+            bnds[2] = (0.04, 0.1)
+            result = minimize(of.regularization, 
+                              (1., scan[0], scan[1], bg_result.x[0], bg_result.x[1]),
+                              method = 'SLSQP',
+                              args   = (sim, of.bg_sig_objective),
+                              bounds = bnds
+                              )
 
-            qtest = 2*(nll_bg - bg_sig_objective(result.x, sim))
+            nll_sig = of.bg_sig_objective(result.x, sim)
+            qtest = 2*(nll_bg - nll_sig)
             qscan.append(qtest)
             if qtest > qmaxscan[-1]: 
                 params_best = result.x
                 qmaxscan[-1] = qtest
 
-        if make_plots and i < 9:
-            sim = scale_data(sim, invert=True)
-            fit_plot(sim, combined_model, params_best, 
-                     legendre_polynomial, bg_result.x, 
+        if make_plots and i < 100:
+            sim = of.scale_data(sim, invert=True)
+            of.fit_plot(sim, (12, 70), of.combined_model, params_best, 
+                     of.legendre_polynomial, bg_result.x, 
                      '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')
             if ndim == 1:
-                excursion_plot_1d(np.linspace(xlimits[0], xlimits[1], nscan[0]), qscan, 1.,
+                excursion_plot_1d(np.linspace(xlimits[0], xlimits[1], nscan[0]), qscan, 2.,
                                  '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')
 
         ### Doing calculations
         qscan = np.array(qscan).reshape(nscan)
         phiscan.append([calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
+        paramscan.append(params_best)
         
         if make_plots and i < 9 and ndim == 2: 
             cmap = axes1[i/3][i%3].pcolormesh(x, y, qscan, cmap='viridis', vmin=0., vmax=10.)
@@ -363,8 +376,8 @@ if __name__ == '__main__':
         plt.close()
 
     ### Calculate LEE correction ###
-    k1, nvals1, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
-    k2, nvals2, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
+    k1, nvals1, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
+    k2, nvals2, p_global = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
     k, nvals, p_global   = lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
     #validation_plots(u_0, phiscan, qmaxscan, [nvals], [k], '{0}_{1}D'.format(channel, ndim))
     validation_plots(u_0, phiscan, qmaxscan, [nvals1, nvals2, nvals], [k1, k2, k], '{0}_{1}D'.format(channel, ndim))
@@ -372,6 +385,7 @@ if __name__ == '__main__':
     print 'k = {0:.2f}'.format(k)
     for i,n in enumerate(nvals):
         print 'N{0} = {1:.2f}'.format(i, n)
+
     print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
     print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
