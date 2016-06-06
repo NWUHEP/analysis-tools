@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import chi2, norm 
 from scipy.optimize import minimize
 
-from nllfitter.fit_tools import get_data, fit_plot, get_corr
-from lmfit import Parameter, Parameters, Minimizer
+from nllfitter.fit_tools import get_data, fit_plot, get_corr, scale_data
+from lmfit import Parameter, Parameters, Minimizer, report_fit
 import lmfit
 
 # global options
@@ -22,7 +22,7 @@ np.set_printoptions(precision=3.)
 ### PDF definitions ###
 def bg_pdf(x, a): 
     '''
-    Second order Legendre Polynomial with constant term set to 0.5.
+    Third order Legendre Polynomial with constant term set to 0.5.
 
     Parameters:
     ===========
@@ -60,11 +60,14 @@ class Model:
         self.corr       = None
 
 
-    def get_parameters(self):
+    def get_parameters(self, by_val=False):
         '''
         Returns parameters object
         '''
-        return self.parameters
+        if by_val:
+            return [p.value for p in self.parameters.values()]
+        else:
+            return self.parameters
 
     def get_pdf(self):
         '''
@@ -117,76 +120,6 @@ class Model:
         nll = -np.sum(np.log(pdf))
         return nll
 
-class CombinedModel():
-    '''
-    Multiple model class.  
-
-    Parameters
-    ==========
-    models: an array of Model instances
-    '''
-    def __init__(self, models, parinit='None'):
-        self.models = models
-        self.initialize()
-        self.corr = None
-
-    def initialize(self):
-        '''
-        Returns a dictionary of parameters where the keys are the parameter
-        names and values are tuples with the first entry being the parameter
-        value and the second being the uncertainty on the parameter.
-        '''
-        params = OrderedDict() 
-        bounds = OrderedDict() 
-        for m in self.models:
-            p = m.get_parameters()
-            b = OrderedDict(zip(m.parnames, m.bounds))
-
-            bounds.update(b)
-            params.update(p)
-
-        self.parnames  = params.keys()
-        self.params    = [params[n] for n in self.parnames]
-        self.param_err = np.zeros(np.size(self.params))
-        self.bounds    = [bounds[n] for n in self.parnames]
-
-    def get_parameters(self, as_dict=True, include_errors=False):
-        '''
-        Returns a dictionary of parameters where the keys are the parameter
-        names and values are tuples with the first entry being the parameter
-        value and the second being the uncertainty on the parameter.
-        '''
-        if include_errors:
-            params = zip(self.parnames, zip(self.params, self.param_err))
-        else:
-            params = zip(self.parnames, self.params)
-
-        if as_dict:
-            return OrderedDict(params)
-        else:
-            return params
-            
-    def update_params(self, params, param_err):
-        self.params     = params
-        self.param_err  = param_err 
-
-        pdict = self.get_parameters(include_errors=True)
-        for m in self.models:
-            m.params    = [pdict[n][0] for n in m.parnames]
-            m.param_err = [pdict[n][1] for n in m.parnames]
-
-    def nll(self, X, a=None):
-
-        if np.any(a) == None:
-            params = self.get_parameters()
-        else:
-            params = OrderedDict(zip(self.parnames, a)) 
-
-        nll = 0.
-        for m, x in zip(self.models, X):
-            nll += m.nll(x, [params[name] for name in m.parnames])
-
-        return nll
 
 def nll(params, data, pdf):
     '''
@@ -219,7 +152,7 @@ if __name__ == '__main__':
 
     print 'Getting data and scaling to lie in range [-1, 1].'
     data, n_total  = get_data('data/toy_hgammagamma.txt', 'dimuon_mass', xlimits)
-    print 'Analyzing {0} events...'.format(n_total)
+    print 'Analyzing {0} events...\n'.format(n_total)
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
@@ -230,17 +163,21 @@ if __name__ == '__main__':
 
     bg_model  = Model(bg_pdf, bg_params)
     bg_fitter = Minimizer(nll, bg_params, fcn_args=(data, bg_pdf))
-    bg_result = bg_fitter.scalar_minimize('SLSQP')
+    bg_result = bg_fitter.minimize('SLSQP')
     bg_params = bg_result.params
     sigma, corr = get_corr(partial(nll, data=data, pdf=bg_pdf), 
                            [p.value for p in bg_params.values()]) 
     bg_model.update_parameters(bg_params, (sigma, corr))
+    report_fit(bg_params, show_correl=False)
+    print ''
+    print '[[Correlation matrix]]\n'
+    print corr, '\n'
 
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
     sig_params.add_many(
-                        ('A'     , 0.   , True , 0.   , 1.   , None),
-                        ('mu'    , 0.   , True , -0.8 , 0.8  , None),
+                        ('A'     , 0.01 , True , 0.   , 1.   , None),
+                        ('mu'    , -0.3 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.01 , 1.   , None),
                         ('a1'    , 0.   , True , None , None , None),
                         ('a2'    , 0.   , True , None , None , None),
@@ -249,11 +186,15 @@ if __name__ == '__main__':
 
     sig_model  = Model(sig_pdf, sig_params)
     sig_fitter = Minimizer(nll, sig_params, fcn_args=(data, sig_pdf))
-    sig_result = sig_fitter.scalar_minimize('SLSQP')
+    sig_result = sig_fitter.minimize('SLSQP')
     sig_params = sig_result.params
     sigma, corr = get_corr(partial(nll, data=data, pdf=sig_pdf), 
                            [p.value for p in sig_params.values()]) 
     sig_model.update_parameters(sig_params, (sigma, corr))
+    report_fit(sig_model.get_parameters(), show_correl=False)
+    print ''
+    print '[[Correlation matrix]]\n'
+    print corr, '\n'
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
@@ -261,13 +202,9 @@ if __name__ == '__main__':
     print '{0}: q = {1:.2f}'.format('h->gg', q)
 
     ### Plots!!! ###
-    print 'Making plot of fit results.'
-    fit_plot(scale_data(data, invert=True), xlimits, sig_pdf, sig_result.x, bg_pdf, bg_result.x, channel)
-
-    ### Plot results.  Overlay signal+bg fit, bg-only fit, and data
-    fit_plot(scale_data(data, invert=True), xlimits,
-                        sig_pdf, sig_model.params,    
-                        bg_pdf, bg_model.params, '{0}'.format(channel))
-    '''
+    print 'Making plot of fit results...'
+    fit_plot(scale_data(data, xmin=100, xmax=180, invert=True), xlimits,
+             sig_pdf, sig_model.get_parameters(by_val=True),    
+             bg_pdf, bg_model.get_parameters(by_val=True), 'hgg')
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

@@ -20,11 +20,11 @@ from scipy.optimize import minimize
 np.set_printoptions(precision=3.)
 
 ### Data manipulation ###
-def scale_data(x, xlow=12., xhigh=70., invert=False):
+def scale_data(x, xmin=12., xmax=70., invert=False):
     if not invert:
-        return 2*(x - xlow)/(xhigh - xlow) - 1
+        return 2*(x - xmin)/(xmax - xmin) - 1
     else:
-        return 0.5*(x + 1)*(xhigh - xlow) + xlow
+        return 0.5*(x + 1)*(xmax - xmin) + xmin
 
 def get_data(filename, varname, xlim):
     '''
@@ -33,7 +33,7 @@ def get_data(filename, varname, xlim):
     ntuple  = pd.read_csv(filename)
     data    = ntuple[varname].values
     data    = data[np.all([(data > xlim[0]), (data < xlim[1])], axis=0)]
-    data    = np.apply_along_axis(scale_data, 0, data, xlow=xlim[0], xhigh=xlim[1])
+    data    = np.apply_along_axis(scale_data, 0, data, xmin=xlim[0], xmax=xlim[1])
     n_total = data.size
 
     return data, n_total
@@ -106,7 +106,7 @@ def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='plots
     y_sig   = (N*binning/nbins)*sig_pdf(x, params) 
     y_bg1   = (1 - params[0]) * N * binning/nbins * bg_pdf(x, params[3:]) 
     y_bg2   = (N*binning/nbins)*bg_pdf(x, bg_params) 
-    x       = scale_data(x, xlow=xlim[0], xhigh=xlim[1],invert=True)
+    x       = scale_data(x, xmin=xlim[0], xmax=xlim[1],invert=True)
 
     # Get histogram of data points
     h = plt.hist(data, bins=nbins, range=xlim, normed=False, histtype='step')
@@ -123,11 +123,19 @@ def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='plots
     if suffix[:4] == '1b1f':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
         ax.set_ylim([0., 25.])
+        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
     elif suffix[:4] == '1b1c':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 central jet + MET < 40 + $\Delta\phi (\mu\mu ,bj)$')
         ax.set_ylim([0., 50.])
-    ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-    ax.set_ylabel('entries / 2 GeV')
+        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+    elif suffix[:4] == 'hgg':
+        ax.set_title(r'$h(125)\rightarrow \gamma\gamma$')
+        #ax.set_ylim([0., 50.])
+        ax.set_xlabel(r'$m_{\gamma\gamma}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+
     ax.set_xlim(xlim)
 
     fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
