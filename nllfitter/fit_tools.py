@@ -37,29 +37,51 @@ def get_data(filename, varname, xlim):
     n_total = data.size
 
     return data, n_total
+  
+def get_corr(func, a):
+	'''
+    Given a function func and parameters a, this will numerically estimate the
+    covariance of the parameters about the given values
 
-### PDF definitions ###
-def bg_pdf(x, a): 
-    '''
-    Second order Legendre Polynomial with constant term set to 0.5.
+	Parameters:
+	===========
+    func : function used to estimate covariance of parameters
+    a    : parameters
+	'''
 
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (a1 and a2)
-    '''
-    return 0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
+	hcalc   = nd.Hessian(func, step=0.01, method='central', full_output=True) 
+	hobj    = hcalc(a)[0]
+	hinv    = np.linalg.inv(hobj)
 
-def sig_pdf(x, a):
-    '''
-    Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
+	# get uncertainties on parameters
+	sig = np.sqrt(hinv.diagonal())
 
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (a1, a2, mu, and sigma)
+	# calculate correlation matrix
+	mcorr = hinv/np.outer(sig, sig)
+
+	return sig, mcorr
+
+def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
+    
+    xvals = np.linspace(xlim[0], xlim[1], npoints)
+
+    #Calculate CDFs 
+    data_cdf = np.array([data[data < x].size for x in xvals]).astype(float)
+    data_cdf = data_cdf/data.size
+
+    model_pdf = model_pdf(xvals)
+    model_cdf = np.cumsum(model_pdf)*(xlim[1] - xlim[0])/npoints
+
+    return np.abs(model_cdf - data_cdf)
+
+def calculate_likelihood_ratio(bg_model, s_model, data):
     '''
-    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
+    '''
+    bg_nll  = bg_model.nll(data)
+    s_nll   = s_model.nll(data)
+
+    return 2*(bg_nll - s_nll)
+
 
 ### toy MC p-value calculator ###
 def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):

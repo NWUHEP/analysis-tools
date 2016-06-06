@@ -2,41 +2,45 @@ from __future__ import division
 
 from timeit import default_timer as timer
 from collections import OrderedDict
+from functools import partial
 
 import pandas as pd
 import numpy as np
 import numdifftools as nd
+import matplotlib.pyplot as plt
 #from scipy import stats
 from scipy.stats import chi2, norm 
 from scipy.optimize import minimize
 
-from nllfitter.fit_tools import get_data, scale_data, fit_plot, bg_pdf, sig_pdf
-from lmfit import Parameters
+from nllfitter.fit_tools import get_data, fit_plot, get_corr
+from lmfit import Parameter, Parameters, Minimizer
+import lmfit
 
 # global options
 np.set_printoptions(precision=3.)
 
-def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
-    
-    xvals = np.linspace(xlim[0], xlim[1], npoints)
-
-    #Calculate CDFs 
-    data_cdf = np.array([data[data < x].size for x in xvals]).astype(float)
-    data_cdf = data_cdf/data.size
-
-    model_pdf = model_pdf(xvals)
-    model_cdf = np.cumsum(model_pdf)*(xlim[1] - xlim[0])/npoints
-
-    return np.abs(model_cdf - data_cdf)
-
-def calculate_likelihood_ratio(bg_model, s_model, data):
+### PDF definitions ###
+def bg_pdf(x, a): 
     '''
+    Second order Legendre Polynomial with constant term set to 0.5.
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1 and a2)
     '''
-    bg_nll = bg_model.nll(data)
-    s_nll = s_model.nll(data)
+    return 0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1) + 0.5*a[2]*(5*x**3 - 3*x)
 
-    return 2*(bg_nll - s_nll)
+def sig_pdf(x, a):
+    '''
+    Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
 
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1, a2, mu, and sigma)
+    '''
+    return (1 - a[0])*bg_pdf(x, a[3:6]) + a[0]*norm.pdf(x, a[1], a[2])
 
 class Model:
     '''
@@ -46,39 +50,17 @@ class Model:
 
     Parameters
     ==========
-    model  : a function describing the model that takes argurements (params, data)
-    parameters: lmfit Parameter object
+    model      : a function describing the model that takes argurements (params, data)
+    parameters : lmfit Parameter object
     '''
-    def __init__(self, model, params, parinit=None):
+    def __init__(self, model, parameters, parinit=None):
         
         self.model      = model
-        self.parameters = params
+        self.parameters = parameters
         self.corr       = None
 
-    def set_bounds(self, param_name, bounds):
-        '''
-        Set bounds for given parameter.
 
-        Parameters:
-        ===========
-        param_name: name of parameter to be updated
-        bounds: tuple with first entry being the min and second being the max
-        '''
-        self.parameters[param_name].set(min=bounds[0])
-        self.parameters[param_name].set(max=bounds[1])
-
-    def set_constraints(self, param_name, cons):
-        '''
-        Set constraint expression for given parameter.
-
-        Parameters:
-        ===========
-        param_name: name of parameter to be updated
-        cons: string expression specifying constraint on give parameter
-        '''
-        self.parameters[param_name].set(expr=cons)
-
-    def get_params(self):
+    def get_parameters(self):
         '''
         Returns parameters object
         '''
@@ -90,12 +72,21 @@ class Model:
         '''
         return lambda x: self.model(x, self.parameters)
 
-    def update_params(self, params, param_err):
+    def update_parameters(self, params, covariance=None):
         '''
         Updates the values and errors of each of the parameters.
+
+        Parameters:
+        ===========
+        params: new values of parameters
+        covariance: result from get_corr(), i.e., the uncertainty on the
+                    parameters and their correlations in a tuple (sigma, correlation_matrix)
         '''
-        for pname in self.parameters.keys():
-            self.parameters[pname].set(value=params[pname])
+        self.corr = covariance[1]
+        for i, (pname, pobj) in enumerate(self.parameters.iteritems()):
+            self.parameters[pname] = params[pname]
+            self.parameters[pname].stderr = covariance[0][i]
+            #if covariance:
 
     def pdf(self, X, a=None):
         '''
@@ -107,21 +98,22 @@ class Model:
         a: array of parameter values.  If not specified, the class member params will be used.
         '''
         if np.any(a) == None:
-            return self.model(X, self.params)
+            return self.model(X, [p.value for p in bg_params.values()])
         else:
             return self.model(X, a)
 
 
-    def nll(self, X, a=None):
+    def nll(self, X):
         '''
         Return the negative log likelihood of the model given some data.
 
         Parameters
         ==========
         X: data points where the PDF will be evaluated
-        a: array of parameter values.  If not specified, the class member params will be used.
         '''
-        pdf = self.pdf(X, a)
+        
+        pvals = [p.value for p in self.parameters.values()]
+        pdf = self.pdf(X, pvals)
         nll = -np.sum(np.log(pdf))
         return nll
 
@@ -147,7 +139,7 @@ class CombinedModel():
         params = OrderedDict() 
         bounds = OrderedDict() 
         for m in self.models:
-            p = m.get_params()
+            p = m.get_parameters()
             b = OrderedDict(zip(m.parnames, m.bounds))
 
             bounds.update(b)
@@ -158,7 +150,7 @@ class CombinedModel():
         self.param_err = np.zeros(np.size(self.params))
         self.bounds    = [bounds[n] for n in self.parnames]
 
-    def get_params(self, as_dict=True, include_errors=False):
+    def get_parameters(self, as_dict=True, include_errors=False):
         '''
         Returns a dictionary of parameters where the keys are the parameter
         names and values are tuples with the first entry being the parameter
@@ -178,7 +170,7 @@ class CombinedModel():
         self.params     = params
         self.param_err  = param_err 
 
-        pdict = self.get_params(include_errors=True)
+        pdict = self.get_parameters(include_errors=True)
         for m in self.models:
             m.params    = [pdict[n][0] for n in m.parnames]
             m.param_err = [pdict[n][1] for n in m.parnames]
@@ -186,7 +178,7 @@ class CombinedModel():
     def nll(self, X, a=None):
 
         if np.any(a) == None:
-            params = self.get_params()
+            params = self.get_parameters()
         else:
             params = OrderedDict(zip(self.parnames, a)) 
 
@@ -196,104 +188,24 @@ class CombinedModel():
 
         return nll
 
-
-class NLLFitter: 
+def nll(params, data, pdf):
     '''
-    Class for carrying out PDF estimation using unbinned negative log likelihood minimization.
+    Return the negative log likelihood of the model given some data.
 
     Parameters
     ==========
-    model    : a Model object or and array of Model objects
-    data     : the dataset or datasets we wish to carry out the modelling on
-    min_algo : algorith used for minimizing the nll (uses available scipy.optimize algorithms)
-    scaledict: (optional) a dictionary of functions for scaling parameters while pretty printing
+    data   : data points where the PDF will be evaluated
+    params : lmfit Parameters object or an numpy array
+    pdf    : probability distribution function model
     '''
-    def __init__(self, model, data, min_algo='SLSQP', scaledict={}, verbose=True):
-       self.model     = model
-       self.data      = data
-       self.min_algo  = min_algo
-       self.scaledict = scaledict
-       self.verbose   = verbose
-       self.lmult     = (1., 1.)
+     
+    if isinstance(params, Parameters):
+        pdf = pdf(data, [p.value for p in params.values()])
+    elif isinstance(params, np.ndarray):
+        pdf = pdf(data, params)
 
-    def set_data(self, data):
-        self.data = data    
-
-    def regularization(self, a):
-        nll = self.model.nll(self.data, a)
-        return nll + self.lmult[0] * np.sum(np.abs(a)) + self.lmult[1] * np.sum(a**2)
-
-    def get_corr(self, a):
-
-        f_obj   = lambda params: self.model.nll(self.data, params)
-        hcalc   = nd.Hessian(f_obj, step=0.01, method='central', full_output=True) 
-        hobj    = hcalc(a)[0]
-        hinv    = np.linalg.inv(hobj)
-
-        # get uncertainties on parameters
-        sig = np.sqrt(hinv.diagonal())
-
-        # calculate correlation matrix
-        mcorr = hinv/np.outer(sig, sig)
-
-        return sig, mcorr
-
-    def fit(self, init_params, calculate_corr=True):
-
-        self.model.update_params(init_params, init_params)
-        if self.verbose:
-            print 'Performing fit with initial parameters:'
-
-            for n,p in self.model.get_params().iteritems():
-                if n in self.scaledict.keys():
-                    p = self.scaledict[n](p)
-                print '{0}\t= {1:.3f}'.format(n, p)
-
-        result = minimize(self.regularization, init_params,
-                          method = self.min_algo, 
-                          bounds = self.model.bounds,
-                          #args   = (self.data, self.nll)
-                          )
-        if self.verbose:
-            print 'Fit finished with status: {0}'.format(result.status)
-
-        if result.status == 0:
-            if calculate_corr:
-                if self.verbose:
-                    print 'Calculating covariance of parameters...'
-                sigma, corr = self.get_corr(result.x)
-            else:
-                sigma, corr = result.x, 0.
-
-            self.model.update_params(result.x, sigma)
-            self.model.corr = corr
-
-            if self.verbose:
-                self.print_results()
-
-        return result
-
-    def print_results(self):
-        '''
-        Pretty print model parameters
-        '''
-        print '\n'
-        print 'RESULTS'
-        print '-------'
-        for n,p in self.model.get_params(as_dict=False, include_errors=True):
-            if n in self.scaledict.keys():
-                pct_err = p[1]/np.abs(p[0]) 
-                pval    = self.scaledict[n](p[0])
-                perr    = pval*pct_err
-                print '{0}\t= {1[0]:.3f} +/- {1[1]:.3f}'.format(n, (pval, perr))
-            else:
-                print '{0}\t= {1[0]:.3f} +/- {1[1]:.3f}'.format(n, p)
-
-        print '\n'
-        print 'CORRELATION MATRIX'
-        print '------------------'
-        print self.model.corr
-        print '\n'
+    nll = -np.sum(np.log(pdf))
+    return nll
 
 
 if __name__ == '__main__':
@@ -304,36 +216,49 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits  = (100., 180.)
-    sdict    = {'mu': lambda x: scale_data(x, invert = True),
-                'sigma': lambda x: x*(xlimits[1] - xlimits[0])/2.
-               }
 
-    print 'Getting data and scaling to lie in range [-1, 1].'.format(channel)
-    data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    print 'Getting data and scaling to lie in range [-1, 1].'
+    data, n_total  = get_data('data/toy_hgammagamma.txt', 'dimuon_mass', xlimits)
     print 'Analyzing {0} events...'.format(n_total)
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
-#                      (Name , Value , Vary , Min  , Max  , Expr)
-    bg_params.add_many(('a1' , 0.    , True , None , None , None),
-                       ('a2' , 0.    , True , None , None , None),
-                       ('a3' , 0.    , True , None , None , None))
-    bg_model = Model(bg_pdf, bg_params)
-    bg_model.set_bounds([(None, None), (None, None), (None, None)])
-    bg_fitter = NLLFitter(bg_model, data)
-    bg_result = bg_fitter.fit([0.5, 0.05, 0.05])
+    bg_params.add_many(('a1', 0., True, None, None, None),
+                       ('a2', 0., True, None, None, None),
+                       ('a3', 0., True, None, None, None)
+                       )
+
+    bg_model  = Model(bg_pdf, bg_params)
+    bg_fitter = Minimizer(nll, bg_params, fcn_args=(data, bg_pdf))
+    bg_result = bg_fitter.scalar_minimize('SLSQP')
+    bg_params = bg_result.params
+    sigma, corr = get_corr(partial(nll, data=data, pdf=bg_pdf), 
+                           [p.value for p in bg_params.values()]) 
+    bg_model.update_parameters(bg_params, (sigma, corr))
 
     ### Define bg+sig model and carry out fit ###
-    sig_model = Model(sig_pdf, ['A', 'mu', 'sigma', 'a1', 'a2'])
-    sig_model.set_bounds([(0., .5), 
-                          (-0.9, -0.2), (0., 1.),
-                          (None, None), (None, None), (None, None)
-                         ])
-    sig_fitter = NLLFitter(sig_model, data, scaledict=sdict)
-    sig_result = sig_fitter.fit((0.01, -0.3, 0.1, bg_result.x[0], bg_result.x[1], bg_result.x[2]))
+    sig_params = Parameters()
+    sig_params.add_many(
+                        ('A'     , 0.   , True , 0.   , 1.   , None),
+                        ('mu'    , 0.   , True , -0.8 , 0.8  , None),
+                        ('sigma' , 0.01 , True , 0.01 , 1.   , None),
+                        ('a1'    , 0.   , True , None , None , None),
+                        ('a2'    , 0.   , True , None , None , None),
+                        ('a3'    , 0.   , True , None , None , None)
+                       )
 
-    q = calculate_likelihood_ratio(bg_model, sig_model, data)
-    print '{0}: q = {1:.2f}'.format(channel, q)
+    sig_model  = Model(sig_pdf, sig_params)
+    sig_fitter = Minimizer(nll, sig_params, fcn_args=(data, sig_pdf))
+    sig_result = sig_fitter.scalar_minimize('SLSQP')
+    sig_params = sig_result.params
+    sigma, corr = get_corr(partial(nll, data=data, pdf=sig_pdf), 
+                           [p.value for p in sig_params.values()]) 
+    sig_model.update_parameters(sig_params, (sigma, corr))
+
+    ### Calculate the likelihood ration between the background and signal model
+    ### given the data and optimized parameters
+    q = 2*(bg_model.nll(data) - sig_model.nll(data))
+    print '{0}: q = {1:.2f}'.format('h->gg', q)
 
     ### Plots!!! ###
     print 'Making plot of fit results.'
@@ -343,5 +268,6 @@ if __name__ == '__main__':
     fit_plot(scale_data(data, invert=True), xlimits,
                         sig_pdf, sig_model.params,    
                         bg_pdf, bg_model.params, '{0}'.format(channel))
+    '''
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
