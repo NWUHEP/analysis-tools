@@ -4,7 +4,6 @@ from timeit import default_timer as timer
 from collections import OrderedDict
 from functools import partial
 
-import pandas as pd
 import numpy as np
 import numdifftools as nd
 import matplotlib.pyplot as plt
@@ -106,7 +105,7 @@ class Model:
             return self.model(X, a)
 
 
-    def nll(self, X):
+    def calc_nll(self, X):
         '''
         Return the negative log likelihood of the model given some data.
 
@@ -121,7 +120,7 @@ class Model:
         return nll
 
 
-def nll(params, data, pdf):
+def calc_nll(params, data, pdf):
     '''
     Return the negative log likelihood of the model given some data.
 
@@ -162,10 +161,10 @@ if __name__ == '__main__':
                        )
 
     bg_model  = Model(bg_pdf, bg_params)
-    bg_fitter = Minimizer(nll, bg_params, fcn_args=(data, bg_pdf))
+    bg_fitter = Minimizer(calc_nll, bg_params, fcn_args=(data, bg_pdf))
     bg_result = bg_fitter.minimize('SLSQP')
     bg_params = bg_result.params
-    sigma, corr = get_corr(partial(nll, data=data, pdf=bg_pdf), 
+    sigma, corr = get_corr(partial(calc_nll, data=data, pdf=bg_pdf), 
                            [p.value for p in bg_params.values()]) 
     bg_model.update_parameters(bg_params, (sigma, corr))
     report_fit(bg_params, show_correl=False)
@@ -185,10 +184,10 @@ if __name__ == '__main__':
                        )
 
     sig_model  = Model(sig_pdf, sig_params)
-    sig_fitter = Minimizer(nll, sig_params, fcn_args=(data, sig_pdf))
+    sig_fitter = Minimizer(calc_nll, sig_params, fcn_args=(data, sig_pdf))
     sig_result = sig_fitter.minimize('SLSQP')
     sig_params = sig_result.params
-    sigma, corr = get_corr(partial(nll, data=data, pdf=sig_pdf), 
+    sigma, corr = get_corr(partial(calc_nll, data=data, pdf=sig_pdf), 
                            [p.value for p in sig_params.values()]) 
     sig_model.update_parameters(sig_params, (sigma, corr))
     report_fit(sig_model.get_parameters(), show_correl=False)
