@@ -70,7 +70,7 @@ class NLLFitter:
         '''
 
         if params_init: 
-            self.update_params(params_init)
+            self.model.update_params(params_init)
         else:
             params_init = self.model.get_parameters(by_value=True)
 
@@ -78,6 +78,7 @@ class NLLFitter:
                           params_init,
                           method = self.min_algo, 
                           bounds = self.model.get_bounds(),
+                          constraints = self.model.get_constraints(),
                           args   = (data)
                           )
         if self.verbose:

@@ -103,3 +103,42 @@ class Model:
         nll = -np.sum(np.log(pdf))
         return nll
 
+class CombinedModel(Model):
+    '''
+    Combines multiple models so that their PDFs can be estimated simultaneously.
+
+    Parameters
+    ==========
+    models: an array of Model instances
+    '''
+    def __init__(self, models):
+        self.models = models
+        self._initialize()
+        self.corr = None
+
+    def _initialize(self):
+        '''
+        Returns a dictionary of parameters where the keys are the parameter
+        names and values are tuples with the first entry being the parameter
+        value and the second being the uncertainty on the parameter.
+        '''
+        params = Parameters() 
+        for m in self.models:
+            p = m.get_parameters()
+            params += p
+        self.parameters = params
+
+    def calc_nll(self, X, params=None):
+
+        if isinstance(params, Parameters):
+            params = [params[n].value for n in self.parameters.keys()]
+        elif np.any(params) == None:
+            params = [p.value for p in self.parameters.values()]
+
+        nll = 0.
+        for m, x in zip(self.models, X):
+            nll += m.calc_nll(x, params)
+
+        return nll
+
+
