@@ -78,7 +78,7 @@ class NLLFitter:
                           params_init,
                           method = self.min_algo, 
                           bounds = self.model.get_bounds(),
-                          constraints = self.model.get_constraints(),
+                          #constraints = self.model.get_constraints(),
                           args   = (data)
                           )
         if self.verbose:
@@ -99,3 +99,4 @@ class NLLFitter:
                 print corr, '\n'
 
         return result	
+

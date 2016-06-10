@@ -7,7 +7,7 @@ from scipy.stats import norm
 from lmfit import Parameter, Parameters
 
 from nllfitter.fit_tools import get_data, fit_plot, scale_data
-from nllfitter.future_fitter import Model, NLLFitter
+from nllfitter import Model, CombinedModel, NLLFitter
 
 def bg_pdf(x, a): 
     '''
@@ -67,8 +67,39 @@ if __name__ == '__main__':
     bg_fitter = NLLFitter(bg2_model)
     bg_result = bg_fitter.fit(datasets[1])
 
-    ### Carry out combined fit ###
-    bg_params = bg1_params + bg2_params
+    ### Carry out combined background fit ###
+    bg_model = CombinedModel([bg1_model, bg2_model])
+    bg_fitter = NLLFitter(bg_model)
+    bg_result = bg_fitter.fit(datasets)
+
+    ### Define bg+sig model and carry out fit ###
+    sig1_params = Parameters()
+    sig1_params.add_many(
+                        ('A1'    , 0.01 , True , 0.01 , 1.   , None),
+                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
+                        ('sigma' , 0.01 , True , 0.02 , 1.   , None)
+                       )
+    sig1_params += bg1_params.copy()
+    sig1_model = Model(sig_pdf, sig1_params)
+    sig_fitter = NLLFitter(sig1_model)
+    sig_result = sig_fitter.fit(datasets[0])
+
+    sig2_params = Parameters()
+    sig2_params.add_many(
+                        ('A2'    , 0.01 , True , 0.01 , 1.   , None),
+                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
+                        ('sigma' , 0.01 , True , 0.02 , 1.   , None)
+                       )
+    sig2_params += bg2_params.copy()
+    sig2_model = Model(sig_pdf, sig2_params)
+    sig_fitter = NLLFitter(sig2_model)
+    sig_result = sig_fitter.fit(datasets[1])
+
+    ### Carry out combined signal+background fit ###
+    sig_model  = CombinedModel([sig1_model, sig2_model])
+    sig_fitter = NLLFitter(sig_model)
+    sig_result = sig_fitter.fit(datasets)
+
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

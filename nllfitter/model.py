@@ -18,7 +18,7 @@ class Model:
     def __init__(self, pdf, parameters):
         
         self._pdf       = pdf
-        self.parameters = parameters
+        self._parameters = parameters
         self.corr       = None
 
     def get_parameters(self, by_value=False):
@@ -31,28 +31,28 @@ class Model:
                   function will return the lmfit Parameters object
         '''
         if by_value:
-            return [p.value for p in self.parameters.values()]
+            return [p.value for p in self._parameters.values()]
         else:
-            return self.parameters
+            return self._parameters
 
     def get_bounds(self):
         '''
         Return list of tuples with the bounds for each parameter.  
         '''
-        return [(p.min, p.max) for n,p in self.parameters.iteritems()]
+        return [(p.min, p.max) for n,p in self._parameters.iteritems()]
 
     def get_constranints(self):
         '''
         Return list of tuples with the bounds for each parameter.  
         '''
-        return [p.expr for n,p in self.parameters.iteritems()]
+        return [p.expr for n,p in self._parameters.iteritems()]
 
     def pdf(self, data, params=None):
         '''
         Returns the pdf as a function with current values of parameters
         '''
         if isinstance(params, Parameters):
-            return self._pdf(data, [params[n].value for n in self.parameters.keys()])
+            return self._pdf(data, [params[n].value for n in self._parameters.keys()])
         if isinstance(params, np.ndarray):
             return self._pdf(data, params)
         else:
@@ -71,14 +71,14 @@ class Model:
                     parameters and their correlations in a tuple (sigma, correlation_matrix)
         '''
 
-        for i, (pname, pobj) in enumerate(self.parameters.iteritems()):
+        for i, (pname, pobj) in enumerate(self._parameters.iteritems()):
             if isinstance(params, np.ndarray):
-                self.parameters[pname].value = params[i]
+                self._parameters[pname].value = params[i]
             else:
-                self.parameters[pname] = params[pname]
+                self._parameters[pname] = params[pname]
 
             if covariance:
-                self.parameters[pname].stderr = covariance[0][i]
+                self._parameters[pname].stderr = covariance[0][i]
 
         if covariance:
             self.corr = covariance[1]
@@ -95,9 +95,9 @@ class Model:
         '''
         
         if isinstance(params, Parameters):
-            params = [params[n].value for n in self.parameters.keys()]
+            params = [params[n].value for n in self._parameters.keys()]
         elif np.any(params) == None:
-            params = [p.value for p in self.parameters.values()]
+            params = [p.value for p in self._parameters.values()]
 
         pdf = self._pdf(X, params)
         nll = -np.sum(np.log(pdf))
@@ -123,21 +123,36 @@ class CombinedModel(Model):
         value and the second being the uncertainty on the parameter.
         '''
         params = Parameters() 
+        nparams = [] # keep track of how many parameters each model has
         for m in self.models:
             p = m.get_parameters()
+            nparams.append(len(p))
             params += p
-        self.parameters = params
+        self._parameters = params
+        self._nparams = nparams
 
     def calc_nll(self, X, params=None):
+        '''
+        Wrapper for Model.calc_nll.  Converts params to an lmfit Parameter
+        object which can then be unpacked by Model.calc_nll.  (Probably not the
+        most efficient thing to do, but it makes dealing with sorting which
+        parameters got with what model.)
 
-        if isinstance(params, Parameters):
-            params = [params[n].value for n in self.parameters.keys()]
-        elif np.any(params) == None:
-            params = [p.value for p in self.parameters.values()]
+        Parameters"
+        ===========
+        X: an array of datasets; one dataset per model
+        params: parameters of the combined model
+        '''
 
-        nll = 0.
-        for m, x in zip(self.models, X):
-            nll += m.calc_nll(x, params)
+        if isinstance(params, np.ndarray):
+            self.update_parameters(params)
+        params = self.get_parameters()
+
+        nll         = 0.
+        param_count = 0
+        for i, (m, x) in enumerate(zip(self.models, X)):
+            nll         += m.calc_nll(x, params)
+            param_count += self._nparams[i]
 
         return nll
 

@@ -7,7 +7,7 @@ from scipy.stats import norm
 from lmfit import Parameter, Parameters
 
 from nllfitter.fit_tools import get_data, fit_plot, scale_data
-from nllfitter.future_fitter import Model, NLLFitter
+from nllfitter import Model, NLLFitter
 
 def bg_pdf(x, a): 
     '''
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits = (12., 70.)
-    channel = '1b1c'
+    channel = '1b1f'
 
     print 'Getting data and scaling to lie in range [-1, 1].'
     data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
