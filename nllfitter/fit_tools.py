@@ -6,15 +6,13 @@ from timeit import default_timer as timer
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
 import numpy.random as rng
 import numdifftools as nd
-
+import lmfit
 #from scipy import stats
 from scipy.stats import chi2, norm 
 from scipy import integrate
 from scipy.optimize import minimize
-
 
 # global options
 np.set_printoptions(precision=3.)
@@ -39,27 +37,27 @@ def get_data(filename, varname, xlim):
     return data, n_total
   
 def get_corr(func, a):
-	'''
+    '''
     Given a function func and parameters a, this will numerically estimate the
     covariance of the parameters about the given values
-
-	Parameters:
-	===========
+    
+    Parameters:
+    ===========
     func : function used to estimate covariance of parameters
     a    : parameters
-	'''
+    '''
 
-	hcalc   = nd.Hessian(func, step=0.01, method='central', full_output=True) 
-	hobj    = hcalc(a)[0]
-	hinv    = np.linalg.inv(hobj)
+    hcalc   = nd.Hessian(func, step=0.01, method='central', full_output=True) 
+    hobj    = hcalc(a)[0]
+    hinv    = np.linalg.inv(hobj)
 
-	# get uncertainties on parameters
-	sig = np.sqrt(hinv.diagonal())
+    # get uncertainties on parameters
+    sig = np.sqrt(hinv.diagonal())
+    
+    # calculate correlation matrix
+    mcorr = hinv/np.outer(sig, sig)
 
-	# calculate correlation matrix
-	mcorr = hinv/np.outer(sig, sig)
-
-	return sig, mcorr
+    return sig, mcorr
 
 def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
     
@@ -96,17 +94,20 @@ def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
     return pval
 
 ### Plotter ###
-def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='plots'):
+def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
+#def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='plots'):
     N       = data.size
     binning = 2.
     nbins   = int((xlim[1] - xlim[0])/binning)
 
     # Scale pdfs and data from [-1, 1] back to the original values
+    params = sig_model.get_parameters()
     x       = np.linspace(-1, 1, num=10000)
-    y_sig   = (N*binning/nbins)*sig_pdf(x, params) 
-    y_bg1   = (1 - params[0]) * N * binning/nbins * bg_pdf(x, params[3:]) 
-    y_bg2   = (N*binning/nbins)*bg_pdf(x, bg_params) 
+    y_sig   = (N*binning/nbins)*sig_model.pdf(x) 
+    y_bg1   = (1 - params['A']) * N * binning/nbins * bg_model.pdf(x, params) 
+    y_bg2   = (N*binning/nbins)*bg_model.pdf(x)
     x       = scale_data(x, xmin=xlim[0], xmax=xlim[1],invert=True)
+    data    = scale_data(data, xmin=xlim[0], xmax=xlim[1],invert=True)
 
     # Get histogram of data points
     h = plt.hist(data, bins=nbins, range=xlim, normed=False, histtype='step')

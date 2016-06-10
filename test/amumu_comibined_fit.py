@@ -1,15 +1,13 @@
 from __future__ import division
 
 from timeit import default_timer as timer
-from functools import partial
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import norm
-from lmfit import Parameter, Parameters, Minimizer, report_fit
+from lmfit import Parameter, Parameters
 
-from nllfitter.fit_tools import get_data, fit_plot, get_corr, scale_data
-from nllfitter.future_fitter import Model, calc_nll
+from nllfitter.fit_tools import get_data, fit_plot, scale_data
+from nllfitter.future_fitter import Model, NLLFitter
 
 def bg_pdf(x, a): 
     '''
@@ -33,16 +31,6 @@ def sig_pdf(x, a):
     '''
     return a[0]*norm.pdf(x, a[1], a[2]) + (1 - a[0])*bg_pdf(x, a[3:5])
 
-def objective(params, data, pdfs):
-    '''
-    Objective function for combining fit
-    '''
-
-    nll = 0.
-    for d,f in zip(data, pdfs):
-        nll += calc_nll(d, 
-
-    
 
 if __name__ == '__main__':
 
@@ -53,67 +41,35 @@ if __name__ == '__main__':
     xlimits  = (12., 70.)
     channels = ['1b1f', '1b1c']
 
-    datasets = []
+    datasets  = []
     for channel in channels:
-        data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+        data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 
+                                  'dimuon_mass', xlimits)
         datasets.append(data)
 
+    ### Fit single models to initialize parameters ###
     ### Define bg model and carry out fit ###
-    bg_params = Parameters()
-    bg_params.add_many(
-                       ('a1', 0., true, none, none, none),
-                       ('a2', 0., true, none, none, none),
-                       ('b1', 0., true, none, none, none),
-                       ('b2', 0., true, none, none, none)
-                       )
+    bg1_params = Parameters()
+    bg1_params.add_many(
+                       ('a1', 0., True, None, None, None),
+                       ('a2', 0., True, None, None, None)
+                      )
+    bg1_model = Model(bg_pdf, bg1_params)
+    bg_fitter = NLLFitter(bg1_model)
+    bg_result = bg_fitter.fit(datasets[0])
 
-    bg_pdfs = 2*[bg_pdf,]
-    bg_fitter = Minimizer(objective, bg_params, fcn_args=(datasets, bg_pdfs))
-    bg_result = bg_fitter.minimize('SLSQP')
+    bg2_params = Parameters()
+    bg2_params.add_many(
+                       ('b1', 0., True, None, None, None),
+                       ('b2', 0., True, None, None, None)
+                      )
+    bg2_model = Model(bg_pdf, bg2_params)
+    bg_fitter = NLLFitter(bg2_model)
+    bg_result = bg_fitter.fit(datasets[1])
 
-    '''
-    bg_params = bg_result.params
-    sigma, corr = get_corr(partial(objective, data=data, pdf=bg_pdf), 
-                           [p.value for p in bg_params.values()]) 
-    bg_model.update_parameters(bg_params, (sigma, corr))
-    report_fit(bg_params, show_correl=False)
-    print ''
-    print '[[Correlation matrix]]\n'
-    print corr, '\n'
+    ### Carry out combined fit ###
+    bg_params = bg1_params + bg2_params
 
-    ### Define bg+sig model and carry out fit ###
-    sig_params = Parameters()
-    sig_params.add_many(
-                        ('A'     , 0.05 , True , 0.01 , 0.5  , None),
-                        ('mu'    , 0.   , True , -0.8 , 0.8  , None),
-                        ('sigma' , 0.02 , True , 0.01 , 0.15 , None),
-                        ('a1'    , 0.   , True , 0.01 , 0.5  , None),
-                        ('a2'    , 0.   , True , 0.01 , 0.2  , None)
-                       )
-
-    sig_model  = Model(sig_pdf, sig_params)
-    sig_fitter = Minimizer(nll, sig_params, fcn_args=(data, sig_pdf))
-    sig_result = sig_fitter.minimize('SLSQP')
-    sig_params = sig_result.params
-    sigma, corr = get_corr(partial(nll, data=data, pdf=sig_pdf), 
-                           [p.value for p in sig_params.values()]) 
-    sig_model.update_parameters(sig_params, (sigma, corr))
-    report_fit(sig_model.get_parameters(), show_correl=False)
-    print ''
-    print '[[Correlation matrix]]\n'
-    print corr, '\n'
-
-    ### Calculate the likelihood ration between the background and signal model
-    ### given the data and optimized parameters
-    q = 2*(bg_model.nll(data) - sig_model.nll(data))
-    print '{0}: q = {1:.2f}'.format('h->gg', q)
-
-    ### Plots!!! ###
-    print 'Making plot of fit results...'
-    fit_plot(scale_data(data, xmin=12, xmax=70, invert=True), xlimits,
-             sig_pdf, sig_model.get_parameters(by_val=True),    
-             bg_pdf, bg_model.get_parameters(by_val=True), '{0}'.format(channel))
-    '''
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
 
