@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.random as rng
 import numdifftools as nd
+import emcee as mc
 import lmfit
 #from scipy import stats
 from scipy.stats import chi2, norm 
@@ -36,29 +37,6 @@ def get_data(filename, varname, xlim):
 
     return data, n_total
   
-def get_corr(func, a):
-    '''
-    Given a function func and parameters a, this will numerically estimate the
-    covariance of the parameters about the given values
-    
-    Parameters:
-    ===========
-    func : function used to estimate covariance of parameters
-    a    : parameters
-    '''
-
-    hcalc   = nd.Hessian(func, step=0.01, method='central', full_output=True) 
-    hobj    = hcalc(a)[0]
-    hinv    = np.linalg.inv(hobj)
-
-    # get uncertainties on parameters
-    sig = np.sqrt(hinv.diagonal())
-    
-    # calculate correlation matrix
-    mcorr = hinv/np.outer(sig, sig)
-
-    return sig, mcorr
-
 def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
     
     xvals = np.linspace(xlim[0], xlim[1], npoints)
@@ -72,13 +50,27 @@ def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
 
     return np.abs(model_cdf - data_cdf)
 
-def calculate_likelihood_ratio(bg_model, s_model, data):
+def bg_pdf(x, a): 
     '''
-    '''
-    bg_nll  = bg_model.nll(data)
-    s_nll   = s_model.nll(data)
+    Second order Legendre Polynomial with constant term set to 0.5.
 
-    return 2*(bg_nll - s_nll)
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1 and a2)
+    '''
+    return 0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
+
+def sig_pdf(x, a):
+    '''
+    Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1, a2, mu, and sigma)
+    '''
+    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
 
 
 ### toy MC p-value calculator ###
@@ -144,3 +136,43 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
     plt.close()
 
 
+### Monte Carlo simulations ###
+def lnprob(x, pdf, bounds):
+    if np.any(x < bounds[0]) or np.any(x > bounds[1]):
+        return -np.inf
+    else:
+        return np.log(pdf(x))
+
+def generator(pdf, samples_per_toy=100, ntoys=100, bounds=(-1, 1)):
+    '''
+    Wrapper for emcee the MCMC hammer (only does 1D distributions for now...)
+
+    Parameters
+    ==========
+    pdf             : distribution to be sampled
+    samples_per_toy : number of draws to be assigned to each pseudo-experiment
+    ntoys           : number of toy models to produce
+    bounds          : (xmin, xmax) for values of X
+    '''
+    ndim = 1
+    sampler = mc.EnsembleSampler(samples_per_toy, ndim, lnprob, args=[pdf, bounds])
+
+    p0 = [np.random.rand(1) for i in xrange(samples_per_toy)]
+    pos, prob, state = sampler.run_mcmc(p0, 1000) # Let walkers settle in
+    sampler.reset()
+    sampler.run_mcmc(pos, ntoys, rstate0=state)
+
+    print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
+    print("Autocorrelation time:", sampler.get_autocorr_time())
+
+    return sampler.flatchain[:, 0].reshape(samples_per_toy, ntoys)
+
+
+if __name__ == '__main__':
+
+
+    pdf = lambda x: np.exp(-x)
+    sim = generator(pdf=pdf)
+
+    #plt.hist(sampler.flatchain[:,0], 100)
+    #plt.show()
