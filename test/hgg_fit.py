@@ -1,15 +1,13 @@
 from __future__ import division
 
 from timeit import default_timer as timer
-from functools import partial
 
 import numpy as np
-import numdifftools as nd
-from scipy.stats import chi2, norm 
+from scipy.stats import norm 
 
 from nllfitter import NLLFitter, Model
 from nllfitter.fit_tools import get_data, fit_plot, scale_data
-from lmfit import Parameter, Parameters, report_fit
+from lmfit import Parameters
 
 # global options
 np.set_printoptions(precision=3.)
@@ -47,7 +45,7 @@ if __name__ == '__main__':
     xlimits  = (100., 180.)
 
     print 'Getting data and scaling to lie in range [-1, 1].'
-    data, n_total  = get_data('data/toy_hgammagamma.txt', 'dimuon_mass', xlimits)
+    data, n_total  = get_data('data/toy_hgammagamma.txt', 'diphoton_mass', xlimits)
     print 'Analyzing {0} events...\n'.format(n_total)
 
     ### Define bg model and carry out fit ###

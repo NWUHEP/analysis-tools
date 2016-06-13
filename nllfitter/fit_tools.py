@@ -87,8 +87,7 @@ def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
     return pval
 
 ### Plotter ###
-def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
-#def fit_plot(data, xlim, sig_pdf, params, bg_pdf, bg_params, suffix, path='plots'):
+def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots', show=False):
     N       = data.size
     binning = 2.
     nbins   = int((xlim[1] - xlim[0])/binning)
@@ -113,6 +112,7 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
     ax.plot(x, y_sig, 'b-', linewidth=2.)
     ax.plot(x, y_bg1, 'b--', linewidth=2.) 
     ax.plot(x, y_bg2, 'r-.', linewidth=2.) 
+    ax.legend(['data', 'bg+sig.', 'bg', 'bg only']) 
 
     if suffix[:4] == '1b1f':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
@@ -132,9 +132,12 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
 
     ax.set_xlim(xlim)
 
-    fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
-    fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
-    plt.close()
+    if show:
+        plt.show()
+    else:
+        fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
+        fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
+        plt.close()
 
 
 ### Monte Carlo simulations ###
