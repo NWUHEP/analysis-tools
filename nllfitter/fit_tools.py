@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import division
 import pickle
 from timeit import default_timer as timer
 
@@ -180,7 +181,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     # Carry out rejection sampling
     keep = pdf(x) > rnums[1]
     x    = x[keep]
-    print 'Generated {0} data points with {1}% efficiency'.format(ntoys*samples_per_toy, keep[keep==1]/keep.size)
+    print 'Generated {0} data points with {1:.2f}% efficiency'.format(2*ntoys*samples_per_toy, 100.*x.size/keep.size)
     
     # Remove excess events and shape to samples_per_toy
     x = x[:-(x.size%samples_per_toy)]
