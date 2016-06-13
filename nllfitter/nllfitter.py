@@ -1,4 +1,5 @@
 from __future__ import division
+from itertools import product
 
 import numpy as np
 import numdifftools as nd
@@ -100,3 +101,87 @@ class NLLFitter:
 
         return result	
 
+    def scan(self, scan_params, data):
+        '''
+        Fits model to data while scanning over give parameters.
+
+        Parameters:
+        ===========
+        scan_params       : ScanParameters class object specifying parameters to be scanned over
+        data              : dataset to fit the models to
+        '''
+
+        ### Save bounds for parameters to be scanned so that they can be reset
+        ### when finished
+        saved_bounds = {}
+        params = self.model.get_parameters()
+        for name in scan_params.names:
+            saved_bounds[name] = (params[name].min, params[name].max)
+
+        nllscan     = []
+        best_params = 0.
+        nll_min = 1e9
+        scan_vals, scan_div = scan_params.get_scan_vals()
+        for i, scan in enumerate(scan_vals):
+
+            ### set bounds of model parameters being scanned over
+            for j, name in enumerate(scan_params.names):
+                self.model.set_bounds(name, scan[j], scan[j]+scan_div[j])
+                self.model.set_parameter_value(name, scan[j])
+
+            ### Get initialization values
+            params_init = [p.value for p in params.values()]
+            result = minimize(self._objective, 
+                              params_init,
+                              method = self.min_algo, 
+                              bounds = self.model.get_bounds(),
+                              #constraints = self.model.get_constraints(),
+                              args   = (data)
+                              )
+
+            if result.status == 0:
+                nll = self.model.calc_nll(data, result.x)
+                nllscan.append(nll)
+                if nll < nll_min:
+                    best_params = result.x
+                    nll_min = nll
+            else:
+                print result.status
+                continue
+
+        ## Reset parameter bounds
+        for name in scan_params.names:
+            self.model.set_bounds(name, saved_bounds[name][0], saved_bounds[name][1])
+
+        nllscan = np.array(nllscan)
+        return nllscan, best_params
+
+class ScanParameters:
+    '''
+    Class for defining parameters for scanning over fit parameters.
+    Parameters
+    ==========
+    names: name of parameters to scan over
+    bounds: values to scan between (should be an array with 2 values)
+    nscans: number of scan points to consider
+    '''
+    def __init__(self, names, bounds, nscans, fixed=False):
+        self.names  = names
+        self.bounds = bounds
+        self.nscans = nscans
+        self.init_scan_params()
+
+    def init_scan_params(self):
+        scans = []
+        div   = []
+        for n, b, ns in zip(self.names, self.bounds, self.nscans):
+            scans.append(np.linspace(b[0], b[1], ns))
+            div.append(np.abs(b[1] - b[0])/ns)
+        self.div   = div
+        self.scans = scans
+
+    def get_scan_vals(self, ):
+        '''
+        Return an array of tuples to be scanned over.
+        '''
+        return list(product(*self.scans)), self.div

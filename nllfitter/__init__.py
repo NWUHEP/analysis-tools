@@ -7,6 +7,6 @@ classes.
 '''
 
 from .model import Model, CombinedModel
-from .nllfitter import NLLFitter
+from .nllfitter import NLLFitter, ScanParameters
 from lmfit import Parameter, Parameters
 

@@ -143,7 +143,7 @@ def lnprob(x, pdf, bounds):
     else:
         return np.log(pdf(x))
 
-def generator(pdf, samples_per_toy=100, ntoys=100, bounds=(-1, 1)):
+def generator_emcee(pdf, samples_per_toy=100, ntoys=100, bounds=(-1, 1)):
     '''
     Wrapper for emcee the MCMC hammer (only does 1D distributions for now...)
 
@@ -165,14 +165,30 @@ def generator(pdf, samples_per_toy=100, ntoys=100, bounds=(-1, 1)):
     print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
     print("Autocorrelation time:", sampler.get_autocorr_time())
 
-    return sampler.flatchain[:, 0].reshape(samples_per_toy, ntoys)
+    return sampler.flatchain[:, 0].reshape(ntoys, samples_per_toy)
 
+def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
+    '''
+    Rejection sampling with broadcasting gives approximately the requested number of toys...
+    '''
 
-if __name__ == '__main__':
+    # Generate random numbers and map into domain defined by bounds
+    rnums = rng.rand(2, 2*ntoys*samples_per_toy) 
+    x = rnums[0]
+    x = (bounds[1] - bounds[0])*x + bounds[0]
 
+    # Carry out rejection sampling
+    keep = pdf(x) > rnums[1]
+    x    = x[keep]
+    print 'Generated {0} data points with {1}% efficiency'.format(ntoys*samples_per_toy, keep[keep==1]/keep.size)
+    
+    # Remove excess events and shape to samples_per_toy
+    x = x[:-(x.size%samples_per_toy)]
+    x = x.reshape(x.size/samples_per_toy, samples_per_toy)
 
-    pdf = lambda x: np.exp(-x)
-    sim = generator(pdf=pdf)
+    # if ntoys is not produced try again
+    #if x.shape[0] < ntoys:
+    #    x = np.concatenate((x, mc_generator(pdf, samp_per_toy, (ntoys-x.shape[0]), domain)))
 
-    #plt.hist(sampler.flatchain[:,0], 100)
-    #plt.show()
+    return x
+

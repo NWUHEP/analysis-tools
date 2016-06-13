@@ -41,6 +41,13 @@ class Model:
         '''
         return [(p.min, p.max) for n,p in self._parameters.iteritems()]
 
+    def set_bounds(self, param_name, xmin, xmax):
+        '''
+        Set lower and upper bounds for parameter with the given name.
+        '''
+        self._parameters[param_name].min = xmin
+        self._parameters[param_name].max = xmax
+
     def get_constranints(self):
         '''
         Return list of tuples with the bounds for each parameter.  
@@ -57,6 +64,13 @@ class Model:
             return self._pdf(data, params)
         else:
             return self._pdf(data, self.get_parameters(by_value=True))
+
+    def set_parameter_value(self, param_name, value):
+        '''
+        Change the value of named parameter.
+        '''
+        self._parameters[param_name].value = value
+
 
     def update_parameters(self, params, covariance=None):
         '''

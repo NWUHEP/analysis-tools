@@ -7,39 +7,9 @@ from timeit import default_timer as timer
 import numpy as np
 from scipy.stats import norm
 
-from nllfitter import Parameters, Model, NLLFitter
+from nllfitter import Parameters, ScanParameters, Model, NLLFitter
 import nllfitter.fit_tools as ft
-from nllfitter.emcee import generator
-
-class ScanParameters:
-    '''
-    Class for defining parameters for scanning over fit parameters.
-    Parameters
-    ==========
-    names: name of parameters to scan over
-    bounds: values to scan between (should be an array with 2 values)
-    nscans: number of scan points to consider
-    '''
-    def __init__(self, names, bounds, nscans, fixed=False):
-        self.names  = names
-        self.bounds = bounds
-        self.nscans = nscans
-        self.init_scan_params()
-
-    def init_scan_params(self):
-        scans = []
-        div   = []
-        for n, b, ns in zip(self.names, self.bounds, self.nscans):
-            scans.append(np.linspace(b[0], b[1], ns))
-            div.append(np.abs(b[1] - b[0])/ns)
-        self.div   = div
-        self.scans = scans
-
-    def get_scan_vals(self, ):
-        '''
-        Return an array of tuples to be scanned over.
-        '''
-        return list(product(*self.scans)), self.div
+import nllfitter.lookee as lee
 
 if __name__ == '__main__':
 
@@ -52,7 +22,7 @@ if __name__ == '__main__':
         ndim    = int(sys.argv[3])
     else:
         channel = '1b1f'
-        nsims   = 100
+        nsims   = 10
         ndim    = 2
 
     #####################
@@ -61,7 +31,7 @@ if __name__ == '__main__':
 
     minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
-    make_plots = False
+    make_plots = True
 
     ########################
     ### Define fit model ###
@@ -77,50 +47,70 @@ if __name__ == '__main__':
                       )
 
     bg_model  = Model(ft.bg_pdf, bg_params)
-    bg_fitter = NLLFitter(bg_model)
+    bg_fitter = NLLFitter(bg_model, verbose=False)
     bg_result = bg_fitter.fit(data)
 
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
     sig_params.add_many(
-                        ('A'     , 0.01 , True , 0.01 , 1.   , None),
+                        ('A'     , 0.01  , True , 0.0 , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
-                        ('sigma' , 0.01 , True , 0.02 , 1.   , None)
+                        ('sigma' , 0.03 , True , 0.02 , 1.   , None)
                        )
     sig_params += bg_params.copy()
+
     sig_model  = Model(ft.sig_pdf, sig_params)
-    sig_fitter = NLLFitter(sig_model)
+    sig_fitter = NLLFitter(sig_model, verbose=False)
     sig_result = sig_fitter.fit(data)
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
-    q = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
+    qmax = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
 
     ### Generate toy MC ###
-    sims = generator(bg_model.pdf, n_total, ntoys=nsims)
+    print 'Generating pseudodata for likelihood scans...'
+    sims = ft.generator(bg_model.pdf, n_total, ntoys=nsims)
 
     #######################################################
     ### Scan over search dimensions/nuisance parameters ###
     #######################################################
 
     ### Define scan values here ### 
+    print 'Preparing scan parameters...'
     scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                 bounds = [(-0.8, 0.8), (-0.1, 0.02)],
-                                 nscans = [25, 25]
+                                 bounds = [(-0.8, 0.8), (0.047,0.047)],
+                                 nscans = [25, 1]
                                 )
 
-    '''
     paramscan = []
-    phiscan = []
-    qmaxscan = []
+    phiscan   = []
+    qmaxscan  = []
+    u_0       = np.linspace(0.01, 25., 1250.)
     for i, sim in enumerate(sims):
-        if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
+        if i%100 == 0: print 'Carrying out scan {0}...'.format(i+1)
 
-        params, phis, qmax = q_scan(bg_fitter, sig_fitter, scan_params, sim) 
+        # fit background model
+        bg_result = bg_fitter.fit(sim)
+        if bg_result.status == 0:
+            nll_bg = bg_model.calc_nll(sim)
+        else:
+            continue
 
-        if make_plots and i < 9:
-            of.fit_plot(sim, xlimits, sig_model, bg_model,
-                        '{0}_{1}'.format(channel,i+1), path='figures/scan_fits')
+        # scan over signal parameters
+        nllscan, params = sig_fitter.scan(scan_params, sim) 
+        qscan = -2*(nllscan - nll_bg)
+        paramscan.append(params)
+        qmaxscan.append(np.max(qscan))
+
+        ### Calculate E.C. of the random field
+        qscan = np.array(qscan).reshape(scan_params.nscans)
+        phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
+
+        if make_plots and i < 50:
+            sig_model.update_parameters(params)
+            bg_model.update_parameters(bg_result.x)
+            ft.fit_plot(sim, xlimits, sig_model, bg_model,
+                        '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
 
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
@@ -130,8 +120,8 @@ if __name__ == '__main__':
     ### Calculate LEE correction ###
     ################################
 
-    k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
-    k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
+    #k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1)
+    #k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2)
     k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
     lee.validation_plots(u_0, phiscan, qmaxscan, 
                          #[nvals1, nvals2, nvals], [k1, k2, k], 
@@ -145,12 +135,11 @@ if __name__ == '__main__':
     print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     # Save scan data
-    outfile = open('data/lee_scan_{0}_{1}.pkl'.format('combined', nsims), 'w')
-    pickle.dump(u_0, outfile)
-    pickle.dump(qmaxscan, outfile)
-    pickle.dump(phiscan, outfile)
-    pickle.dump(paramscan, outfile)
-    outfile.close()
-    '''
+    #outfile = open('data/lee_scan_{0}_{1}.pkl'.format('combined', nsims), 'w')
+    #pickle.dump(u_0, outfile)
+    #pickle.dump(qmaxscan, outfile)
+    #pickle.dump(phiscan, outfile)
+    #pickle.dump(paramscan, outfile)
+    #outfile.close()
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
