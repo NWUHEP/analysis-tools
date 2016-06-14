@@ -17,9 +17,9 @@ class Model:
     '''
     def __init__(self, pdf, parameters):
         
-        self._pdf       = pdf
+        self._pdf        = pdf
         self._parameters = parameters
-        self.corr       = None
+        self.corr        = None
 
     def get_parameters(self, by_value=False):
         '''
@@ -97,7 +97,7 @@ class Model:
         if covariance:
             self.corr = covariance[1]
 
-    def calc_nll(self, X, params=None):
+    def calc_nll(self, data, params=None):
         '''
         Return the negative log likelihood of the model given some data.
 
@@ -105,7 +105,7 @@ class Model:
         ==========
         a: model parameters specified as a numpy array or lmfit Parameters
            object.  If not specified, the current model parameters will be used
-        X: data points where the PDF will be evaluated
+        data: data points where the PDF will be evaluated
         '''
         
         if isinstance(params, Parameters):
@@ -113,7 +113,7 @@ class Model:
         elif np.any(params) == None:
             params = [p.value for p in self._parameters.values()]
 
-        pdf = self._pdf(X, params)
+        pdf = self._pdf(data, params)
         nll = -np.sum(np.log(pdf))
         return nll
 

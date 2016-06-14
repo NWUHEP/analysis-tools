@@ -58,9 +58,9 @@ def exp_phi_u(u, n_j, k=1):
     
     Parameters
     ----------
-    u: array of scan thresholds
-    n_j: array of coefficients
-    k: nDOF of chi2 field
+    u   : array of scan thresholds
+    n_j : array of coefficients
+    k   : nDOF of chi2 field
     '''
     return chi2.sf(u,k) + np.sum([n*rho_g(u, j+1, k) for j,n in enumerate(n_j)], axis=0)
 
@@ -75,19 +75,19 @@ def lee_objective(a, Y, dY, X, k0):
 
     Parameters
     ----------
-    a: list of parameters
-    Y: target data
-    dY: variance on the data
-    X: independent variable values corresponding to values of Y
+    a  : list of parameters (a[0] is d.o.f., a[1:] are the expansion coefficients)
+    Y  : target data
+    dY : variance on the data
+    X  : independent variable values corresponding to values of Y
     '''
 
     ephi    = exp_phi_u(X, a[1:], k = a[0])
     qcost   = np.sum((Y - ephi)**2/dY)
     ubound  = np.sum(ephi < Y)/Y.size 
-    L1_reg  = np.sum(np.abs(a)) 
-    L2_reg  = np.sum(a**2)
+    L1_reg  = np.sum(np.abs(a[1:])) 
+    L2_reg  = np.sum(a[a:]**2)
 
-    return qcost + (a[0] - k0)**2 + 0.5*ubound
+    return qcost + (a[0] - k0)**2 + 0.5*ubound + L1_reg
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     '''
@@ -98,12 +98,16 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
 
     Parameters
     ----------
-    max_local_sig: observed local significance (assumes sqrt(-2*nllr))
-    u: array of scan thresholds
-    phiscan: scan of EC for values in u
-    j = numbers of search dimensions to calculate
-    k = assumed numbers of degrees of freedom of chi2 field. If not specified
-        it will be a floating parmeter in the LEE estimation (recommended)
+    max_local_sig : observed local significance (assumes sqrt(-2*q))
+    u             : array of scan thresholds
+    phiscan       : scan of EC 
+    j             : numbers of search dimensions to calculate
+    k             : assumed numbers of degrees of freedom of chi2 field. If not
+                    specified it will be a floating parmeter in the LEE estimation.
+    do_fit        : by default the d.o.f. and the amplitude of the LEE
+                    expansion terms will be allowed to vary; if False the d.o.f. will be fixed
+                    to the input value and the expansion coefficients will be determined by
+                    picking a few point from the data.
     '''
     exp_phi = phiscan.mean(axis=0)
     var_phi = phiscan.var(axis=0)
