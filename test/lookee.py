@@ -78,10 +78,16 @@ if __name__ == '__main__':
 
     ### Define scan values here ### 
     print 'Preparing scan parameters...'
-    scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                 bounds = [(-0.8, 0.8), (0.02,0.1)],
-                                 nscans = [25, 25]
-                                )
+    if ndim == 1:
+        scan_params = ScanParameters(names = ['mu', 'sigma'],
+                                     bounds = [(-0.8, 0.8), (0.04,0.04)],
+                                     nscans = [25, 1]
+                                    )
+    elif ndim == 2:
+        scan_params = ScanParameters(names = ['mu', 'sigma'],
+                                     bounds = [(-0.8, 0.8), (0.02,0.1)],
+                                     nscans = [25, 25]
+                                    )
 
     paramscan = []
     phiscan   = []
