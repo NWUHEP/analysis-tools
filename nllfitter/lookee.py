@@ -54,14 +54,16 @@ def rho_g(u, j=1, k=1):
 
 def exp_phi_u(u, n_j, k=1):
     '''
-    1 or 2 dimensional expressions for chi2 random field EC expectation
-    
+    Returns the Gross-Vittels expansion of the expectation of the E.C. of a
+    chi2 random field with k d.o.f. and give expansion coefficients n_j 
+
     Parameters
     ----------
     u   : array of scan thresholds
     n_j : array of coefficients
     k   : nDOF of chi2 field
     '''
+    
     return chi2.sf(u,k) + np.sum([n*rho_g(u, j+1, k) for j,n in enumerate(n_j)], axis=0)
 
 def lee_objective(a, Y, dY, X, k0):
@@ -84,10 +86,11 @@ def lee_objective(a, Y, dY, X, k0):
     ephi    = exp_phi_u(X, a[1:], k = a[0])
     qcost   = np.sum((Y - ephi)**2/dY)
     ubound  = np.sum(ephi < Y)/Y.size 
-    L1_reg  = np.sum(np.abs(a[1:])) 
-    L2_reg  = np.sum(a[a:]**2)
 
-    return qcost + (a[0] - k0)**2 + 0.5*ubound + L1_reg
+    L1_reg  = np.sum(np.abs(a[1:])) 
+    L2_reg  = np.sum(a[1:]**2)
+
+    return qcost #+ (a[0] - k0)**2 + 0.5*ubound + L1_reg
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     '''

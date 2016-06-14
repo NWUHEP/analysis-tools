@@ -117,6 +117,8 @@ if __name__ == '__main__':
             bg_model.update_parameters(bg_result.x)
             ft.fit_plot(sim, xlimits, sig_model, bg_model,
                         '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
+            if ndim == 2:
+                cmap = plt.imshow(qscan, cmap='viridis', vmin=0., vmax=10.) 
 
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
