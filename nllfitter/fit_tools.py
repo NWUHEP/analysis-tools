@@ -1,3 +1,7 @@
+'''
+    Miscellaneous tools and helper functions for the nllfitting framework.
+'''
+
 #!/usr/bin/env python
 
 from __future__ import division
