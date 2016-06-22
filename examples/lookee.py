@@ -4,6 +4,7 @@ import sys, pickle
 from timeit import default_timer as timer
 
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.stats import norm
 
 from nllfitter import Parameters, ScanParameters, Model, NLLFitter
@@ -20,7 +21,7 @@ if __name__ == '__main__':
         nsims   = int(sys.argv[2])
         ndim    = int(sys.argv[3])
     else:
-        channel = '1b1c'
+        channel = '1b1f'
         nsims   = 10
         ndim    = 2
 
@@ -30,14 +31,18 @@ if __name__ == '__main__':
 
     minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
-    make_plots = False
+    make_plots = True
     save_data  = False
 
     ########################
     ### Define fit model ###
     ########################
 
-    data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+    data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+    data = np.concatenate((data_1b1f, data_1b1c))
+    n_total = n_1b1f + n_1b1c
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
@@ -93,7 +98,7 @@ if __name__ == '__main__':
     qmaxscan  = []
     u_0       = np.linspace(0.01, 25., 1250.)
     for i, sim in enumerate(sims):
-        if i%100 == 0: print 'Carrying out scan {0}...'.format(i+1)
+        if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
 
         # fit background model
         bg_result = bg_fitter.fit(sim)
@@ -118,7 +123,11 @@ if __name__ == '__main__':
             ft.fit_plot(sim, xlimits, sig_model, bg_model,
                         '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
             if ndim == 2:
-                cmap = plt.imshow(qscan, cmap='viridis', vmin=0., vmax=10.) 
+                cmap = plt.imshow(qscan.transpose(), cmap='viridis', vmin=0., vmax=20.) 
+                plt.colorbar()
+                plt.savefig('plots/scan_fits/qscan_{0}_{1}.png'.format(channel, i))
+                plt.savefig('plots/scan_fits/qscan_{0}_{1}.pdf'.format(channel, i))
+                plt.close()
 
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
@@ -131,10 +140,12 @@ if __name__ == '__main__':
     k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
     k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
     k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
-    lee.validation_plots(u_0, phiscan, qmaxscan, 
-                         [nvals1, nvals2, nvals], [k1, k2, k], 
-                         #[nvals], [k], 
-                         '{0}_{1}D'.format(channel, ndim))
+
+    if make_plots:
+        lee.validation_plots(u_0, phiscan, qmaxscan, 
+                             [nvals1, nvals2, nvals], [k1, k2, k], 
+                             #[nvals], [k], 
+                             '{0}_{1}D'.format(channel, ndim))
 
     print 'k = {0:.2f}'.format(k)
     for i,n in enumerate(nvals):

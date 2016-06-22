@@ -112,11 +112,11 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots', show=False):
     plt.close()
 
     fig, ax = plt.subplots()
-    ax.errorbar(bincenters, h[0], yerr=binerrs, fmt='ko')
     ax.plot(x, y_sig, 'b-', linewidth=2.)
     ax.plot(x, y_bg1, 'b--', linewidth=2.) 
     ax.plot(x, y_bg2, 'r-.', linewidth=2.) 
-    ax.legend(['data', 'bg+sig.', 'bg', 'bg only']) 
+    ax.errorbar(bincenters, h[0], yerr=binerrs, fmt='ko')
+    ax.legend(['bg+sig.', 'bg', 'bg only', 'data']) 
 
     if suffix[:4] == '1b1f':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')

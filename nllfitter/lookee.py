@@ -36,13 +36,13 @@ def rho_g(u, j=1, k=1):
 
     Parameters
     ----------
+    u: threshold for excursions in the field
     j: number of nuisance parameters (search dimensions)
     k: d.o.f. of chi2 random field
-    u: threshold for excursions in the field
     '''
 
     coeff_num       = u**((k - j)/2.) * np.exp(-u/2.) 
-    coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k-2.)/2.)
+    coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k - 2.)/2.)
     indicate        = lambda m,l: float(k >= j - m - 2.*l)
     sum_fraction    = lambda m,l: ((-1.)**(j - 1. + m + l) * factorial(j - 1)) / (factorial(m)*factorial(l)*2.**l)
     m_terms         = lambda l: np.array([indicate(m,l) * comb(k-l, j-1.-m-2.*l) * sum_fraction(m,l) * u**(m+l) 
@@ -83,14 +83,26 @@ def lee_objective(a, Y, dY, X, k0):
     X  : independent variable values corresponding to values of Y
     '''
 
-    ephi    = exp_phi_u(X, a[1:], k = a[0])
+    ephi    = exp_phi_u(X, a[1:], k = k0)
+    #ephi    = exp_phi_u(X, a[1:], k = a[0])
     qcost   = np.sum((Y - ephi)**2/dY)
     ubound  = np.sum(ephi < Y)/Y.size 
 
+    ### regularization
     L1_reg  = np.sum(np.abs(a[1:])) 
     L2_reg  = np.sum(a[1:]**2)
 
-    return qcost #+ (a[0] - k0)**2 + 0.5*ubound + L1_reg
+    ### Require expansion coefficients to be positive
+    pCoeff1 = 0.
+    if np.any(a[1:] < 0):
+        pCoeff1 = np.exp(-10*np.sum(a[a<0.]))
+
+    ### Require k >= 1
+    pCoeff2 = 0.
+    if a[0] < 1:
+        pCoeff2 = np.inf
+
+    return qcost + (a[0] - k0)**2 + 0.5*ubound + L1_reg + pCoeff1 + pCoeff2
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     '''
@@ -115,7 +127,7 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     exp_phi = phiscan.mean(axis=0)
     var_phi = phiscan.var(axis=0)
 
-    ### Remove points where exp_phi > 0 ###
+    ### Remove points where exp_phi < 0 ###
     phimask = (exp_phi > 0.)
     exp_phi = exp_phi[phimask]
     var_phi = var_phi[phimask]
@@ -134,7 +146,7 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
                           args   = (exp_phi, var_phi, u, k),
                           #bounds = bnds
                           )
-        k = result.x[0]
+        k = result.x[0] if result.x[0] >= 1. else 1.
         n = result.x[1:]
     else:
         print 'd.o.f. specified => fit the EC scan with free parameters N_j and k={0}...'.format(k)
@@ -178,6 +190,7 @@ def validation_plots(u, phiscan, qmax, Nvals, kvals, channel):
     ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
     ax.fill_between(hbins, pval-perr, pval+perr, color='m', alpha=0.25, interpolate=True)
     for N ,k in zip(Nvals, kvals):
+        print N, k
         ax.plot(u, exp_phi_u(u, N, k), '--', linewidth=2.)
 
 
