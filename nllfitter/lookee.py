@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import division
+
 import sys
 import pickle
 from timeit import default_timer as timer
@@ -44,9 +46,8 @@ def rho_g(u, j=1, k=1):
     coeff_num       = u**((k - j)/2.) * np.exp(-u/2.) 
     coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k - 2.)/2.)
     indicate        = lambda m,l: float(k >= j - m - 2.*l)
-    sum_fraction    = lambda m,l: ((-1.)**(j - 1. + m + l) * factorial(j - 1)) / (factorial(m)*factorial(l)*2.**l)
-    m_terms         = lambda l: np.array([indicate(m,l) * comb(k-l, j-1.-m-2.*l) * sum_fraction(m,l) * u**(m+l) 
-                                        for m in np.arange(0, 1 + int(j-1.-2.*l))])
+    sum_fraction    = lambda m,l: ((-1.)**(j - 1. + m + l) * factorial(j - 1)) / (factorial(m)*factorial(l)*(2**l))
+    m_terms         = lambda l: np.array([indicate(m,l) * comb(k-l, j-1.-m-2.*l) * sum_fraction(m,l) * u**(m+l) for m in np.arange(0, 1 + int(j-1.-2.*l))])
     m_sum           = lambda l: np.sum(m_terms(l), axis=0)
     l_sum           = np.sum([m_sum(l) for l in np.arange(0., 1 + np.floor((j-1)/2))], axis=0) 
 
