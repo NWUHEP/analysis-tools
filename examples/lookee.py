@@ -33,6 +33,7 @@ if __name__ == '__main__':
     xlimits    = (12., 70.)
     make_plots = True
     save_data  = False
+    is_batch   = False
 
     ########################
     ### Define fit model ###
@@ -123,7 +124,7 @@ if __name__ == '__main__':
             ft.fit_plot(sim, xlimits, sig_model, bg_model,
                         '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
             if ndim == 2:
-                cmap = plt.imshow(qscan.transpose(), cmap='viridis', vmin=0., vmax=20.) 
+                cmap = plt.imshow(qscan.transpose(), cmap='viridis', vmin=0., vmax=10.) 
                 plt.colorbar()
                 plt.savefig('plots/scan_fits/qscan_{0}_{1}.png'.format(channel, i))
                 plt.savefig('plots/scan_fits/qscan_{0}_{1}.pdf'.format(channel, i))
@@ -137,24 +138,25 @@ if __name__ == '__main__':
     ### Calculate LEE correction ###
     ################################
 
-    k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
-    k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
-    k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
+    if not is_batch:
+        k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
+        k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
+        k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
 
-    if make_plots:
-        lee.validation_plots(u_0, phiscan, qmaxscan, 
-                             [nvals1, nvals2, nvals], [k1, k2, k], 
-                             #[nvals], [k], 
-                             '{0}_{1}D'.format(channel, ndim))
+        if make_plots:
+            lee.validation_plots(u_0, phiscan, qmaxscan, 
+                                 [nvals1, nvals2, nvals], [k1, k2, k], 
+                                 #[nvals], [k], 
+                                 '{0}_{1}D'.format(channel, ndim))
 
-    print 'k = {0:.2f}'.format(k)
-    for i,n in enumerate(nvals):
-        print 'N{0} = {1:.2f}'.format(i, n)
-    print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
-    print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
+        print 'k = {0:.2f}'.format(k)
+        for i,n in enumerate(nvals):
+            print 'N{0} = {1:.2f}'.format(i, n)
+        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
+        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     # Save scan data
-    if save_data:
+    if save_data or is_batch:
         outfile = open('data/lee_scan_{0}_{1}.pkl'.format('combined', nsims), 'w')
         pickle.dump(u_0, outfile)
         pickle.dump(qmaxscan, outfile)

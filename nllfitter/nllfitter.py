@@ -184,4 +184,6 @@ class ScanParameters:
         '''
         Return an array of tuples to be scanned over.
         '''
-        return list(product(*self.scans)), self.div
+        scan_vals = list(product(*self.scans))
+        return scan_vals, self.div
+
