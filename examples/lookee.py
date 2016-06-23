@@ -39,11 +39,13 @@ if __name__ == '__main__':
     ### Define fit model ###
     ########################
 
-    #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-    data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-    data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
-    data = np.concatenate((data_1b1f, data_1b1c))
-    n_total = n_1b1f + n_1b1c
+    if channel == 'combined':
+        data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+        data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+        data = np.concatenate((data_1b1f, data_1b1c))
+        n_total = n_1b1f + n_1b1c
+    else:
+        data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
@@ -157,7 +159,7 @@ if __name__ == '__main__':
 
     # Save scan data
     if save_data or is_batch:
-        outfile = open('data/lee_scan_{0}_{1}.pkl'.format('combined', nsims), 'w')
+        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format(channel, nsims, ndim), 'w')
         pickle.dump(u_0, outfile)
         pickle.dump(qmaxscan, outfile)
         pickle.dump(phiscan, outfile)
