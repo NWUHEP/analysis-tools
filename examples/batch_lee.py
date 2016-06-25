@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     channel     = '1b1f'
     ndim        = 1
-    path        = 'data/batch_scans/'
+    path        = 'data/batch_scans/{0}_{1}'.format(channel, ndim)
     filenames   = [path + f for f in os.listdir(path) if os.path.isfile(path + f)]
     print 'Getting data from {0}...'.format(path)
 
