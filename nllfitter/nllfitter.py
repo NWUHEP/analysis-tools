@@ -120,7 +120,7 @@ class NLLFitter:
 
         nllscan     = []
         best_params = 0.
-        nll_min = 1e9
+        nll_min     = 1e9
         scan_vals, scan_div = scan_params.get_scan_vals()
         for i, scan in enumerate(scan_vals):
 

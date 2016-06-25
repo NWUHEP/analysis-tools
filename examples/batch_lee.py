@@ -9,23 +9,26 @@ from scipy.stats import chi2, norm
 
 if __name__ == '__main__':
 
-    path    = 'data/batch_combination_1D/'
-    files   = [open(path + f, 'r') for f in os.listdir(path) if os.path.isfile(path + f)]
+    channel     = '1b1f'
+    ndim        = 1
+    path        = 'data/batch_scans/'
+    filenames   = [path + f for f in os.listdir(path) if os.path.isfile(path + f)]
     print 'Getting data from {0}...'.format(path)
 
     qmaxscan    = []
     phiscan     = []
     paramscan   = []
     u_0         = np.linspace(0., 20., 1000)
-    for f in files:
-        #u_0 = pickle.load(f)
+    for name in filenames:
+        f = open(path+name, 'r')
+        u_0 = pickle.load(f)
         qmaxscan.append(pickle.load(f))
         phiscan.append(pickle.load(f))
         paramscan.append(pickle.load(f))
         f.close()
 
-    qmaxscan    = np.array([q for scan in qmaxscan for q in scan])
-    phiscan     = np.concatenate(phiscan, axis=0)
+    qmaxscan = np.array([q for scan in qmaxscan for q in scan])
+    phiscan = np.concatenate(phiscan, axis=0)
 
     ### Calculate LEE correction ###
     qmax    = 26.89

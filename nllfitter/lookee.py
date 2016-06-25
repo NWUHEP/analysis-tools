@@ -38,20 +38,25 @@ def rho_g(u, j=1, k=1):
 
     Parameters
     ----------
-    u: threshold for excursions in the field
+    u: threshold for excursions in the field. Can be 
     j: number of nuisance parameters (search dimensions)
     k: d.o.f. of chi2 random field
     '''
 
-    coeff_num       = u**((k - j)/2.) * np.exp(-u/2.) 
-    coeff_den       = (2.*np.pi)**(j/2.) * gamma(k/2.) * 2**((k - 2.)/2.)
-    indicate        = lambda m,l: float(k >= j - m - 2.*l)
-    sum_fraction    = lambda m,l: ((-1.)**(j - 1. + m + l) * factorial(j - 1)) / (factorial(m)*factorial(l)*(2**l))
-    m_terms         = lambda l: np.array([indicate(m,l) * comb(k-l, j-1.-m-2.*l) * sum_fraction(m,l) * u**(m+l) for m in np.arange(0, 1 + int(j-1.-2.*l))])
-    m_sum           = lambda l: np.sum(m_terms(l), axis=0)
-    l_sum           = np.sum([m_sum(l) for l in np.arange(0., 1 + np.floor((j-1)/2))], axis=0) 
+    coeff_num       = np.power(u, (k - j)/2.) * np.exp(-u/2.) 
+    coeff_den       = np.power(2.*np.pi, j/2.) * gamma(k/2.) * np.power(2, (k - 2.)/2.)
 
-    return (coeff_num/coeff_den)*l_sum
+    sum_term = 0.
+    for l in xrange(1 + np.max(0, int(((j-1)/2)))):
+        for m in xrange(j - 2*l):
+            choose = comb(k-1, j-1-m-2*l)
+            indicate = float(k >= j-m-2*l)
+            sum_num = ((-1)**(j-1+m+l) * factorial(j-1)) 
+            sum_den = (factorial(m)*factorial(l)*(2**l))
+
+            sum_term += indicate*choose*(sum_num/sum_den)*np.power(u, m+l)
+
+    return (coeff_num/coeff_den)*sum_term
 
 def exp_phi_u(u, n_j, k=1):
     '''
@@ -84,8 +89,8 @@ def lee_objective(a, Y, dY, X, k0):
     X  : independent variable values corresponding to values of Y
     '''
 
-    ephi    = exp_phi_u(X, a[1:], k = k0)
-    #ephi    = exp_phi_u(X, a[1:], k = a[0])
+    #ephi    = exp_phi_u(X, a[1:], k = k0)
+    ephi    = exp_phi_u(X, a[1:], k = a[0])
     qcost   = np.sum((Y - ephi)**2/dY)
     ubound  = np.sum(ephi < Y)/Y.size 
 
@@ -103,7 +108,7 @@ def lee_objective(a, Y, dY, X, k0):
     if a[0] < 1:
         pCoeff2 = np.inf
 
-    return qcost + (a[0] - k0)**2 + 0.5*ubound + L1_reg + pCoeff1 + pCoeff2
+    return qcost + 0.5*ubound + L1_reg + pCoeff1 + pCoeff2 + (a[0] - k0)**2 
 
 def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     '''

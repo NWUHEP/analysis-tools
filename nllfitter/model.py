@@ -158,6 +158,12 @@ class CombinedModel(Model):
         params: parameters of the combined model
         '''
 
+        if len(X) is not len(self.models):
+            except:
+                print 'The number of datasets must be the same as the number of models!!!'
+                print 'There are {0} models'.format(len(self.models))
+                return
+
         if isinstance(params, np.ndarray):
             self.update_parameters(params)
         params = self.get_parameters()

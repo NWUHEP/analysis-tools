@@ -177,10 +177,20 @@ def generator_emcee(pdf, samples_per_toy=100, ntoys=100, bounds=(-1, 1)):
 
 def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     '''
-    Rejection sampling with broadcasting gives approximately the requested number of toys...
+    Rejection sampling with broadcasting gives approximately the requested
+    number of toys.  This works okay for simple pdfs.
+
+    Parameters:
+    ===========
+    pdf             : the pdf that will be sampled to produce the synthetic data
+    samples_per_toy : number of datapoint per toy dataset
+    ntoys           : number of synthetic datasets to be produced
+    bounds          : specify (lower, upper) bounds for the toy data
     '''
 
-    # Generate random numbers and map into domain defined by bounds
+    # Generate random numbers and map into domain defined by bounds.  Generate
+    # twice the number of requested events in expectation of ~50% efficiency.
+    # This will not be the case for more complicated pdfs presumably
     rnums = rng.rand(2, 2*ntoys*samples_per_toy) 
     x = rnums[0]
     x = (bounds[1] - bounds[0])*x + bounds[0]
@@ -188,15 +198,19 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     # Carry out rejection sampling
     keep = pdf(x) > rnums[1]
     x    = x[keep]
-    print 'Generated {0} data points with {1:.2f}% efficiency'.format(2*ntoys*samples_per_toy, 100.*x.size/keep.size)
     
-    # Remove excess events and shape to samples_per_toy
+    # Remove excess events and shape to samples_per_toy.
     x = x[:-(x.size%samples_per_toy)]
     x = x.reshape(x.size/samples_per_toy, samples_per_toy)
 
-    # if ntoys is not produced try again
-    #if x.shape[0] < ntoys:
-    #    x = np.concatenate((x, mc_generator(pdf, samp_per_toy, (ntoys-x.shape[0]), domain)))
+    # if the exact number of toy datasets are not generated either trim or
+    # produce more.
+    ndata = x.shape[0]
+    if ndata < ntoys:
+        xplus = generator(pdf, samples_per_toy, (ntoys-ndata), bounds)
+        x = np.concatenate((x, xplus))
+    elif ndata > ntoys:
+        x = x[:ntoys,]
 
     return x
 
