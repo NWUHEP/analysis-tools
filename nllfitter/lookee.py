@@ -17,7 +17,10 @@ from scipy.special import gamma
 from scipy.misc import comb, factorial
 
 def calculate_euler_characteristic(a):
-   '''Calculate the Euler characteristic for level set a'''
+   '''
+   Calculate the Euler characteristic for level set a.
+   Taken from https://github.com/cranmer/look-elsewhere-2d/blob/master/lee2d.py#L87
+   '''
    face_filter=np.zeros((2,2))+1
    right_edge_filter = np.array([[1,1]])
    bottom_edge_filter = right_edge_filter.T
@@ -72,7 +75,7 @@ def exp_phi_u(u, n_j, k=1):
     
     return chi2.sf(u,k) + np.sum([n*rho_g(u, j+1, k) for j,n in enumerate(n_j)], axis=0)
 
-def lee_objective(a, Y, dY, X, k0):
+def lee_objective(a, Y, dY, X, k0, fix_dof=False):
     '''
     Defines the objective function for regressing the <EC> of our chi2 field.
     The minimization should be done on the quadratic cost weighted by the
@@ -89,28 +92,40 @@ def lee_objective(a, Y, dY, X, k0):
     X  : independent variable values corresponding to values of Y
     '''
 
-    #ephi    = exp_phi_u(X, a[1:], k = k0)
-    ephi    = exp_phi_u(X, a[1:], k = a[0])
-    qcost   = np.sum((Y - ephi)**2/dY)
-    ubound  = np.sum(ephi < Y)/Y.size 
+    if fix_dof:
+        ephi = exp_phi_u(X, a[1:], k = k0)
+    else:
+        ephi = exp_phi_u(X, a[1:], k = a[0])
 
-    ### regularization
+    quadratic_cost = np.sum((Y - ephi)**2/dY)
+
+    ### upper bound
+    ubound = np.sum(ephi < Y)/Y.size 
+
+    ### regularization of expansion coefficients
     L1_reg  = np.sum(np.abs(a[1:])) 
     L2_reg  = np.sum(a[1:]**2)
 
-    ### Require expansion coefficients to be positive
+    ### require expansion coefficients to be positive
     pCoeff1 = 0.
     if np.any(a[1:] < 0):
         pCoeff1 = np.exp(-10*np.sum(a[a<0.]))
 
-    ### Require k >= 1
+    ### require k >= 1
     pCoeff2 = 0.
-    if a[0] < 1:
+    if a[0] < 1 and not fix_dof:
         pCoeff2 = np.inf
 
-    return qcost + 0.5*ubound + L1_reg + pCoeff1 + pCoeff2 + (a[0] - k0)**2 
+    objective = quadratic_cost # essential
+    #objective += ubound # ad-hoc
+    #objective += L1_reg  
+    #objective += L2_reg  
+    #objective += pCoeff1
+    #objective += pCoeff2
 
-def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
+    return objective
+
+def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True, fix_dof=False):
     '''
     Carries GV style look elsewhere corrections with a twist.  Allows for an
     arbitrary number of search dimensions/nuisance parameters and allows the
@@ -143,19 +158,24 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True):
     var_phi[var_phi==0] = 1./np.sqrt(phiscan.shape[0])
     
     if do_fit:
-        print 'd.o.f. not specified => fit the EC with scan free parameters N_j and k...'
-        bnds   = [(1, None)] + j*[(0., None)]
-        p_init = [1.] + j*[1.,]
+        print 'fit the EC with scan free parameters N_j and k...'
+        if fix_dof:
+            k_bnds = [(k, k)]
+        else:
+            k_bnds = [(1., np.inf)]
+
+        bnds   = k_bnds + j*[(0., np.inf)]
+        p_init = [e] + j*[1.,]
         result = minimize(lee_objective,
                           p_init,
-                          method = 'Nelder-Mead',
-                          args   = (exp_phi, var_phi, u, k),
-                          #bounds = bnds
+                          method = 'SLSQP',
+                          args   = (exp_phi, var_phi, u, k, fix_dof),
+                          bounds = bnds
                           )
         k = result.x[0] if result.x[0] >= 1. else 1.
         n = result.x[1:]
     else:
-        print 'd.o.f. specified => fit the EC scan with free parameters N_j and k={0}...'.format(k)
+        print 'fit the EC scan with free parameters N_j and k={0}...'.format(k)
         mask  = np.arange(1, 1 + j)*100
         xvals = u[mask]
         ephis = exp_phi[mask]
@@ -196,7 +216,6 @@ def validation_plots(u, phiscan, qmax, Nvals, kvals, channel):
     ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
     ax.fill_between(hbins, pval-perr, pval+perr, color='m', alpha=0.25, interpolate=True)
     for N ,k in zip(Nvals, kvals):
-        print N, k
         ax.plot(u, exp_phi_u(u, N, k), '--', linewidth=2.)
 
 
