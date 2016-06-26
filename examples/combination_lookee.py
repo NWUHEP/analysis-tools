@@ -28,9 +28,9 @@ if __name__ == '__main__':
     xlimits    = (12., 70.)
     nscan      = (50, 30)
     channels   = ['1b1f', '1b1c']
-    make_plots = True
+    make_plots = False
     save_data  = False
-    is_batch   = False
+    is_batch   = True
 
     ########################
     ### Define fit model ###
@@ -171,7 +171,16 @@ if __name__ == '__main__':
     ### Calculate LEE correction ###
     ################################
 
-    if not is_batch:
+    if is_batch:
+        # Save scan data
+        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format('combined', nsims, ndim), 'w')
+        pickle.dump(u_0, outfile)
+        pickle.dump(qmaxscan, outfile)
+        pickle.dump(phiscan, outfile)
+        pickle.dump(paramscan, outfile)
+        outfile.close()
+
+    elif not is_batch:
         k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
         k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
         k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
@@ -188,13 +197,5 @@ if __name__ == '__main__':
         print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
         print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
-    # Save scan data
-    if save_data or is_batch:
-        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format('combined', nsims, ndim), 'w')
-        pickle.dump(u_0, outfile)
-        pickle.dump(qmaxscan, outfile)
-        pickle.dump(phiscan, outfile)
-        pickle.dump(paramscan, outfile)
-        outfile.close()
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
