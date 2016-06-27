@@ -136,6 +136,15 @@ if __name__ == '__main__':
     paramscan   = np.array(paramscan)
     qmaxscan    = np.array(qmaxscan)
 
+    # Save scan data
+    if save_data or is_batch:
+        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format(channel, nsims, ndim), 'w')
+        pickle.dump(u_0, outfile)
+        pickle.dump(qmaxscan, outfile)
+        pickle.dump(phiscan, outfile)
+        pickle.dump(paramscan, outfile)
+        outfile.close()
+
     ################################
     ### Calculate LEE correction ###
     ################################
@@ -156,14 +165,5 @@ if __name__ == '__main__':
             print 'N{0} = {1:.2f}'.format(i, n)
         print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
         print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
-
-    # Save scan data
-    if save_data or is_batch:
-        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format(channel, nsims, ndim), 'w')
-        pickle.dump(u_0, outfile)
-        pickle.dump(qmaxscan, outfile)
-        pickle.dump(phiscan, outfile)
-        pickle.dump(paramscan, outfile)
-        outfile.close()
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))

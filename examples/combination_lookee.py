@@ -167,20 +167,21 @@ if __name__ == '__main__':
     paramscan   = np.array(paramscan)
     qmaxscan    = np.array(qmaxscan)
 
-    ################################
-    ### Calculate LEE correction ###
-    ################################
-
     if is_batch:
         # Save scan data
-        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format('combined', nsims, ndim), 'w')
+        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format('combination', nsims, ndim), 'w')
         pickle.dump(u_0, outfile)
         pickle.dump(qmaxscan, outfile)
         pickle.dump(phiscan, outfile)
         pickle.dump(paramscan, outfile)
         outfile.close()
 
-    elif not is_batch:
+    else:
+
+        ################################
+        ### Calculate LEE correction ###
+        ################################
+
         k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
         k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
         k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
