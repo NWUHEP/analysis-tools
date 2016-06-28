@@ -28,8 +28,8 @@ if __name__ == '__main__':
     xlimits    = (12., 70.)
     nscan      = (50, 30)
     channels   = ['1b1f', '1b1c']
-    make_plots = True
-    is_batch   = False
+    make_plots = False
+    is_batch   = True
 
     ########################
     ### Define fit model ###
@@ -115,12 +115,12 @@ if __name__ == '__main__':
     print 'Preparing scan parameters...'
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.7, 0.7), (0.045,0.055)],
+                                     bounds = [(-0.75, 0.75), (0.05,0.05)],
                                      nscans = [25, 1]
                                     )
     elif ndim == 2:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.7, 0.7), (0.02,0.1)],
+                                     bounds = [(-0.75, 0.75), (0.02,0.1)],
                                      nscans = [25, 25]
                                     )
 
