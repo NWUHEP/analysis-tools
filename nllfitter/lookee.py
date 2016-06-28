@@ -106,19 +106,9 @@ def lee_objective(a, Y, dY, X, k0, fix_dof=False):
     L1_reg  = np.sum(np.abs(a[1:])) 
     L2_reg  = np.sum(a[1:]**2)
 
-    ### require expansion coefficients to be positive
-    pCoeff1 = 0.
-    if np.any(a[1:] < 0):
-        pCoeff1 = np.exp(-10*np.sum(a[a<0.]))
-
-    ### require k >= 1
-    pCoeff2 = 0.
-    if a[0] < 1 and not fix_dof:
-        pCoeff2 = np.inf
-
     objective = quadratic_cost # essential
-    #objective += ubound # ad-hoc
-    #objective += L1_reg  
+    objective += 10*ubound # ad-hoc
+    objective += L1_reg  
     #objective += L2_reg  
     #objective += pCoeff1
     #objective += pCoeff2
@@ -165,7 +155,7 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True, fix_dof=False):
             k_bnds = [(1., np.inf)]
 
         bnds   = k_bnds + j*[(0., np.inf)]
-        p_init = [e] + j*[1.,]
+        p_init = [k] + j*[1.,]
         result = minimize(lee_objective,
                           p_init,
                           method = 'SLSQP',
@@ -212,7 +202,7 @@ def validation_plots(u, phiscan, qmax, Nvals, kvals, channel):
 
     ### Make the plots ###
     fig, ax = plt.subplots()
-    ax.plot(hbins[pmask], pval[pmask], 'm-', linewidth=2.)
+    ax.plot(hbins[pmask], pval[pmask], 'm-', linewidth=2)
     ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
     ax.fill_between(hbins, pval-perr, pval+perr, color='m', alpha=0.25, interpolate=True)
     for N ,k in zip(Nvals, kvals):
@@ -225,7 +215,7 @@ def validation_plots(u, phiscan, qmax, Nvals, kvals, channel):
                 else r'$\overline{{\phi}}_{{ \mathrm{{th.}} }}; k={0:.2f}$'.format(k) for k in kvals])
 
     ax.set_yscale('log')
-    ax.set_ylim(1e-4, 5*np.max(phiscan))
+    ax.set_ylim(1e-5, 5*np.max(phiscan))
     ax.set_ylabel(r'$\mathbb{\mathrm{P}}[q_{\mathrm{max}} > u]$')
     ax.set_xlabel(r'$u$')
     fig.savefig('plots/GV_validate_{0}.png'.format(channel))

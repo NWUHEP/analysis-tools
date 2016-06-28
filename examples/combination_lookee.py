@@ -28,9 +28,8 @@ if __name__ == '__main__':
     xlimits    = (12., 70.)
     nscan      = (50, 30)
     channels   = ['1b1f', '1b1c']
-    make_plots = False
-    save_data  = False
-    is_batch   = True
+    make_plots = True
+    is_batch   = False
 
     ########################
     ### Define fit model ###
@@ -70,7 +69,7 @@ if __name__ == '__main__':
     ### Define bg+sig model and carry out fit ###
     sig1_params = Parameters()
     sig1_params.add_many(
-                        ('A1'    , 0.01 , True , 0.01 , 1.   , None),
+                        ('A1'    , 0.01 , True , 0.   , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
@@ -81,7 +80,7 @@ if __name__ == '__main__':
 
     sig2_params = Parameters()
     sig2_params.add_many(
-                        ('A2'    , 0.01 , True , 0.01 , 1.   , None),
+                        ('A2'    , 0.01 , True , 0.   , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
@@ -116,7 +115,7 @@ if __name__ == '__main__':
     print 'Preparing scan parameters...'
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.7, 0.7), (0.04,0.04)],
+                                     bounds = [(-0.7, 0.7), (0.045,0.055)],
                                      nscans = [25, 1]
                                     )
     elif ndim == 2:
@@ -159,8 +158,8 @@ if __name__ == '__main__':
             if ndim == 2:
                 cmap = plt.imshow(qscan.transpose(), cmap='viridis', vmin=0., vmax=10.) 
                 plt.colorbar()
-                plt.savefig('plots/scan_fits/qscan_{0}_{1}.png'.format(channel, i))
-                plt.savefig('plots/scan_fits/qscan_{0}_{1}.pdf'.format(channel, i))
+                plt.savefig('plots/scan_fits/qscan_{0}_{1}.png'.format('combinaiton', i))
+                plt.savefig('plots/scan_fits/qscan_{0}_{1}.pdf'.format('combination', i))
                 plt.close()
 
     phiscan     = np.array(phiscan)
@@ -190,7 +189,7 @@ if __name__ == '__main__':
             lee.validation_plots(u_0, phiscan, qmaxscan, 
                                  [nvals1, nvals2, nvals], [k1, k2, k], 
                                  #[nvals], [k], 
-                                 '{0}_{1}D'.format('combined', ndim))
+                                 '{0}_{1}D'.format('combination', ndim))
 
         print 'k = {0:.2f}'.format(k)
         for i,n in enumerate(nvals):

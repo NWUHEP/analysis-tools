@@ -37,8 +37,15 @@ if __name__ == '__main__':
     paramscan = np.concatenate(paramscan, axis=0)
 
     ### Calculate LEE correction ###
-    qmax    = 18.31
-    ndim    = 1
+    if channel == '1b1f':
+        qmax = 18.31
+    elif channel == '1b1c':
+        qmax = 9.8
+    elif channel == 'combined':
+        qmax = 24.43
+    elif channel == 'combination': 
+        qmax = 27.57
+
     k1, nvals1, p_global    = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, fix_dof=True)
     k2, nvals2, p_global    = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, fix_dof=True)
     k, nvals, p_global      = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)

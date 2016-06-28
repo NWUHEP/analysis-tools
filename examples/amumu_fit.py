@@ -40,10 +40,16 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits = (12., 70.)
-    channel = '1b1f'
+    channel = 'combined'
 
     print 'Getting data and scaling to lie in range [-1, 1].'
-    data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    if channel == 'combined':
+        data_1b1f, n_1b1f = get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+        data_1b1c, n_1b1c = get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+        data = np.concatenate((data_1b1f, data_1b1c))
+        n_total = n_1b1f + n_1b1c
+    else:
+        data, n_total = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
     print 'Analyzing {0} events...\n'.format(n_total)
 
     ### Define bg model and carry out fit ###

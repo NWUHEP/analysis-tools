@@ -100,6 +100,8 @@ if __name__ == '__main__':
     sig_fitter = NLLFitter(sig_model)
     sig_result = sig_fitter.fit(datasets)
 
+    q = 2*(bg_model.calc_nll(datasets) - sig_model.calc_nll(datasets))
+    print '{0}: q = {1:.2f}'.format('h->gg', q)
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
