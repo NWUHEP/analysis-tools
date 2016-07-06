@@ -99,6 +99,7 @@ if __name__ == '__main__':
     paramscan = []
     phiscan   = []
     qmaxscan  = []
+    qfixed    = []
     u_0       = np.linspace(0.01, 25., 1250.)
     for i, sim in enumerate(sims):
         if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
@@ -115,6 +116,8 @@ if __name__ == '__main__':
         qscan = -2*(nllscan - nll_bg)
         paramscan.append(params)
         qmaxscan.append(np.max(qscan))
+
+        # calculate q at mu and sigma from data
 
         ### Calculate E.C. of the random field
         qscan = np.array(qscan).reshape(scan_params.nscans)

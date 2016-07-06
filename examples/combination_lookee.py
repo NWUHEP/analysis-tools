@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     sig2_params = Parameters()
     sig2_params.add_many(
-                        ('A2'    , 0.01 , True , 0.   , 1.   , None),
+                        ('A2'    , 0.01 , True , -1.   , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
@@ -93,7 +93,6 @@ if __name__ == '__main__':
     sig_model  = CombinedModel([sig1_model, sig2_model])
     sig_fitter = NLLFitter(sig_model, verbose=False)
     sig_result = sig_fitter.fit(datasets)
-
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
@@ -113,6 +112,11 @@ if __name__ == '__main__':
 
     ### Define scan values here ### 
     print 'Preparing scan parameters...'
+    if ndim == 0:
+        scan_params = ScanParameters(names = ['mu', 'sigma'],
+                                     bounds = [(-0.43, -0.43), (0.04,0.04)],
+                                     nscans = [1, 1]
+                                    )
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
                                      bounds = [(-0.75, 0.75), (0.05,0.05)],
