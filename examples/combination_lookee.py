@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     sig2_params = Parameters()
     sig2_params.add_many(
-                        ('A2'    , 0.01 , True , -1.   , 1.   , None),
+                        ('A2'    , 0.01 , True , 0.   , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )

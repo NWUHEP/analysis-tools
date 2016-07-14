@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits = (12., 70.)
-    channel = '1b1c'
+    channel = '1b1f'
     doCI    = False
 
     print 'Getting data and scaling to lie in range [-1, 1].'

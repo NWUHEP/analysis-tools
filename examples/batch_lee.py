@@ -2,10 +2,12 @@
 
 import pickle
 import os,sys
-import numpy as np
-import nllfitter.lookee as lee
 
+import numpy as np
 from scipy.stats import chi2, norm
+from scipy.optimize import minimize
+
+import nllfitter.lookee as lee
 
 if __name__ == '__main__':
 
@@ -36,29 +38,36 @@ if __name__ == '__main__':
     phiscan = np.concatenate(phiscan, axis=0)
     paramscan = np.concatenate(paramscan, axis=0)
 
-    ### Calculate LEE correction ###
-    if channel == '1b1f':
-        qmax = 18.31
-        k0 = 1 
-    elif channel == '1b1c':
-        qmax = 9.8
-        k0 = 1 
-    elif channel == 'combined':
-        qmax = 24.43
-        k0 = 1 
-    elif channel == 'combination': 
-        qmax = 27.57
-        k0 = 2 
+    if ndim == 0:
+        
+        pdf = lambda x, a: chi2.pdf(x, a[0])
+        obj = lambda a, x: -np.sum(np.log(pdf(x, a)))
+        result = minimize(obj, [1.], method='SLSQP', bounds=[(1., None)], args=(qmaxscan))
 
-    k1, nvals1, p_global    = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=k0, fix_dof=True)
-    k2, nvals2, p_global    = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1.53, fix_dof=True)
-    k, nvals, p_global      = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
-    lee.validation_plots(u_0, phiscan, qmaxscan, [nvals1, nvals2, nvals], [int(k1), k2, k], '{0}_{1}D'.format(channel, ndim))
+    else:
+        ### Calculate LEE correction ###
+        if channel == '1b1f':
+            qmax = 18.31
+            k0 = 1 
+        elif channel == '1b1c':
+            qmax = 9.8
+            k0 = 1 
+        elif channel == 'combined':
+            qmax = 24.43
+            k0 = 1 
+        elif channel == 'combination': 
+            qmax = 27.57
+            k0 = 2 
 
-    print 'k = {0:.2f}'.format(k)
-    for i,n in enumerate(nvals):
-        print 'N{0} = {1:.2f}'.format(i+1, n)
-    print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
-    print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
+        k1, nvals1, p_global    = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=k0, fix_dof=True)
+        k2, nvals2, p_global    = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1.53, fix_dof=True)
+        k, nvals, p_global      = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
+        lee.validation_plots(u_0, phiscan, qmaxscan, [nvals1, nvals2, nvals], [int(k1), k2, k], '{0}_{1}D'.format(channel, ndim))
+
+        print 'k = {0:.2f}'.format(k)
+        for i,n in enumerate(nvals):
+            print 'N{0} = {1:.2f}'.format(i+1, n)
+        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
+        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
 

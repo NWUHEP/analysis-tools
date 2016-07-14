@@ -19,6 +19,7 @@ import lmfit
 from scipy.stats import chi2, norm 
 from scipy import integrate
 from scipy.optimize import minimize
+from scipy.special import wofz
 
 # global options
 np.set_printoptions(precision=3.)
@@ -55,6 +56,31 @@ def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
 
     return np.abs(model_cdf - data_cdf)
 
+### PDF definitions (maybe put these in a separate file)
+def lorentzian(x, a):
+    '''
+    Lorentzian line shape
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (mean and HWHM)
+    '''
+    return a[1]/(np.pi*((x-a[0])**2 + a[1]**2))
+
+def voigt(x, a):
+    '''
+    Voigt profile
+
+    Parameters:
+    ===========
+    x: data
+    a: model paramters (mean, gamma, and sigma)
+    '''
+    z = ((x - a[0]) + 1j*a[1])/(a[2]*np.sqrt(2))
+    return np.real(wofz(z))/(a[2]*np.sqrt(2*np.pi))
+
+
 def bg_pdf(x, a): 
     '''
     Second order Legendre Polynomial with constant term set to 0.5.
@@ -74,6 +100,17 @@ def sig_pdf(x, a):
     ===========
     x: data
     a: model parameters (a1, a2, mu, and sigma)
+    '''
+    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
+
+def sig_pdf_alt(x, a):
+    '''
+    Second order Legendre Polynomial (normalized to unity) plus a Voigt profile.
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1, a2, mu, sigma, and gamma)
     '''
     return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
 
