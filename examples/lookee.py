@@ -85,6 +85,11 @@ if __name__ == '__main__':
 
     ### Define scan values here ### 
     print 'Preparing scan parameters...'
+    if ndim == 0:
+        scan_params = ScanParameters(names = ['mu', 'sigma'],
+                                     bounds = [(-0.43, -0.43), (0.04,0.04)],
+                                     nscans = [1, 1]
+                                    )
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
                                      bounds = [(-0.7, 0.7), (0.04,0.04)],
@@ -152,7 +157,7 @@ if __name__ == '__main__':
     ### Calculate LEE correction ###
     ################################
 
-    if not is_batch:
+    if not is_batch or ndim > 0:
         k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, fix_dof=True)
         k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, fix_dof=True)
         k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
