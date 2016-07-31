@@ -11,6 +11,24 @@ from nllfitter import Parameters, ScanParameters, Model, NLLFitter
 import nllfitter.fit_tools as ft
 import nllfitter.lookee as lee
 
+def sig_constraint(sig_pdf, a):
+    '''
+    Constraint for preventing signal pdf from going negative.  Evaluates
+    sig_pdf at the mean value of the signal Gaussian.
+
+    Parameters:
+    ===========
+    sig_pdf: polynomial + Gaussian model
+    x: data
+    a: model parameters (A, mu, sigma, a1, a2)
+    '''
+
+    fmin = sig_pdf(a[1], a)
+    if fmin <= 0.0001:
+        return np.inf
+    else:
+        return 0
+
 if __name__ == '__main__':
 
     start = timer()
@@ -61,14 +79,14 @@ if __name__ == '__main__':
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
     sig_params.add_many(
-                        ('A'     , 0.01  , True , 0.0 , 1.   , None),
+                        ('A'     , 0.01  , True , 0. , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.03 , True , 0.02 , 1.   , None)
                        )
     sig_params += bg_params.copy()
 
     sig_model  = Model(ft.sig_pdf, sig_params)
-    sig_fitter = NLLFitter(sig_model, verbose=False)
+    sig_fitter = NLLFitter(sig_model, verbose=False)#, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 
     ### Calculate the likelihood ration between the background and signal model
@@ -104,6 +122,7 @@ if __name__ == '__main__':
     paramscan = []
     phiscan   = []
     qmaxscan  = []
+    nllbg     = []
     qfixed    = []
     u_0       = np.linspace(0.01, 25., 1250.)
     for i, sim in enumerate(sims):
@@ -121,6 +140,7 @@ if __name__ == '__main__':
         qscan = -2*(nllscan - nll_bg)
         paramscan.append(params)
         qmaxscan.append(np.max(qscan))
+        nllbg.append(nll_bg)
 
         # calculate q at mu and sigma from data
 

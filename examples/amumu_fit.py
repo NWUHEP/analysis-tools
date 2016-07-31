@@ -31,6 +31,23 @@ def sig_pdf(x, a):
     '''
     return a[0]*norm.pdf(x, a[1], a[2]) + (1 - a[0])*bg_pdf(x, a[3:5])
 
+def sig_constraint(sig_pdf, a):
+    '''
+    Constraint for preventing signal pdf from going negative.  Evaluates
+    sig_pdf at the mean value of the signal Gaussian.
+
+    Parameters:
+    ===========
+    sig_pdf: polynomial + Gaussian model
+    x: data
+    a: model parameters (A, mu, sigma, a1, a2)
+    '''
+
+    fmin = sig_pdf(a[1], a)
+    if fmin <= 0:
+        return np.inf
+    else:
+        return 0
 
 if __name__ == '__main__':
 
@@ -73,7 +90,7 @@ if __name__ == '__main__':
                        )
     sig_params += bg_params.copy()
     sig_model  = Model(sig_pdf, sig_params)
-    sig_fitter = NLLFitter(sig_model)
+    sig_fitter = NLLFitter(sig_model, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 
     ### Plots!!! ###

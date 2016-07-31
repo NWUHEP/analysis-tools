@@ -3,7 +3,7 @@ from __future__ import division
 from timeit import default_timer as timer
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, chi2
 from lmfit import Parameter, Parameters
 
 from nllfitter.fit_tools import get_data, fit_plot, scale_data
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     ### Define bg+sig model and carry out fit ###
     sig1_params = Parameters()
     sig1_params.add_many(
-                        ('A1'    , 0.01 , True , 0.01 , 1.   , None),
+                        ('A1'    , 0.01 , True , 0.0 , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     sig2_params = Parameters()
     sig2_params.add_many(
-                        ('A2'    , 0.01 , True , 0.01 , 1.   , None),
+                        ('A2'    , 0.01 , True , 0.0 , 1.   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
@@ -101,8 +101,10 @@ if __name__ == '__main__':
     sig_result = sig_fitter.fit(datasets)
 
     q = 2*(bg_model.calc_nll(datasets) - sig_model.calc_nll(datasets))
-    print '{0}: q = {1:.2f}'.format('h->gg', q)
-
+    p_value = 0.5*chi2.sf(q, 1) + 0.25*chi2.sf(q, 2) # according to Chernoff 
+    print '{0}: q = {1:.3f}'.format('h->gg', q)
+    print 'p_local = {0}'.format(p_value)
+    print 'z_local = {0}'.format(-norm.ppf(p_value))
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
 

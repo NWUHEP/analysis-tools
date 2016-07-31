@@ -17,12 +17,14 @@ class NLLFitter:
     data     : the dataset or datasets we wish to carry out the modelling on
     min_algo : algorith used for minimizing the nll (uses available scipy.optimize algorithms)
 	verbose  : control verbosity of fit method
+    fcons    : constraint function; should take arguments of the form (sig_pdf, params)
     '''
-    def __init__(self, model, min_algo='SLSQP', verbose=True, lmult=(1., 1.)):
+    def __init__(self, model, min_algo='SLSQP', verbose=True, lmult=(0., 0.), fcons=None):
        self.model     = model
        self.min_algo  = min_algo
        self.verbose   = verbose
        self._lmult    = lmult
+       self._fcons    = fcons
 
     def _objective(self, params, data):
         '''
@@ -34,7 +36,15 @@ class NLLFitter:
         ==========
         a: model parameters in an numpy array
         '''
+
+        obj = 0.
+        if self._fcons:
+            obj += self._fcons(self.model._pdf, params)
+
         nll = self.model.calc_nll(data, params)
+        if nll is not np.nan:
+            obj += nll
+
         return nll + self._lmult[0] * np.sum(np.abs(params)) + self._lmult[1] * np.sum(params**2)
 
     def _get_corr(self, data, params):
@@ -123,7 +133,6 @@ class NLLFitter:
         nll_min     = 1e9
         scan_vals, scan_div = scan_params.get_scan_vals()
         for i, scan in enumerate(scan_vals):
-
             ### set bounds of model parameters being scanned over
             for j, name in enumerate(scan_params.names):
                 self.model.set_bounds(name, scan[j], scan[j]+scan_div[j])
