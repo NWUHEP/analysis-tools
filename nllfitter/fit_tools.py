@@ -78,7 +78,9 @@ def voigt(x, a):
     a: model paramters (mean, gamma, and sigma)
     '''
     z = ((x - a[0]) + 1j*a[1])/(a[2]*np.sqrt(2))
-    return np.real(wofz(z))/(a[2]*np.sqrt(2*np.pi))
+
+    v = np.real(wofz(z))/(a[2]*np.sqrt(2*np.pi))
+    return v
 
 
 def bg_pdf(x, a): 
@@ -105,14 +107,16 @@ def sig_pdf(x, a):
 
 def sig_pdf_alt(x, a):
     '''
-    Second order Legendre Polynomial (normalized to unity) plus a Voigt profile.
+    Second order Legendre Polynomial (normalized to unity) plus a Voigt
+    profile. N.B. The width of the convolutional Gaussian is set to 0.17 which
+    corresponds to a dimuon mass resolution 0.5 GeV.
 
     Parameters:
     ===========
     x: data
-    a: model parameters (a1, a2, mu, sigma, and gamma)
+    a: model parameters (a1, a2, mu, and gamma)
     '''
-    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
+    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*voigt(x, [a[1], a[2], 0.017])
 
 
 ### toy MC p-value calculator ###

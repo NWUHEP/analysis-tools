@@ -111,16 +111,17 @@ class NLLFitter:
 
         return result	
 
-    def scan(self, scan_params, data):
+    def scan(self, scan_params, data, amps=None):
         '''
         Fits model to data while scanning over give parameters.
 
         Parameters:
         ===========
-        scan_params       : ScanParameters class object specifying parameters to be scanned over
-        data              : dataset to fit the models to
+        scan_params : ScanParameters class object specifying parameters to be scanned over
+        data        : dataset to fit the models to
+        amps        : indices of signal amplitude parameters
         '''
-
+        
         ### Save bounds for parameters to be scanned so that they can be reset
         ### when finished
         saved_bounds = {}
@@ -129,6 +130,7 @@ class NLLFitter:
             saved_bounds[name] = (params[name].min, params[name].max)
 
         nllscan     = []
+        dofs        = [] # The d.o.f. of the field will vary depending on the amplitudes
         best_params = 0.
         nll_min     = 1e9
         scan_vals, scan_div = scan_params.get_scan_vals()
@@ -154,8 +156,10 @@ class NLLFitter:
                 if nll < nll_min:
                     best_params = result.x
                     nll_min = nll
+
+                if amps:
+                    dofs.append(np.sum(result.x[amps] > 0.001))
             else:
-                print result.status
                 continue
 
         ## Reset parameter bounds
@@ -163,7 +167,7 @@ class NLLFitter:
             self.model.set_bounds(name, saved_bounds[name][0], saved_bounds[name][1])
 
         nllscan = np.array(nllscan)
-        return nllscan, best_params
+        return nllscan, best_params, dofs
 
 class ScanParameters:
     '''

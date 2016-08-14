@@ -3,6 +3,7 @@ from __future__ import division
 from timeit import default_timer as timer
 
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 from lmfit import Parameter, Parameters
 
@@ -66,6 +67,10 @@ if __name__ == '__main__':
         data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
         data = np.concatenate((data_1b1f, data_1b1c))
         n_total = n_1b1f + n_1b1c
+    if channel == 'test':
+        data = pd.read_csv('data/null_spectrum_1.txt', header=None).values
+        data = ft.scale_data(data)
+        n_total = data.size
     else:
         data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
     print 'Analyzing {0} events...\n'.format(n_total)
@@ -89,7 +94,7 @@ if __name__ == '__main__':
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
     sig_params += bg_params.copy()
-    sig_model  = Model(sig_pdf, sig_params)
+    sig_model  = Model(ft.sig_pdf_alt, sig_params)
     sig_fitter = NLLFitter(sig_model, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 
@@ -100,6 +105,7 @@ if __name__ == '__main__':
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
     q_max = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
+    print 'q = {0}'.format(q_max)
 
     if doCI:
         ### Calculate confidence interval on the likelihood ratio at the +/- 1, 2

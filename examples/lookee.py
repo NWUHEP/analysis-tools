@@ -79,7 +79,7 @@ if __name__ == '__main__':
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
     sig_params.add_many(
-                        ('A'     , 0.01  , True , 0. , 1.   , None),
+                        ('A'     , 0.01  , True , 0. , 0.2   , None),
                         ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
                         ('sigma' , 0.03 , True , 0.02 , 1.   , None)
                        )
@@ -95,7 +95,11 @@ if __name__ == '__main__':
 
     ### Generate toy MC ###
     print 'Generating pseudodata for likelihood scans...'
+    if (channel == '1b1f'):
+        bg_model.set_parameter_value('a1', 0.179745)
+        bg_model.set_parameter_value('a2', 0.037958)
     sims = ft.generator(bg_model.pdf, n_total, ntoys=nsims)
+
 
     #######################################################
     ### Scan over search dimensions/nuisance parameters ###
@@ -105,17 +109,17 @@ if __name__ == '__main__':
     print 'Preparing scan parameters...'
     if ndim == 0:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.43, -0.43), (0.04,0.04)],
+                                     bounds = [(-0.4242, -0.4242), (0.04,0.04)],
                                      nscans = [1, 1]
                                     )
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.7, 0.7), (0.04,0.04)],
+                                     bounds = [(-0.8, 0.8), (0.04784,0.04784)],
                                      nscans = [25, 1]
                                     )
     elif ndim == 2:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.7, 0.7), (0.02,0.1)],
+                                     bounds = [(-0.8, 0.8), (0.02,0.1)],
                                      nscans = [25, 25]
                                     )
 
@@ -124,7 +128,7 @@ if __name__ == '__main__':
     qmaxscan  = []
     nllbg     = []
     qfixed    = []
-    u_0       = np.linspace(0.01, 25., 1250.)
+    u_0       = np.linspace(0.01, 30., 300.)
     for i, sim in enumerate(sims):
         if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
 
@@ -136,17 +140,17 @@ if __name__ == '__main__':
             continue
 
         # scan over signal parameters
-        nllscan, params = sig_fitter.scan(scan_params, sim) 
+        nllscan, params, dof = sig_fitter.scan(scan_params, sim) 
         qscan = -2*(nllscan - nll_bg)
+
         paramscan.append(params)
         qmaxscan.append(np.max(qscan))
         nllbg.append(nll_bg)
 
-        # calculate q at mu and sigma from data
-
         ### Calculate E.C. of the random field
         qscan = np.array(qscan).reshape(scan_params.nscans)
-        phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
+        if ndim > 0:
+            phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
 
         if make_plots and i < 50:
             sig_model.update_parameters(params)
@@ -177,15 +181,11 @@ if __name__ == '__main__':
     ### Calculate LEE correction ###
     ################################
 
-    if not is_batch or ndim > 0:
-        k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, fix_dof=True)
-        k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, fix_dof=True)
-        k, nvals, p_global   = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim)
+    if not is_batch and ndim > 0:
+        k, nvals, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, fix_dof=True)
 
         if make_plots:
-            lee.validation_plots(u_0, phiscan, qmaxscan, 
-                                 [nvals1, nvals2, nvals], [k1, k2, k], 
-                                 #[nvals], [k], 
+            lee.validation_plots(u_0, phiscan, qmaxscan, [nvals], [k], 
                                  '{0}_{1}D'.format(channel, ndim))
 
         print 'k = {0:.2f}'.format(k)

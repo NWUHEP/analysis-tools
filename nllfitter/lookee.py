@@ -16,6 +16,7 @@ from scipy.ndimage import *
 from scipy.special import gamma
 from scipy.misc import comb, factorial
 
+
 def calculate_euler_characteristic(a):
    '''
    Calculate the Euler characteristic for level set a.
@@ -102,20 +103,12 @@ def lee_objective(a, Y, dY, X, k0, fix_dof=False):
     ### upper bound
     ubound = np.sum(ephi < Y)/Y.size 
 
-    ### regularization of expansion coefficients
-    L1_reg  = np.sum(np.abs(a[1:])) 
-    L2_reg  = np.sum(a[1:]**2)
-
     objective = quadratic_cost # essential
     objective += 10*ubound # ad-hoc
-    objective += L1_reg  
-    #objective += L2_reg  
-    #objective += pCoeff1
-    #objective += pCoeff2
 
     return objective
 
-def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True, fix_dof=False):
+def lee_nD(max_local_sig, u, phiscan, j=1, k=1, fix_dof=False):
     '''
     Carries GV style look elsewhere corrections with a twist.  Allows for an
     arbitrary number of search dimensions/nuisance parameters and allows the
@@ -147,30 +140,22 @@ def lee_nD(max_local_sig, u, phiscan, j=1, k=1, do_fit=True, fix_dof=False):
     ### if variance on phi is 0, use the poisson error on dY ###
     var_phi[var_phi==0] = 1./np.sqrt(phiscan.shape[0])
     
-    if do_fit:
-        print 'fit the EC with scan free parameters N_j and k...'
-        if fix_dof:
-            k_bnds = [(k, k)]
-        else:
-            k_bnds = [(1., np.inf)]
-
-        bnds   = k_bnds + j*[(0., np.inf)]
-        p_init = [k] + j*[1.,]
-        result = minimize(lee_objective,
-                          p_init,
-                          method = 'SLSQP',
-                          args   = (exp_phi, var_phi, u, k, fix_dof),
-                          bounds = bnds
-                          )
-        k = result.x[0] if result.x[0] >= 1. else 1.
-        n = result.x[1:]
+    print 'fit the EC with scan free parameters N_j and k...'
+    if fix_dof:
+        k_bnds = [(k, k)]
     else:
-        print 'fit the EC scan with free parameters N_j and k={0}...'.format(k)
-        mask  = np.arange(1, 1 + j)*100
-        xvals = u[mask]
-        ephis = exp_phi[mask]
-        eq    = lambda n: [ephi - exp_phi_u(x, n, k=k) for ephi,x in zip(ephis, xvals)]
-        n     = fsolve(eq, j*(1,))
+        k_bnds = [(1., np.inf)]
+
+    bnds   = k_bnds + j*[(0., np.inf)]
+    p_init = [k] + j*[1.,]
+    result = minimize(lee_objective,
+                      p_init,
+                      method = 'SLSQP',
+                      args   = (exp_phi, var_phi, u, k, fix_dof),
+                      bounds = bnds
+                      )
+    k = result.x[0] if result.x[0] >= 1. else 1.
+    n = result.x[1:]
 
     p_global = exp_phi_u(max_local_sig**2, n, k)
 

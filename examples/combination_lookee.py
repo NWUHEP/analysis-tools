@@ -6,7 +6,8 @@ from timeit import default_timer as timer
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+import pandas as pd
+from scipy.stats import norm, chi2
 
 from nllfitter import Parameters, ScanParameters, Model, CombinedModel, NLLFitter
 import nllfitter.fit_tools as ft
@@ -28,8 +29,8 @@ if __name__ == '__main__':
     xlimits    = (12., 70.)
     nscan      = (50, 30)
     channels   = ['1b1f', '1b1c']
-    make_plots = False
-    is_batch   = True
+    make_plots = True
+    is_batch   = False
 
     ########################
     ### Define fit model ###
@@ -144,7 +145,7 @@ if __name__ == '__main__':
             continue
 
         # scan over signal parameters
-        nllscan, params = sig_fitter.scan(scan_params, sim) 
+        nllscan, params, dof = sig_fitter.scan(scan_params, sim, amps=[0, 5]) 
         qscan = -2*(nllscan - nll_bg)
         paramscan.append(params)
         qmaxscan.append(np.max(qscan))
@@ -170,6 +171,7 @@ if __name__ == '__main__':
     paramscan   = np.array(paramscan)
     qmaxscan    = np.array(qmaxscan)
 
+
     if is_batch:
         # Save scan data
         outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format('combination', nsims, ndim), 'w')
@@ -185,11 +187,16 @@ if __name__ == '__main__':
         ### Calculate LEE correction ###
         ################################
 
-        p_local = 0.5*chi2.sf(q, 1) + 0.25*chi2.sf(q, 2) # according to Chernoff 
+        p_local = 0.5*chi2.sf(qmax, 1) + 0.25*chi2.sf(qmax, 2) # according to Chernoff 
         z_local = -norm.ppf(p_local)
 
-        k1, nvals1, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, do_fit=False)
-        k2, nvals2, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=2, do_fit=False)
+        ### Before carrying this out, the E.C. coefficients should be determined for
+        ### each of the channels for the separate channels, i.e., when k=1.  The
+        ### construction of Gross-Vitells in this case is informed by the construction of
+        ### the local p value from Chernoff
+
+
+        #k2, nvals2, p_global = lee.lee_nD(z_local, u_0, phiscan, j=ndim, k=2, fix_dof=False)
 
         if make_plots:
             lee.validation_plots(u_0, phiscan, qmaxscan, 
