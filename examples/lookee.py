@@ -63,7 +63,8 @@ if __name__ == '__main__':
         data = np.concatenate((data_1b1f, data_1b1c))
         n_total = n_1b1f + n_1b1c
     else:
-        data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+        data, n_total = ft.get_data('data/test_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+        #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
@@ -85,7 +86,7 @@ if __name__ == '__main__':
                        )
     sig_params += bg_params.copy()
 
-    sig_model  = Model(ft.sig_pdf, sig_params)
+    sig_model  = Model(ft.sig_pdf_alt, sig_params)
     sig_fitter = NLLFitter(sig_model, verbose=False)#, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 

@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits = (12., 70.)
-    channel = '1b1f'
+    channel = 'test'
     doCI    = False
 
     print 'Getting data and scaling to lie in range [-1, 1].'
@@ -68,9 +68,7 @@ if __name__ == '__main__':
         data = np.concatenate((data_1b1f, data_1b1c))
         n_total = n_1b1f + n_1b1c
     if channel == 'test':
-        data = pd.read_csv('data/null_spectrum_1.txt', header=None).values
-        data = ft.scale_data(data)
-        n_total = data.size
+        data, n_total = ft.get_data('data/test_1b1f.csv'.format(channel), 'dimuon_mass', xlimits)
     else:
         data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
     print 'Analyzing {0} events...\n'.format(n_total)
@@ -94,7 +92,7 @@ if __name__ == '__main__':
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
     sig_params += bg_params.copy()
-    sig_model  = Model(ft.sig_pdf_alt, sig_params)
+    sig_model  = Model(ft.sig_pdf, sig_params)
     sig_fitter = NLLFitter(sig_model, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 
