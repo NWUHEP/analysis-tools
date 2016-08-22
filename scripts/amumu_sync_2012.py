@@ -17,7 +17,7 @@ if __name__ == '__main__':
         infile  = sys.argv[1]
         cat     = sys.argv[2]
     else:
-        infile = 'data/ntuple_dimuon.csv'
+        infile = 'data/ntuple_dimuon_muon_2012.csv'
         cat     = '1b1f'
 
     data = pd.read_csv(infile)
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         data_cut = data_cut.query(cut6)
         print data_cut.shape[0], data_cut.event_number.isin(en).value_counts()[True]
     
-        cut7 = 'delta_phi > 2.5'
+        cut7 = 'abs(delta_phi) > 2.5'
         data_cut = data_cut.query(cut7)
         print data_cut.shape[0], data_cut.event_number.isin(en).value_counts()[True]
     
@@ -68,3 +68,4 @@ if __name__ == '__main__':
     #data_cut = data_cut.query(cut6)
     #print data_cut.shape[0], data_cut.event_number.isin(en).value_counts()[True]
     
+

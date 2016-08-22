@@ -161,7 +161,7 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots', show=False):
 
     if suffix[:4] == '1b1f':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
-        ax.set_ylim([0., 25.])
+        ax.set_ylim([0., 1.5*np.max(h[0])])
         ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
         ax.set_ylabel('entries / 2 GeV')
     elif suffix[:4] == '1b1c':
@@ -254,4 +254,42 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
         x = x[:ntoys,]
 
     return x
+
+def calculate_CI(bg_fitter, sig_fitter):
+
+    ### Calculate confidence interval on the likelihood ratio at the +/- 1, 2
+    ### sigma levels
+    nsims = 1000
+
+    print 'Generating {0} pseudo-datasets from bg+signal fit and determining distribution of q'.format(nsims)
+    sims = ft.generator(sig_model.pdf, n_total, ntoys=nsims)
+    q_sim = []
+    for sim in sims:
+        bg_result = bg_fitter.fit(sim)
+        sig_result = sig_fitter.fit(sim) 
+        if bg_result.status == 0 and sig_result.status == 0:
+            nll_bg = bg_model.calc_nll(sim)
+            nll_sig = sig_model.calc_nll(sim)
+            q = 2*(nll_bg - nll_sig)
+            q_sim.append(q)
+        else:
+            print bg_result.status, sig_result.status
+
+    q_sim = np.array(q_sim)
+    q_sim.sort()
+    q_upper = q_sim[q_sim > q_max]
+    q_lower = q_sim[q_sim < q_max]
+
+    n_upper = q_upper.size
+    n_lower = q_lower.size
+
+    one_sigma_up   = q_upper[int(0.34*n_upper)]
+    two_sigma_up   = q_upper[int(0.475*n_upper)]
+    one_sigma_down = q_lower[int(-0.34*n_lower)]
+    two_sigma_down = q_lower[int(-0.475*n_lower)]
+
+    print '{0}: q = {1:.2f}'.format(channel, q_max)
+    print '1 sigma c.i.: {0:.2f} -- {1:.2f}'.format(one_sigma_down, one_sigma_up)
+    print '2 sigma c.i.: {0:.2f} -- {1:.2f}'.format(two_sigma_down, two_sigma_up)
+
 

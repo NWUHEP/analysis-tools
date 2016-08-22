@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+from scipy import integrate
 from lmfit import Parameter, Parameters
 
 import nllfitter.fit_tools as ft
@@ -58,19 +59,30 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits = (12., 70.)
-    channel = 'test'
-    doCI    = False
+    period  = 2016
+    channel = 'combined'
 
     print 'Getting data and scaling to lie in range [-1, 1].'
-    if channel == 'combined':
-        data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-        data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
-        data = np.concatenate((data_1b1f, data_1b1c))
-        n_total = n_1b1f + n_1b1c
-    if channel == 'test':
-        data, n_total = ft.get_data('data/test_1b1f.csv'.format(channel), 'dimuon_mass', xlimits)
-    else:
-        data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    if period == 2012:
+        if channel == 'combined':
+            data_1b1f, n_1b1f = ft.get_data('data/test_1b1f.csv', 'dimuon_mass', xlimits)
+            data_1b1c, n_1b1c = ft.get_data('data/test_1b1c.csv', 'dimuon_mass', xlimits)
+            #data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+            #data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+            data = np.concatenate((data_1b1f, data_1b1c))
+            n_total = n_1b1f + n_1b1c
+        else:
+            data, n_total = ft.get_data('data/test_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+    elif period == 2016:
+        if channel == 'combined':
+            data_1b1f, n_1b1f = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
+            data_1b1c, n_1b1c = ft.get_data('data/muon_2016_1b1c.csv', 'dimuon_mass', xlimits)
+            data = np.concatenate((data_1b1f, data_1b1c))
+            n_total = n_1b1f + n_1b1c
+        else:
+            data, n_total = ft.get_data('data/muon_2016_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+
     print 'Analyzing {0} events...\n'.format(n_total)
 
     ### Define bg model and carry out fit ###
@@ -87,9 +99,9 @@ if __name__ == '__main__':
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
     sig_params.add_many(
-                        ('A'     , 0.01 , True , 0.01 , 1.   , None),
-                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
-                        ('sigma' , 0.01 , True , 0.02 , 1.   , None)
+                        ('A'     , 0.01 , True , 0.0 , 1.   , None),
+                        ('mu'    , -0.43 , True , -0.4 , -0.45  , None),
+                        ('sigma' , 0.04 , True , 0.03 , 0.05  , None)
                        )
     sig_params += bg_params.copy()
     sig_model  = Model(ft.sig_pdf, sig_params)
@@ -98,50 +110,25 @@ if __name__ == '__main__':
 
     ### Plots!!! ###
     print 'Making plot of fit results...'
-    ft.fit_plot(data, xlimits, sig_model, bg_model, channel)
+    ft.fit_plot(data, xlimits, sig_model, bg_model, '{0}_{1}'.format(channel, period))
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
     q_max = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
-    print 'q = {0}'.format(q_max)
+    #print 'q = {0}'.format(q_max)
+    print 'z = {0}'.format(np.sqrt(q_max))
 
-    if doCI:
-        ### Calculate confidence interval on the likelihood ratio at the +/- 1, 2
-        ### sigma levels
-        bg_fitter.verbose  = False
-        sig_fitter.verbose = False
-        nsims = 1000
+    ### Calculate the number of events in around the peak
+    f_bg    = lambda x: bg_pdf(x, (sig_result.x[3], sig_result.x[4]))
+    xlim    = (sig_result.x[1] - 2*sig_result.x[2], sig_result.x[1] + 2*sig_result.x[2])
+    N_b     = (1 - sig_result.x[0])*n_total*integrate.quad(f_bg, xlim[0], xlim[1])[0]
+    sig_b   = N_b/np.sqrt(n_total*sig_result.x[0])
+    N_s     = n_total*sig_result.x[0]
+    sig_s   = np.sqrt(N_s)
+	#sig_s   = n_total*comb_sigma[0]
 
-        print 'Generating {0} pseudo-datasets from bg+signal fit and determining distribution of q'.format(nsims)
-        sims = ft.generator(sig_model.pdf, n_total, ntoys=nsims)
-        q_sim = []
-        for sim in sims:
-            bg_result = bg_fitter.fit(sim)
-            sig_result = sig_fitter.fit(sim) 
-            if bg_result.status == 0 and sig_result.status == 0:
-                nll_bg = bg_model.calc_nll(sim)
-                nll_sig = sig_model.calc_nll(sim)
-                q = 2*(nll_bg - nll_sig)
-                q_sim.append(q)
-            else:
-                print bg_result.status, sig_result.status
-
-        q_sim = np.array(q_sim)
-        q_sim.sort()
-        q_upper = q_sim[q_sim > q_max]
-        q_lower = q_sim[q_sim < q_max]
-
-        n_upper = q_upper.size
-        n_lower = q_lower.size
-
-        one_sigma_up   = q_upper[int(0.34*n_upper)]
-        two_sigma_up   = q_upper[int(0.475*n_upper)]
-        one_sigma_down = q_lower[int(-0.34*n_lower)]
-        two_sigma_down = q_lower[int(-0.475*n_lower)]
-
-        print '{0}: q = {1:.2f}'.format(channel, q_max)
-        print '1 sigma c.i.: {0:.2f} -- {1:.2f}'.format(one_sigma_down, one_sigma_up)
-        print '2 sigma c.i.: {0:.2f} -- {1:.2f}'.format(two_sigma_down, two_sigma_up)
+    print 'N_b = {0:.2f} +\- {1:.2f}'.format(N_b, sig_b)
+    print 'N_s = {0:.2f} +\- {1:.2f}'.format(N_s, sig_s)
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

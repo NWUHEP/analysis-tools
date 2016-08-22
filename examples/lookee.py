@@ -50,7 +50,7 @@ if __name__ == '__main__':
     minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
     make_plots = True
-    save_data  = False
+    save_data  = True
     is_batch   = False
 
     ########################
@@ -58,8 +58,10 @@ if __name__ == '__main__':
     ########################
 
     if channel == 'combined':
-        data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-        data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+        #data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+        #data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+        data_1b1f, n_1b1f = ft.get_data('data/test_1b1f.csv', 'dimuon_mass', xlimits)
+        data_1b1c, n_1b1c = ft.get_data('data/test_1b1c.csv', 'dimuon_mass', xlimits)
         data = np.concatenate((data_1b1f, data_1b1c))
         n_total = n_1b1f + n_1b1c
     else:
@@ -86,7 +88,7 @@ if __name__ == '__main__':
                        )
     sig_params += bg_params.copy()
 
-    sig_model  = Model(ft.sig_pdf_alt, sig_params)
+    sig_model  = Model(ft.sig_pdf, sig_params)
     sig_fitter = NLLFitter(sig_model, verbose=False)#, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 
@@ -96,9 +98,6 @@ if __name__ == '__main__':
 
     ### Generate toy MC ###
     print 'Generating pseudodata for likelihood scans...'
-    if (channel == '1b1f'):
-        bg_model.set_parameter_value('a1', 0.179745)
-        bg_model.set_parameter_value('a2', 0.037958)
     sims = ft.generator(bg_model.pdf, n_total, ntoys=nsims)
 
 
@@ -110,17 +109,18 @@ if __name__ == '__main__':
     print 'Preparing scan parameters...'
     if ndim == 0:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.4242, -0.4242), (0.04,0.04)],
+                                     #bounds = [(-0.4242, -0.4242), (0.04784,0.04)784],
+                                     bounds = [(0.4242, 0.4242), (0.04,0.04)],
                                      nscans = [1, 1]
                                     )
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.8, 0.8), (0.04784,0.04784)],
+                                     bounds = [(-0.9, 0.9), (0.04784,0.04784)],
                                      nscans = [25, 1]
                                     )
     elif ndim == 2:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.8, 0.8), (0.02,0.1)],
+                                     bounds = [(-0.9, 0.9), (0.02,0.1)],
                                      nscans = [25, 25]
                                     )
 

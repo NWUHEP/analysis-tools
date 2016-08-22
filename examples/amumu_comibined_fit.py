@@ -39,13 +39,19 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     xlimits  = (12., 70.)
+    period   = 2016
     channels = ['1b1f', '1b1c']
 
     datasets  = []
-    for channel in channels:
-        data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 
-                                  'dimuon_mass', xlimits)
-        datasets.append(data)
+    if period == 2012:
+        for channel in channels:
+            #data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            data, n_total  = get_data('data/test_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            datasets.append(data)
+    elif period == 2016:
+        for channel in channels:
+            data, n_total  = get_data('data/muon_2016_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            datasets.append(data)
 
     ### Fit single models to initialize parameters ###
     ### Define bg model and carry out fit ###
@@ -102,7 +108,7 @@ if __name__ == '__main__':
 
     q = 2*(bg_model.calc_nll(datasets) - sig_model.calc_nll(datasets))
     p_value = 0.5*chi2.sf(q, 1) + 0.25*chi2.sf(q, 2) # according to Chernoff 
-    print '{0}: q = {1:.3f}'.format('h->gg', q)
+    print '{0}: q = {1:.3f}'.format('a->mumu', q)
     print 'p_local = {0}'.format(p_value)
     print 'z_local = {0}'.format(-norm.ppf(p_value))
     print ''
