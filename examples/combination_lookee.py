@@ -125,7 +125,7 @@ if __name__ == '__main__':
                                     )
     elif ndim == 2:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.75, 0.75), (0.02,0.1)],
+                                     bounds = [(-0.8, 0.8), (0.02,0.1)],
                                      nscans = [25, 25]
                                     )
 
@@ -170,7 +170,6 @@ if __name__ == '__main__':
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
     qmaxscan    = np.array(qmaxscan)
-
 
     if is_batch:
         # Save scan data

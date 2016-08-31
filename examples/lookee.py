@@ -58,12 +58,19 @@ if __name__ == '__main__':
     ########################
 
     if channel == 'combined':
+        data_1b1f_2016, n_1b1f_2016 = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
+        data_1b1c_2016, n_1b1c_2016 = ft.get_data('data/muon_2016_1b1c.csv', 'dimuon_mass', xlimits)
+        data_1b1f_2012, n_1b1f_2012 = ft.get_data('data/test_1b1f.csv', 'dimuon_mass', xlimits)
+        data_1b1c_2012, n_1b1c_2012 = ft.get_data('data/test_1b1c.csv', 'dimuon_mass', xlimits)
+        data = np.concatenate((data_1b1f_2016, data_1b1c_2016, data_1b1f_2012, data_1b1c_2012))
+        n_total = n_1b1f_2012 + n_1b1c_2012 + n_1b1f_2016 + n_1b1c_2016
+
         #data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
         #data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
-        data_1b1f, n_1b1f = ft.get_data('data/test_1b1f.csv', 'dimuon_mass', xlimits)
-        data_1b1c, n_1b1c = ft.get_data('data/test_1b1c.csv', 'dimuon_mass', xlimits)
-        data = np.concatenate((data_1b1f, data_1b1c))
-        n_total = n_1b1f + n_1b1c
+        #data_1b1f, n_1b1f = ft.get_data('data/test_1b1f.csv', 'dimuon_mass', xlimits)
+        #data_1b1c, n_1b1c = ft.get_data('data/test_1b1c.csv', 'dimuon_mass', xlimits)
+        #data = np.concatenate((data_1b1f, data_1b1c))
+        #n_total = n_1b1f + n_1b1c
     else:
         data, n_total = ft.get_data('data/test_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
         #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)

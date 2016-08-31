@@ -5,12 +5,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def stack_by_group(df, by, var, histtype='stepfilled', bins=30., range=None):
-
-    g = df.groupby(by)
-    data = [g.get_group(group)[var] for group in g.groups.keys()] 
-    plt.hist(data, histtype=histtype, bins=bins, stacked=True)
-
 if __name__ == '__main__':
 
     if len(sys.argv) > 2:
@@ -21,6 +15,8 @@ if __name__ == '__main__':
         cat     = '1b1f'
 
     data = pd.read_csv(infile)
+    data = data.query('muon2_pt > 25')
+    data = data.query('12 < dimuon_mass < 70')
 
     # Get the reference data
     if cat == '1b1f':

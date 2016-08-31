@@ -109,7 +109,7 @@ if __name__ == '__main__':
     q = 2*(bg_model.calc_nll(datasets) - sig_model.calc_nll(datasets))
     p_value = 0.5*chi2.sf(q, 1) + 0.25*chi2.sf(q, 2) # according to Chernoff 
     print '{0}: q = {1:.3f}'.format('a->mumu', q)
-    print 'p_local = {0}'.format(p_value)
+    print 'p_local = {0:.3e}'.format(p_value)
     print 'z_local = {0}'.format(-norm.ppf(p_value))
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

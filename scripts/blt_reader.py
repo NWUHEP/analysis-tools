@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 import ROOT as r
+import json
 
 '''
 Simple script for getting data out of ROOT files and into CSV format.
@@ -21,17 +22,18 @@ if __name__ == '__main__':
     rfiles = []
     froot  = r.TFile(infile)
 
+    print 'Opening file {0}'.format(infile)
     if datatype == 'muon_2012':
         datasets = ['data_muon_2012A', 'data_muon_2012B', 'data_muon_2012C', 'data_muon_2012D'] 
     elif datatype[:9] == 'muon_2016':
-        datasets = ['data_muon_2016B', 'data_muon_2016C', 'data_muon_2016D', 'data_muon_2016E', 'data_muon_2016F']
+        datasets = ['data_muon_2016B', 'data_muon_2016C', 'data_muon_2016D']#, 'data_muon_2016E', 'data_muon_2016F']
     elif datatype == 'test':
         datasets = ['data_muon']
     else:
         print 'Specified datatype is not valid!!!'
         exit()
 
-    ntuple  = {'dimuon_mass':[], 
+    ntuple  = {
             'muon1_pt':[], 'muon1_eta':[], 'muon1_phi':[], 'muon1_iso':[], 
             'muon2_pt':[], 'muon2_eta':[], 'muon2_phi':[], 'muon2_iso':[], 
             'muon_delta_eta':[], 'muon_delta_phi':[], 'muon_delta_r':[],
@@ -40,10 +42,15 @@ if __name__ == '__main__':
             'delta_phi':[], 'delta_eta':[], 'four_body_mass':[],
             'bjet_pt':[], 'bjet_eta':[], 'bjet_phi':[], 'bjet_d0':[],
             'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 'jet_d0':[], 
-            'n_jets':[], 'n_bjets':[],
+            'n_jets':[], 'n_fwdjets':[], 'n_bjets':[],
             'met_mag':[], 'met_phi':[],
             'run_number':[], 'event_number':[], 'lumi':[]
             }
+
+    # get lumi mask
+    lumi_json = open('data/Cert_271036-277148_13TeV_PromptReco_Collisions16_JSON.txt')
+    mask_str  = lumi_json.read()
+    lumi_mask = json.loads(mask_str)
 
     for dataset in datasets:
         tree    = froot.Get(dataset)
@@ -52,6 +59,19 @@ if __name__ == '__main__':
         print 'Reading {0} with {1} events...'.format(dataset, n)
         for i in xrange(n):
             tree.GetEntry(i)
+
+            # apply lumi mask
+            event_pass = True
+            if unicode(tree.runNumber) in lumi_mask.keys():
+                good_lumis = lumi_mask[unicode(tree.runNumber)]
+                for lumi_range in good_lumis:
+                    if tree.lumiSection in lumi_range:
+                        event_pass = False
+                        break
+            else:
+                continue
+
+            if not event_pass: continue
 
             # event info
             ntuple['run_number'].append(tree.runNumber)
@@ -98,7 +118,9 @@ if __name__ == '__main__':
             ntuple['jet_eta'].append(jet.Eta())
             ntuple['jet_phi'].append(jet.Phi())
             ntuple['jet_d0'].append(tree.jet_d0)
+
             ntuple['n_jets'].append(tree.nJets)
+            ntuple['n_fwdjets'].append(tree.nFwdJets)
             ntuple['n_bjets'].append(tree.nBJets)
 
             # MET
