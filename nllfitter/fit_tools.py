@@ -43,18 +43,34 @@ def get_data(filename, varname, xlim):
 
     return data, n_total
   
-def kolmogorov_smirinov(data, model_pdf, xlim=(-1, 1), npoints=10000):
+def ks_test(data, model_pdf, xlim=(-1, 1), make_plots=False, suffix=None):
     
-    xvals = np.linspace(xlim[0], xlim[1], npoints)
+    n_points = 1e5
+    x = np.linspace(xlim[0], xlim[1], n_points)
+    pdf = model_pdf(x)
+    cdf = np.cumsum(pdf)*(xlim[1] - xlim[0])/n_points
 
-    #Calculate CDFs 
-    data_cdf = np.array([data[data < x].size for x in xvals]).astype(float)
-    data_cdf = data_cdf/data.size
+    data.sort()
+    x_i = np.array([np.abs(d - x).argmin() for d in data])
+    cdf_i = np.linspace(1, data.size, data.size)/data.size
 
-    model_pdf = model_pdf(xvals)
-    model_cdf = np.cumsum(model_pdf)*(xlim[1] - xlim[0])/npoints
+    ks_residuals = np.abs(cdf[x_i] - cdf_i)
 
-    return np.abs(model_cdf - data_cdf)
+    if make_plots:
+        plt.hist(ks_residuals, bins=25, histtype='step')
+        plt.ylabel(r'Entries')
+        plt.xlabel(r'$|\rm CDF_{model} - CDF_{data}|$')
+        plt.savefig('plots/ks_residuals_{0}.pdf'.format(suffix))
+        plt.close()
+
+        plt.plot(x, cdf)
+        plt.plot(data, cdf_i)
+        plt.ylabel(r'CDF(x)')
+        plt.xlabel(r'x')
+        plt.savefig('plots/ks_cdf_overlay_{0}.pdf'.format(suffix))
+        plt.close()
+
+    return np.max(ks_residuals)
 
 ### PDF definitions (maybe put these in a separate file)
 def lorentzian(x, a):

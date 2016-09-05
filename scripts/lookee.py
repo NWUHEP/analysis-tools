@@ -60,8 +60,8 @@ if __name__ == '__main__':
     if channel == 'combined':
         data_1b1f_2016, n_1b1f_2016 = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
         data_1b1c_2016, n_1b1c_2016 = ft.get_data('data/muon_2016_1b1c.csv', 'dimuon_mass', xlimits)
-        data_1b1f_2012, n_1b1f_2012 = ft.get_data('data/test_1b1f.csv', 'dimuon_mass', xlimits)
-        data_1b1c_2012, n_1b1c_2012 = ft.get_data('data/test_1b1c.csv', 'dimuon_mass', xlimits)
+        data_1b1f_2012, n_1b1f_2012 = ft.get_data('data/muon_2012_1b1f.csv', 'dimuon_mass', xlimits)
+        data_1b1c_2012, n_1b1c_2012 = ft.get_data('data/muon_2012_1b1c.csv', 'dimuon_mass', xlimits)
         data = np.concatenate((data_1b1f_2016, data_1b1c_2016, data_1b1f_2012, data_1b1c_2012))
         n_total = n_1b1f_2012 + n_1b1c_2012 + n_1b1f_2016 + n_1b1c_2016
 
@@ -156,6 +156,10 @@ if __name__ == '__main__':
         nllbg.append(nll_bg)
 
         ### Calculate E.C. of the random field
+        if qscan.size != np.prod(scan_params.nscans): 
+            print 'Part of the scan must have failed :(!'
+            continue
+
         qscan = np.array(qscan).reshape(scan_params.nscans)
         if ndim > 0:
             phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
@@ -199,7 +203,7 @@ if __name__ == '__main__':
         print 'k = {0:.2f}'.format(k)
         for i,n in enumerate(nvals):
             print 'N{0} = {1:.2f}'.format(i, n)
-        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
-        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
+        print 'local p_value = {0:.3e},  local significance = {1:.2f}'.format(norm.cdf(-np.sqrt(qmax)), np.sqrt(qmax))
+        print 'global p_value = {0:.3e}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
