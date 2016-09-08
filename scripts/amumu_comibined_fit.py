@@ -24,7 +24,7 @@ if __name__ == '__main__':
     channels = ['1b1f', '1b1c']
 
     ### For post fit tests
-    doToys   = True
+    doToys   = False
     nsims    = 10000
 
     datasets  = []
