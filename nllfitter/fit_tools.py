@@ -44,6 +44,9 @@ def get_data(filename, varname, xlim):
     return data, n_total
   
 def ks_test(data, model_pdf, xlim=(-1, 1), make_plots=False, suffix=None):
+    '''
+    Kolmogorov-Smirnov test.  Returns the residuals of |CDF_model - CDF_data|.
+    '''
     
     n_points = 1e5
     x = np.linspace(xlim[0], xlim[1], n_points)
@@ -58,19 +61,21 @@ def ks_test(data, model_pdf, xlim=(-1, 1), make_plots=False, suffix=None):
 
     if make_plots:
         plt.hist(ks_residuals, bins=25, histtype='step')
-        plt.ylabel(r'Entries')
+        plt.ylabel('Entries')
         plt.xlabel(r'$|\rm CDF_{model} - CDF_{data}|$')
         plt.savefig('plots/ks_residuals_{0}.pdf'.format(suffix))
         plt.close()
 
         plt.plot(x, cdf)
         plt.plot(data, cdf_i)
-        plt.ylabel(r'CDF(x)')
-        plt.xlabel(r'x')
+        plt.ylabel('CDF(x)')
+        plt.xlabel('x')
+        plt.title(suffix)
+        plt.legend(['model', 'data'])
         plt.savefig('plots/ks_cdf_overlay_{0}.pdf'.format(suffix))
         plt.close()
 
-    return np.max(ks_residuals)
+    return ks_residuals
 
 ### PDF definitions (maybe put these in a separate file)
 def lorentzian(x, a):
@@ -177,12 +182,17 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots', show=False):
 
     if suffix[:4] == '1b1f':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
-        ax.set_ylim([0., 1.5*np.max(h[0])])
+        ax.set_ylim([0., 2*np.max(h[0])])
         ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
         ax.set_ylabel('entries / 2 GeV')
     elif suffix[:4] == '1b1c':
         ax.set_title(r'$\mu\mu$ + 1 b jet + 1 central jet + MET < 40 + $\Delta\phi (\mu\mu ,bj)$')
-        ax.set_ylim([0., 50.])
+        ax.set_ylim([0., 1.5*np.max(h[0])])
+        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+    elif suffix[:8] == 'combined':
+        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 jet')
+        ax.set_ylim([0., 1.5*np.max(h[0])])
         ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
         ax.set_ylabel('entries / 2 GeV')
     elif suffix[:4] == 'hgg':
@@ -267,7 +277,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
         xplus = generator(pdf, samples_per_toy, (ntoys-ndata), bounds)
         x = np.concatenate((x, xplus))
     elif ndata > ntoys:
-        x = x[:ntoys,]
+        x = x[:int(ntoys),]
 
     return x
 

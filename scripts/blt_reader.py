@@ -18,7 +18,7 @@ if __name__ == '__main__':
     else:
         datatype = 'test'
 
-    infile = 'data/output_{0}.root'.format(datatype)
+    infile = 'data/bltuples/output_{0}.root'.format(datatype)
     rfiles = []
     froot  = r.TFile(infile)
 
@@ -44,11 +44,14 @@ if __name__ == '__main__':
             'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 'jet_d0':[], 
             'n_jets':[], 'n_fwdjets':[], 'n_bjets':[],
             'met_mag':[], 'met_phi':[],
-            'run_number':[], 'event_number':[], 'lumi':[]
+            'run_number':[], 'event_number':[], 'lumi':[], 'data_period':[]
             }
 
     # get lumi mask
-    lumi_json = open('data/Cert_271036-277148_13TeV_PromptReco_Collisions16_JSON.txt')
+    if datatype == 'muon_2012':
+        lumi_json = open('data/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt')
+    elif datatype == 'muon_2016':
+        lumi_json = open('data/Cert_271036-277148_13TeV_PromptReco_Collisions16_JSON.txt')
     mask_str  = lumi_json.read()
     lumi_mask = json.loads(mask_str)
 
@@ -71,17 +74,20 @@ if __name__ == '__main__':
             else:
                 continue
 
-            if not event_pass: continue
+            #if not event_pass: continue
 
             # event info
             ntuple['run_number'].append(tree.runNumber)
             ntuple['event_number'].append(tree.evtNumber)
             ntuple['lumi'].append(tree.lumiSection)
 
-            # muons
+            # get and build physics objects
             mu1, mu2, bjet, jet = tree.muonOneP4, tree.muonTwoP4, tree.bjetP4, tree.jetP4
+            met, met_phi = tree.met, tree.met_phi
             dimuon = mu1 + mu2
             dijet = jet + bjet
+
+            ### muon
             ntuple['muon1_pt'].append(mu1.Pt())
             ntuple['muon1_eta'].append(mu1.Eta())
             ntuple['muon1_phi'].append(mu1.Phi())
@@ -90,11 +96,11 @@ if __name__ == '__main__':
             ntuple['muon2_eta'].append(mu2.Eta())
             ntuple['muon2_phi'].append(mu2.Phi())
             ntuple['muon2_iso'].append(tree.muonTwoIso)
-
             ntuple['muon_delta_eta'].append(abs(mu1.Eta() - mu2.Eta()))
             ntuple['muon_delta_phi'].append(mu1.DeltaPhi(mu2))
             ntuple['muon_delta_r'].append(mu1.DeltaR(mu2))
 
+            ### dimuon and dijet
             ntuple['dimuon_mass'].append(dimuon.M())
             ntuple['dimuon_pt'].append(dimuon.Pt())
             ntuple['dimuon_eta'].append(dimuon.Eta())
@@ -118,13 +124,11 @@ if __name__ == '__main__':
             ntuple['jet_eta'].append(jet.Eta())
             ntuple['jet_phi'].append(jet.Phi())
             ntuple['jet_d0'].append(tree.jet_d0)
-
             ntuple['n_jets'].append(tree.nJets)
             ntuple['n_fwdjets'].append(tree.nFwdJets)
             ntuple['n_bjets'].append(tree.nBJets)
 
             # MET
-            met, met_phi = tree.met, tree.met_phi
             ntuple['met_mag'].append(met)
             ntuple['met_phi'].append(met_phi)
 

@@ -21,6 +21,21 @@ class Model:
         self._parameters = parameters
         self.corr        = None
 
+    def get_parameter(self, name, by_value=True):
+        '''
+        Returns parameter parameter value or lmfit Parameter object
+
+        Parameters:
+        ===========
+        name    : key for paramter value
+        by_value: if True returns a list of parameter values, otherwise the
+                  function will return the lmfit Parameters object
+        '''
+        if by_value:
+            return [p.value for p in self._parameters.values()]
+        else:
+            return self._parameters
+
     def get_parameters(self, by_value=False):
         '''
         Returns parameters either as an lmfit Parameters object or a list of parameter values

@@ -31,16 +31,16 @@ if __name__ == '__main__':
 
     # split features into categories for improved plotting
     muon_features = [
-                     'muon1_pt', 'muon1_eta', 'muon1_phi', #'muon1_iso', 
-                     'muon2_pt', 'muon2_eta', 'muon2_phi', #'muon2_iso', 
+                     'muon1_pt', 'muon1_eta', 'muon1_phi', 'muon1_iso', 
+                     'muon2_pt', 'muon2_eta', 'muon2_phi', 'muon2_iso', 
                     ]
     dimuon_features = [
                      'muon_delta_eta', 'muon_delta_phi', 'muon_delta_r',
                      'dimuon_mass', 'dimuon_pt', 'dimuon_eta', 'dimuon_phi'
                      ]
     four_body_features = ['delta_phi', 'delta_eta', 'four_body_mass']
-    jet_features       = ['jet_pt', 'jet_eta', 'jet_phi']
-    bjet_features      = ['bjet_pt', 'bjet_eta', 'bjet_phi', 'bjet_d0']
+    jet_features       = ['jet_pt', 'jet_eta', 'jet_phi', 'n_jets', 'n_fwdjets']
+    bjet_features      = ['bjet_pt', 'bjet_eta', 'bjet_phi', 'bjet_d0', 'n_bjets']
     dijet_features     = ['dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi']
     met_features       = ['met_mag', 'met_phi']
     misc               = ['event_number', 'run_number', 'lumi']
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     save_histograms(data.query(dijet_condition), cat, 0, 'dijet'    , dijet_features)
     save_histograms(data.query(dijet_condition), cat, 0, 'four_body', four_body_features)
     print 'cut 0: {0}'.format(data.shape[0])
-    data.to_csv('data/amumu_sync/event_list_1b1f_cut0_2016.csv', index=False) 
+    data[misc].to_csv('data/amumu_sync/event_list_cut0_2016.csv', index=False) 
 
     for level in xrange(1,len(cut_list)+1):
         cut_matrix = data[cut_list[:level]]

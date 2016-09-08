@@ -6,7 +6,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 
-import nllfitter.future_fitter as nll
+import nllfitter.nllfitter as nll
 import nllfitter.fit_tools as ft
 
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     for channel in channels:
 
         print 'Getting data for {0} channel and scaling to lie in range [-1, 1].'.format(channel)
-        data, n_total  = get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+        data, n_total  = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
         datas[channel] = data
         print 'Analyzing {0} events...'.format(n_total)
 

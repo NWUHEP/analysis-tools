@@ -113,19 +113,14 @@ if __name__ == '__main__':
 
     ### Define scan values here ### 
     print 'Preparing scan parameters...'
-    if ndim == 0:
-        scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.43, -0.43), (0.04,0.04)],
-                                     nscans = [1, 1]
-                                    )
     if ndim == 1:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.75, 0.75), (0.05,0.05)],
+                                     bounds = [(-0.9, 0.9), (sigma_max, sigma_max)],
                                      nscans = [25, 1]
                                     )
     elif ndim == 2:
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.8, 0.8), (0.02,0.1)],
+                                     bounds = [(-0.9, 0.9), (0.02,0.1)],
                                      nscans = [25, 25]
                                     )
 
