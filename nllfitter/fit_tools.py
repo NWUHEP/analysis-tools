@@ -1,7 +1,3 @@
-'''
-    Miscellaneous tools and helper functions for the nllfitting framework.
-'''
-
 #!/usr/bin/env python
 
 from __future__ import division
@@ -15,7 +11,6 @@ import numpy.random as rng
 import numdifftools as nd
 import emcee as mc
 import lmfit
-#from scipy import stats
 from scipy.stats import chi2, norm 
 from scipy import integrate
 from scipy.optimize import minimize
@@ -152,64 +147,6 @@ def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
 
     return pval
 
-### Plotter ###
-def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots', show=False):
-    N       = data.size
-    binning = 2.
-    nbins   = int((xlim[1] - xlim[0])/binning)
-
-    # Scale pdfs and data from [-1, 1] back to the original values
-    params = sig_model.get_parameters()
-    x       = np.linspace(-1, 1, num=10000)
-    y_sig   = (N*binning/nbins)*sig_model.pdf(x) 
-    y_bg1   = (1 - params['A']) * N * binning/nbins * bg_model.pdf(x, params) 
-    y_bg2   = (N*binning/nbins)*bg_model.pdf(x)
-    x       = scale_data(x, xmin=xlim[0], xmax=xlim[1],invert=True)
-    data    = scale_data(data, xmin=xlim[0], xmax=xlim[1],invert=True)
-
-    # Get histogram of data points
-    h = plt.hist(data, bins=nbins, range=xlim, normed=False, histtype='step')
-    bincenters  = (h[1][1:] + h[1][:-1])/2.
-    binerrs     = np.sqrt(h[0]) 
-    plt.close()
-
-    fig, ax = plt.subplots()
-    ax.plot(x, y_sig, 'b-', linewidth=2.)
-    ax.plot(x, y_bg1, 'b--', linewidth=2.) 
-    ax.plot(x, y_bg2, 'r-.', linewidth=2.) 
-    ax.errorbar(bincenters, h[0], yerr=binerrs, fmt='ko')
-    ax.legend(['bg+sig.', 'bg', 'bg only', 'data']) 
-
-    if suffix[:4] == '1b1f':
-        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
-        ax.set_ylim([0., 2*np.max(h[0])])
-        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
-    elif suffix[:4] == '1b1c':
-        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 central jet + MET < 40 + $\Delta\phi (\mu\mu ,bj)$')
-        ax.set_ylim([0., 1.5*np.max(h[0])])
-        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
-    elif suffix[:8] == 'combined':
-        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 jet')
-        ax.set_ylim([0., 1.5*np.max(h[0])])
-        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
-    elif suffix[:4] == 'hgg':
-        ax.set_title(r'$h(125)\rightarrow \gamma\gamma$')
-        #ax.set_ylim([0., 50.])
-        ax.set_xlabel(r'$m_{\gamma\gamma}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
-
-    ax.set_xlim(xlim)
-
-    if show:
-        plt.show()
-    else:
-        fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
-        fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
-        plt.close()
-
 
 ### Monte Carlo simulations ###
 def lnprob(x, pdf, bounds):
@@ -318,4 +255,115 @@ def calculate_CI(bg_fitter, sig_fitter):
     print '1 sigma c.i.: {0:.2f} -- {1:.2f}'.format(one_sigma_down, one_sigma_up)
     print '2 sigma c.i.: {0:.2f} -- {1:.2f}'.format(two_sigma_down, two_sigma_up)
 
+
+######################
+### plotting tools ###
+######################
+
+def plot_pvalue_scan_1D(qscan, x, suffix):
+    '''
+    Helper function for plotting 1D pvalue scans.
+    '''
+    
+    p_val = np.array(0.5*chi2.sf(qscan, 1) + 0.25*chi2.sf(qscan, 2))
+    plt.plot(x, p_val)
+
+    # Draw significance lines
+    ones = np.ones(x.size)
+    plt.plot(x, norm.sf(1)*ones, 'r--')
+    for i in xrange(2, 7):
+        if norm.sf(i) < p_val.min: 
+            break
+        plt.plot(x, norm.sf(i)*ones, 'r--')
+        plt.text(60, norm.sf(i)*1.25, r'${0} \sigma$'.format(i), color='red')
+    
+    plt.yscale('log')
+    plt.title(r'')
+    plt.ylim([0.5*np.min(p_val), 1.])
+    plt.xlim([x[0], x[-1]])
+    plt.xlabel(r'$m_{\mu\mu}$ [GeV]')
+    plt.ylabel(r'$p_{local}$')
+    plt.savefig('plots/scan_fits/pvalue_scans_{0}_1D.png'.format(suffix))
+    plt.close()
+
+def plot_pvalue_scan_2D(qscan, x, y, suffix):
+    '''
+    Helper function for plotting 1D pvalue scans.
+    '''
+    p_val = np.array(0.5*chi2.sf(qscan, 1) + 0.25*chi2.sf(qscan, 2))
+    p_val = p_val.reshape(x.size, y.size).transpose()
+    z_val = -norm.ppf(p_val)
+
+    ### draw the p values as a colormesh
+    plt.pcolormesh(x, y, p_val[:-1, :-1], cmap='viridis_r', norm=LogNorm(vmin=0.25*p_val.min(), vmax=p_val.max()), linewidth=0, rasterized=True)
+    cbar = plt.colorbar()
+    cbar.set_label(r'$p_{local}$')
+
+    ### draw the z scores as contours 
+    vmap = plt.get_cmap('gray_r')
+    vcol = [vmap(float(u)/5) for i in range(5)]
+    cs = plt.contour(x, y, z_val, [1, 2, 3, 4, 5], colors=vcol)
+    plt.clabel(cs, inline=1, fontsize=10, fmt='%d')
+
+    plt.xlabel(r'$m_{\mu\mu}$ [GeV]')
+    plt.ylabel(r'$\sigma$ [GeV]')
+    plt.xlim(x[0], x[-1])
+    plt.ylim(y[0], y[-1])
+    plt.savefig('plots/scan_fits/pvalue_scans_{0}_2D.png'.format(suffix))
+    plt.close()
+
+
+def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
+    N       = data.size
+    binning = 2.
+    nbins   = int((xlim[1] - xlim[0])/binning)
+
+    # Scale pdfs and data from [-1, 1] back to the original values
+    params = sig_model.get_parameters()
+    x       = np.linspace(-1, 1, num=10000)
+    y_sig   = (N*binning/nbins)*sig_model.pdf(x) 
+    y_bg1   = (1 - params['A']) * N * binning/nbins * bg_model.pdf(x, params) 
+    y_bg2   = (N*binning/nbins)*bg_model.pdf(x)
+    x       = scale_data(x, xmin=xlim[0], xmax=xlim[1],invert=True)
+    data    = scale_data(data, xmin=xlim[0], xmax=xlim[1],invert=True)
+
+    # Get histogram of data points
+    h = plt.hist(data, bins=nbins, range=xlim, normed=False, histtype='step')
+    bincenters  = (h[1][1:] + h[1][:-1])/2.
+    binerrs     = np.sqrt(h[0]) 
+    plt.close()
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y_sig, 'b-', linewidth=2.)
+    ax.plot(x, y_bg1, 'b--', linewidth=2.) 
+    ax.plot(x, y_bg2, 'r-.', linewidth=2.) 
+    ax.errorbar(bincenters, h[0], yerr=binerrs, fmt='ko')
+    ax.legend(['bg+sig.', 'bg', 'bg only', 'data']) 
+
+    if suffix[:4] == '1b1f':
+        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
+        ax.set_ylim([0., 2*np.max(h[0])])
+        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+    elif suffix[:4] == '1b1c':
+        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 central jet + MET < 40 + $\Delta\phi (\mu\mu ,bj)$')
+        ax.set_ylim([0., 1.5*np.max(h[0])])
+        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+    elif suffix[:8] == 'combined':
+        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 jet')
+        ax.set_ylim([0., 1.5*np.max(h[0])])
+        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+    elif suffix[:4] == 'hgg':
+        ax.set_title(r'$h(125)\rightarrow \gamma\gamma$')
+        #ax.set_ylim([0., 50.])
+        ax.set_xlabel(r'$m_{\gamma\gamma}$ [GeV]')
+        ax.set_ylabel('entries / 2 GeV')
+
+    ax.set_xlim(xlim)
+
+    fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
+    fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
+    plt.close()
 

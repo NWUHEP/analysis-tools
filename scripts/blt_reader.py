@@ -44,16 +44,8 @@ if __name__ == '__main__':
             'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 'jet_d0':[], 
             'n_jets':[], 'n_fwdjets':[], 'n_bjets':[],
             'met_mag':[], 'met_phi':[],
-            'run_number':[], 'event_number':[], 'lumi':[], 'data_period':[]
+            'run_number':[], 'event_number':[], 'lumi':[]
             }
-
-    # get lumi mask
-    if datatype == 'muon_2012':
-        lumi_json = open('data/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt')
-    elif datatype == 'muon_2016':
-        lumi_json = open('data/Cert_271036-277148_13TeV_PromptReco_Collisions16_JSON.txt')
-    mask_str  = lumi_json.read()
-    lumi_mask = json.loads(mask_str)
 
     for dataset in datasets:
         tree    = froot.Get(dataset)
@@ -63,19 +55,6 @@ if __name__ == '__main__':
         for i in xrange(n):
             tree.GetEntry(i)
 
-            # apply lumi mask
-            event_pass = True
-            if unicode(tree.runNumber) in lumi_mask.keys():
-                good_lumis = lumi_mask[unicode(tree.runNumber)]
-                for lumi_range in good_lumis:
-                    if tree.lumiSection in lumi_range:
-                        event_pass = False
-                        break
-            else:
-                continue
-
-            #if not event_pass: continue
-
             # event info
             ntuple['run_number'].append(tree.runNumber)
             ntuple['event_number'].append(tree.evtNumber)
@@ -83,7 +62,7 @@ if __name__ == '__main__':
 
             # get and build physics objects
             mu1, mu2, bjet, jet = tree.muonOneP4, tree.muonTwoP4, tree.bjetP4, tree.jetP4
-            met, met_phi = tree.met, tree.met_phi
+            met, met_phi = tree.met, tree.metPhi
             dimuon = mu1 + mu2
             dijet = jet + bjet
 
@@ -119,7 +98,7 @@ if __name__ == '__main__':
             ntuple['bjet_pt'].append(bjet.Pt())
             ntuple['bjet_eta'].append(bjet.Eta())
             ntuple['bjet_phi'].append(bjet.Phi())
-            ntuple['bjet_d0'].append(tree.bjet_d0)
+            ntuple['bjet_d0'].append(tree.bjetD0)
             ntuple['jet_pt'].append(jet.Pt())
             ntuple['jet_eta'].append(jet.Eta())
             ntuple['jet_phi'].append(jet.Phi())

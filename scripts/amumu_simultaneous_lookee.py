@@ -13,6 +13,7 @@ from nllfitter import Parameters, ScanParameters, Model, CombinedModel, NLLFitte
 import nllfitter.fit_tools as ft
 import nllfitter.lookee as lee
 
+
 if __name__ == '__main__':
     start = timer()
 
@@ -113,25 +114,36 @@ if __name__ == '__main__':
 
     ### Define scan values here ### 
     print 'Preparing scan parameters...'
+
+    sig_params = sig_model.get_parameters()
+    mu_max    = sig_params['mu'].value
+    sigma_max = sig_params['sigma'].value
     if ndim == 1:
-        scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.9, 0.9), (sigma_max, sigma_max)],
-                                     nscans = [25, 1]
+        nscans = [50, 1]
+        bnds   = [(-0.8, 0.8), (sigma_max, sigma_max)]
+        scan_params = ScanParameters(names  = ['mu', 'sigma'],
+                                     bounds = bnds,
+                                     nscans = nscans
                                     )
     elif ndim == 2:
+        nscans = [50, 50]
+        bnds   = [(-0.8, 0.8), (0.02, 0.15)]
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.9, 0.9), (0.02,0.1)],
-                                     nscans = [25, 25]
+                                     bounds = bnds,
+                                     nscans = nscans 
                                     )
 
     paramscan = []
     phiscan   = []
     qmaxscan  = []
-    u_0       = np.linspace(0.01, 25., 1250.)
+    u_0       = np.linspace(0.01, 30., 300)
+    mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
+                            xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
     for i, sim in enumerate(sims):
         if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
 
         sim = list(sim) # fitter doesn't like tuples for some reason... 
+
         # fit background model
         bg_result = bg_fitter.fit(sim)
         if bg_result.status == 0:
@@ -146,21 +158,22 @@ if __name__ == '__main__':
         qmaxscan.append(np.max(qscan))
 
         ### Calculate E.C. of the random field
-        qscan = np.array(qscan).reshape(scan_params.nscans)
+        if qscan.size != np.prod(scan_params.nscans): 
+            print 'The scan must have failed :('
+            continue
+
+        qscan   = np.array(qscan).reshape(nscans)
         phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
 
         if make_plots and i < 50:
-            sig_model.update_parameters(params)
-            bg_model.update_parameters(bg_result.x)
             #for j, channel in enumerate(channels):
             #    ft.fit_plot(sim[j], xlimits, sig_model.models[j], bg_model.models[j],
-            #               'combined_{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
-            if ndim == 2:
-                cmap = plt.imshow(qscan.transpose(), cmap='viridis', vmin=0., vmax=10.) 
-                plt.colorbar()
-                plt.savefig('plots/scan_fits/qscan_{0}_{1}.png'.format('combinaiton', i))
-                plt.savefig('plots/scan_fits/qscan_{0}_{1}.pdf'.format('combination', i))
-                plt.close()
+            #               'simultaneous_{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
+
+            if ndim == 1:
+                ft.plot_pvalue_scan_1D(qscan.flatten(), mu, 'simultaneous_{0}'.format(i+1))
+            elif ndim == 2:
+                ft.plot_pvalue_scan_2D(qscan.flatten(), mu, sigma, 'simultaneous_{0}'.format(i+1))
 
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
@@ -168,15 +181,13 @@ if __name__ == '__main__':
 
     if is_batch:
         # Save scan data
-        outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format('combination', nsims, ndim), 'w')
+        outfile = open('data/lee_scan_simultaneous_{0}_{1}.pkl'.format(nsims, ndim), 'w')
         pickle.dump(u_0, outfile)
         pickle.dump(qmaxscan, outfile)
         pickle.dump(phiscan, outfile)
         pickle.dump(paramscan, outfile)
         outfile.close()
-
     else:
-
         ################################
         ### Calculate LEE correction ###
         ################################
@@ -189,19 +200,20 @@ if __name__ == '__main__':
         ### construction of Gross-Vitells in this case is informed by the construction of
         ### the local p value from Chernoff
 
-
-        #k2, nvals2, p_global = lee.lee_nD(z_local, u_0, phiscan, j=ndim, k=2, fix_dof=False)
+        k, nvals = lee.get_GV_coefficients(u_0, phiscan, j=ndim, k=2, scale=1)
+        p_global = lee.get_p_global(qmax, k, nvals, scale=1)
+        z_global = -norm.ppf(p_global)
 
         if make_plots:
-            lee.validation_plots(u_0, phiscan, qmaxscan, 
-                                 [nvals1, nvals2], [k1, k2], 
-                                 '{0}_{1}D'.format('combination', ndim))
+            lee.gv_validation_plot(u_0, phiscan, qmaxscan, 
+                                   nvals, k, scale=1, 
+                                   channel='simultaneous_{0}D'.format(ndim))
 
         print 'k = {0:.2f}'.format(k)
         for i,n in enumerate(nvals):
             print 'N{0} = {1:.2f}'.format(i, n)
         print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(p_local, z_local)
-        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, -norm.ppf(p_global))
+        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, z_global)
 
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))

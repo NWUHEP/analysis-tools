@@ -10,8 +10,8 @@ from scipy.stats import norm, chi2
 from scipy import integrate
 from lmfit import Parameter, Parameters
 
-import nllfitter.fit_tools as ft
 from nllfitter import Model, NLLFitter
+import nllfitter.fit_tools as ft
 
 def sig_constraint(sig_pdf, a):
     '''
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     ### Configuration
     verbose = True
-    doToys  = True
+    doToys  = False
     doKS    = False
     model   = 'Gaussian'
     nsims   = 50000

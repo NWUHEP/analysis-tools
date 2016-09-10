@@ -158,7 +158,7 @@ class NLLFitter:
                     nll_min = nll
 
                 if amps:
-                    dofs.append(np.sum(result.x[amps] > 0.001))
+                    dofs.append(np.sum(result.x[amps] > 0.0001))
             else:
                 continue
 

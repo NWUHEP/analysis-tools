@@ -5,11 +5,12 @@ from timeit import default_timer as timer
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+from scipy.stats import norm, chi2
 
 from nllfitter import Parameters, ScanParameters, Model, NLLFitter
 import nllfitter.fit_tools as ft
 import nllfitter.lookee as lee
+
 
 def sig_constraint(sig_pdf, a):
     '''
@@ -50,7 +51,6 @@ if __name__ == '__main__':
     minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
     make_plots = True
-    save_data  = True
     is_batch   = False
 
     ########################
@@ -115,23 +115,31 @@ if __name__ == '__main__':
 
     ### Define scan values here ### 
     print 'Preparing scan parameters...'
-    mu_max = sig_params['mu'].value
+
+    mu_max    = sig_params['mu'].value
     sigma_max = sig_params['sigma'].value
     if ndim == 1:
-        scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.9, 0.9), (sigma_max, sigma_max)],
-                                     nscans = [25, 1]
+        nscans = [50, 1]
+        bnds   = [(-0.8, 0.8), (sigma_max, sigma_max)]
+        scan_params = ScanParameters(names  = ['mu', 'sigma'],
+                                     bounds = bnds,
+                                     nscans = nscans
                                     )
     elif ndim == 2:
+        nscans = [50, 50]
+        bnds   = [(-0.8, 0.8), (0.02, 0.15)]
         scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = [(-0.9, 0.9), (0.02,0.1)],
-                                     nscans = [25, 25]
+                                     bounds = bnds,
+                                     nscans = nscans 
                                     )
 
     paramscan = []
     phiscan   = []
     qmaxscan  = []
     u_0       = np.linspace(0.01, 30., 300)
+    mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
+                            xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
+    sigma     = np.linspace(0.02, 0.15, nscans[1])
     for i, sim in enumerate(sims):
         if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
 
@@ -145,7 +153,6 @@ if __name__ == '__main__':
         # scan over signal parameters
         nllscan, params, dof = sig_fitter.scan(scan_params, sim) 
         qscan = -2*(nllscan - nll_bg)
-
         paramscan.append(params)
         qmaxscan.append(np.max(qscan))
 
@@ -155,51 +162,48 @@ if __name__ == '__main__':
             continue
 
         qscan = np.array(qscan).reshape(scan_params.nscans)
-        if ndim > 0:
-            phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
+        phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
 
         if make_plots and i < 50:
-            sig_model.update_parameters(params)
-            bg_model.update_parameters(bg_result.x)
             ft.fit_plot(sim, xlimits, sig_model, bg_model,
                         '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
+            if ndim == 1:
+                ft.plot_pvalue_scan_1D(qscan.flatten(), mu, '{0}_{1}'.format(channel, i+1))
             if ndim == 2:
-                cmap = plt.imshow(qscan.transpose(), cmap='viridis', vmin=0., vmax=10.) 
-                plt.colorbar()
-                plt.savefig('plots/scan_fits/qscan_{0}_{1}.png'.format(channel, i))
-                plt.savefig('plots/scan_fits/qscan_{0}_{1}.pdf'.format(channel, i))
-                plt.close()
+                ft.plot_pvalue_scan_2D(qscan.flatten(), mu, sigma, '{0}_{1}'.format(channel, i+1))
 
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
     qmaxscan    = np.array(qmaxscan)
 
     # Save scan data
-    if save_data or is_batch:
+    if is_batch:
         outfile = open('data/lee_scan_{0}_{1}_{2}.pkl'.format(channel, nsims, ndim), 'w')
         pickle.dump(u_0, outfile)
         pickle.dump(qmaxscan, outfile)
         pickle.dump(phiscan, outfile)
         pickle.dump(paramscan, outfile)
         outfile.close()
+    else:
+        ################################
+        ### Calculate LEE correction ###
+        ################################
 
-    ################################
-    ### Calculate LEE correction ###
-    ################################
-
-    if not is_batch and ndim > 0:
-        k, nvals, p_global = lee.lee_nD(np.sqrt(qmax), u_0, phiscan, j=ndim, k=1, fix_dof=True)
+        p_local  = 0.5*chi2.sf(qmax, 1)
+        z_local  = -norm.ppf(p_local)
+        k, nvals = lee.get_GV_coefficients(u_0, phiscan, j=ndim, k=1, scale=0.5)
+        p_global = lee.get_p_global(qmax, k, nvals, scale=0.5)
+        z_global = -norm.ppf(p_global)
 
         if make_plots:
-            lee.validation_plots(u_0, phiscan, qmaxscan, [nvals], [k], '{0}_{1}D'.format(channel, ndim))
+            lee.gv_validation_plot(u_0, phiscan, qmaxscan, 
+                                   nvals, k, scale=0.5,
+                                   channel='{0}_{0}D'.format(channel, ndim))
 
         print ''
         for i, n in enumerate(nvals): 
             print 'N{0} = {1:.2f}'.format(i, n)
 
-        z_local   = np.sqrt(qmax)
-        p_local   = norm.cdf(-z_local)
-        z_global  = -norm.ppf(p_global)
         print 'local p_value       = {0:.3e}'.format(p_local)
         print 'local significance  = {0:.2f}'.format(z_local)
         print 'global p_value      = {0:.3e}'.format(p_global)
