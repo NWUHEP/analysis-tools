@@ -167,6 +167,7 @@ class NLLFitter:
             self.model.set_bounds(name, saved_bounds[name][0], saved_bounds[name][1])
 
         nllscan = np.array(nllscan)
+        dofs = np.array(dofs)
         return nllscan, best_params, dofs
 
 class ScanParameters:

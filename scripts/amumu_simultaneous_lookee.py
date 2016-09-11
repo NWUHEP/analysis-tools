@@ -126,7 +126,7 @@ if __name__ == '__main__':
                                      nscans = nscans
                                     )
     elif ndim == 2:
-        nscans = [50, 50]
+        nscans = [50, 30]
         bnds   = [(-0.8, 0.8), (0.02, 0.15)]
         scan_params = ScanParameters(names = ['mu', 'sigma'],
                                      bounds = bnds,
@@ -135,15 +135,17 @@ if __name__ == '__main__':
 
     paramscan = []
     phiscan   = []
+    dofs      = []
     qmaxscan  = []
     u_0       = np.linspace(0.01, 30., 300)
     mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
                             xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
+    sigma     = np.linspace(0.02, 0.15, nscans[1])
     for i, sim in enumerate(sims):
-        if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
+        #if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
+        print 'Carrying out scan {0}...'.format(i+1)
 
         sim = list(sim) # fitter doesn't like tuples for some reason... 
-
         # fit background model
         bg_result = bg_fitter.fit(sim)
         if bg_result.status == 0:
@@ -154,16 +156,17 @@ if __name__ == '__main__':
         # scan over signal parameters
         nllscan, params, dof = sig_fitter.scan(scan_params, sim, amps=[0, 5]) 
         qscan = -2*(nllscan - nll_bg)
-        paramscan.append(params)
-        qmaxscan.append(np.max(qscan))
 
         ### Calculate E.C. of the random field
         if qscan.size != np.prod(scan_params.nscans): 
             print 'The scan must have failed :('
             continue
 
-        qscan   = np.array(qscan).reshape(nscans)
-        phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
+        qscan = np.array(qscan).reshape(nscans)
+        phiscan.append(np.array([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0]))
+        paramscan.append(params)
+        qmaxscan.append(np.max(qscan))
+        dofs.append(dof)
 
         if make_plots and i < 50:
             #for j, channel in enumerate(channels):
@@ -175,9 +178,10 @@ if __name__ == '__main__':
             elif ndim == 2:
                 ft.plot_pvalue_scan_2D(qscan.flatten(), mu, sigma, 'simultaneous_{0}'.format(i+1))
 
-    phiscan     = np.array(phiscan)
-    paramscan   = np.array(paramscan)
-    qmaxscan    = np.array(qmaxscan)
+    phiscan   = np.array(phiscan)
+    paramscan = np.array(paramscan)
+    qmaxscan  = np.array(qmaxscan)
+    dofs      = np.array(dofs)
 
     if is_batch:
         # Save scan data
@@ -200,20 +204,26 @@ if __name__ == '__main__':
         ### construction of Gross-Vitells in this case is informed by the construction of
         ### the local p value from Chernoff
 
-        k, nvals = lee.get_GV_coefficients(u_0, phiscan, j=ndim, k=2, scale=1)
-        p_global = lee.get_p_global(qmax, k, nvals, scale=1)
+        scales = [0.5, 0.25]
+        kvals  = [1, 2]
+        nvals = lee.get_GV_coefficients(u_0, phiscan, ndim, kvals, scales)
+
+        p_global = lee.get_p_global(qmax, kvals, nvals, scales)
         z_global = -norm.ppf(p_global)
+
+        for i, n in enumerate(nvals.flatten(0)): 
+            print 'N{0} = {1:.2f}'.format(i, n)
+
+        print 'local p_value       = {0:.3e}'.format(p_local)
+        print 'local significance  = {0:.2f}'.format(z_local)
+        print 'global p_value      = {0:.3e}'.format(p_global)
+        print 'global significance = {0:.2f}'.format(z_global)
+        print 'trial factor        = {0:.2f}'.format(p_global/p_local)
 
         if make_plots:
             lee.gv_validation_plot(u_0, phiscan, qmaxscan, 
-                                   nvals, k, scale=1, 
+                                   nvals, kvals, scales, 
                                    channel='simultaneous_{0}D'.format(ndim))
-
-        print 'k = {0:.2f}'.format(k)
-        for i,n in enumerate(nvals):
-            print 'N{0} = {1:.2f}'.format(i, n)
-        print 'local p_value = {0:.7f},  local significance = {1:.2f}'.format(p_local, z_local)
-        print 'global p_value = {0:.7f}, global significance = {1:.2f}'.format(p_global, z_global)
 
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))

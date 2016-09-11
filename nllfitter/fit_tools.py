@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 
 from __future__ import division
-import pickle
 from timeit import default_timer as timer
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import numpy.random as rng
-import numdifftools as nd
-import emcee as mc
-import lmfit
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from scipy.stats import chi2, norm 
 from scipy import integrate
 from scipy.optimize import minimize
 from scipy.special import wofz
+
+import emcee as mc
+import numdifftools as nd
+import lmfit
 
 # global options
 np.set_printoptions(precision=3.)
@@ -94,7 +95,6 @@ def voigt(x, a):
     a: model paramters (mean, gamma, and sigma)
     '''
     z = ((x - a[0]) + 1j*a[1])/(a[2]*np.sqrt(2))
-
     v = np.real(wofz(z))/(a[2]*np.sqrt(2*np.pi))
     return v
 
@@ -146,7 +146,6 @@ def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
     print 'local significance = {0:.2f}'.format(np.abs(norm.ppf(pval)))
 
     return pval
-
 
 ### Monte Carlo simulations ###
 def lnprob(x, pdf, bounds):
@@ -205,7 +204,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     
     # Remove excess events and shape to samples_per_toy.
     x = x[:-(x.size%samples_per_toy)]
-    x = x.reshape(x.size/samples_per_toy, samples_per_toy)
+    x = x.reshape(int(x.size/samples_per_toy), samples_per_toy)
 
     # if the exact number of toy datasets are not generated either trim or
     # produce more.
@@ -217,43 +216,6 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
         x = x[:int(ntoys),]
 
     return x
-
-def calculate_CI(bg_fitter, sig_fitter):
-
-    ### Calculate confidence interval on the likelihood ratio at the +/- 1, 2
-    ### sigma levels
-    nsims = 1000
-
-    print 'Generating {0} pseudo-datasets from bg+signal fit and determining distribution of q'.format(nsims)
-    sims = ft.generator(sig_model.pdf, n_total, ntoys=nsims)
-    q_sim = []
-    for sim in sims:
-        bg_result = bg_fitter.fit(sim)
-        sig_result = sig_fitter.fit(sim) 
-        if bg_result.status == 0 and sig_result.status == 0:
-            nll_bg = bg_model.calc_nll(sim)
-            nll_sig = sig_model.calc_nll(sim)
-            q = 2*(nll_bg - nll_sig)
-            q_sim.append(q)
-        else:
-            print bg_result.status, sig_result.status
-
-    q_sim = np.array(q_sim)
-    q_sim.sort()
-    q_upper = q_sim[q_sim > q_max]
-    q_lower = q_sim[q_sim < q_max]
-
-    n_upper = q_upper.size
-    n_lower = q_lower.size
-
-    one_sigma_up   = q_upper[int(0.34*n_upper)]
-    two_sigma_up   = q_upper[int(0.475*n_upper)]
-    one_sigma_down = q_lower[int(-0.34*n_lower)]
-    two_sigma_down = q_lower[int(-0.475*n_lower)]
-
-    print '{0}: q = {1:.2f}'.format(channel, q_max)
-    print '1 sigma c.i.: {0:.2f} -- {1:.2f}'.format(one_sigma_down, one_sigma_up)
-    print '2 sigma c.i.: {0:.2f} -- {1:.2f}'.format(two_sigma_down, two_sigma_up)
 
 
 ######################
@@ -301,7 +263,7 @@ def plot_pvalue_scan_2D(qscan, x, y, suffix):
 
     ### draw the z scores as contours 
     vmap = plt.get_cmap('gray_r')
-    vcol = [vmap(float(u)/5) for i in range(5)]
+    vcol = [vmap(0.95) if i >= 2 else vmap(0.05) for i in range(5)]
     cs = plt.contour(x, y, z_val, [1, 2, 3, 4, 5], colors=vcol)
     plt.clabel(cs, inline=1, fontsize=10, fmt='%d')
 

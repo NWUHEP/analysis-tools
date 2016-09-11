@@ -191,14 +191,14 @@ if __name__ == '__main__':
 
         p_local  = 0.5*chi2.sf(qmax, 1)
         z_local  = -norm.ppf(p_local)
-        k, nvals = lee.get_GV_coefficients(u_0, phiscan, j=ndim, k=1, scale=0.5)
-        p_global = lee.get_p_global(qmax, k, nvals, scale=0.5)
+        nvals    = lee.get_GV_coefficients(u_0, phiscan, j=ndim)
+        p_global = lee.get_p_global(qmax, [1], nvals, [0.5])
         z_global = -norm.ppf(p_global)
 
         if make_plots:
             lee.gv_validation_plot(u_0, phiscan, qmaxscan, 
-                                   nvals, k, scale=0.5,
-                                   channel='{0}_{0}D'.format(channel, ndim))
+                                   nvals, [1], [0.5],
+                                   '{0}_{1}D'.format(channel, ndim))
 
         print ''
         for i, n in enumerate(nvals): 
