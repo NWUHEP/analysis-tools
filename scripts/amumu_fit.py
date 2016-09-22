@@ -40,7 +40,7 @@ if __name__ == '__main__':
     verbose = True
     doToys  = False
     doKS    = False
-    model   = 'Gaussian'
+    model   = 'Voigt'
     nsims   = 50000
 
     if len(sys.argv) > 2:
@@ -62,7 +62,9 @@ if __name__ == '__main__':
             n_total = n_1b1f + n_1b1c
         else:
             #data, n_total = ft.get_data('data/muon_2012_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-            data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            #data, n_total = ft.get_data('data/emu_2012_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            data, n_total = ft.get_data('data/dimuon_mass_{0}_cut2_2012.csv'.format(channel), 'dimuon_mass', xlimits)
     elif period == 2016:
         if channel == 'combined':
             data_1b1f, n_1b1f = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
@@ -95,16 +97,22 @@ if __name__ == '__main__':
 
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
-    sig_params.add_many(
-                        ('A'     , 0.01 , True , 0.0 , 1.   , None),
-                        ('mu'    , -0.43 , True , -0.1 , -0.7  , None),
-                        ('sigma' , 0.04 , True , 0.02 , 0.2  , None)
-                       )
-    sig_params += bg_params.copy()
     if model == 'Gaussian':
+        sig_params.add_many(
+                            ('A'     , 0.01  , True , 0.0   , 1.   , None),
+                            ('mu'    , -0.43 , True , -0.1  , -0.7 , None),
+                            ('sigma' , 0.04  , True , 0.015 , 0.2  , None)
+                           )
         sig_model  = Model(ft.sig_pdf, sig_params)
     elif model == 'Voigt':
+        sig_params.add_many(
+                            ('A'     , 0.01   , True , 0.0    , 1.     , None),
+                            ('mu'    , -0.43  , True , -0.45  , -0.4   , None),
+                            ('gamma' , 0.033  , True , 0.02   , 0.04   , None),
+                           )
         sig_model  = Model(ft.sig_pdf_alt, sig_params)
+    sig_params += bg_params.copy()
+
     sig_fitter = NLLFitter(sig_model)
     sig_result = sig_fitter.fit(data)
 
@@ -187,8 +195,8 @@ if __name__ == '__main__':
 
         x = np.linspace(0, 20, 2000)
         plt.yscale('log')
-        plt.hist(qmax, bins=50, normed=True, histtype='step', color='k')
-        plt.plot(x, 0.5*chi2.pdf(x, 1), 'r--')
+        plt.hist(qmax, bins=50, normed=True, histtype='step', color='k', linewidth=2)
+        plt.plot(x, 0.5*chi2.pdf(x, 1), 'r--', linewidth=2)
 
         plt.grid()
         plt.xlim(0, 15)
@@ -198,7 +206,7 @@ if __name__ == '__main__':
         plt.xlabel(r'$q$')
         plt.ylabel(r'Entries')
 
-        plt.savefig('plots/q_distribution_{0}_{1}.pdf'.format(channel, period))
+        plt.savefig('plots/q_distribution_{0}_{1}_{2}.pdf'.format(channel, period, model))
         plt.close()
 
     print ''

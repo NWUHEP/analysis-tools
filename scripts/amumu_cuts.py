@@ -22,12 +22,14 @@ def save_histograms(df, cat, level, prefix, columns=None, period='2016'):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         infile  = sys.argv[1]
         cat     = sys.argv[2]
+        period  = sys.argv[3]
     else:
         infile  = 'data/ntuple_dimuon.csv'
         cat     = '1b1f'
+        period  = 2012
 
     # split features into categories for improved plotting
     muon_features = [
@@ -76,7 +78,7 @@ if __name__ == '__main__':
     save_histograms(data.query(dijet_condition), cat, 0, 'dijet'    , dijet_features)
     save_histograms(data.query(dijet_condition), cat, 0, 'four_body', four_body_features)
     print 'cut 0: {0}'.format(data.shape[0])
-    data[misc].to_csv('data/amumu_sync/event_list_cut0_2016.csv', index=False) 
+    data[misc].to_csv('data/amumu_sync/event_list_cut0_{0}.csv'.format(period), index=False) 
 
     for level in xrange(1,len(cut_list)+1):
         cut_matrix = data[cut_list[:level]]
@@ -92,4 +94,5 @@ if __name__ == '__main__':
         save_histograms(data_cut.query(dijet_condition), cat, level, 'four_body', four_body_features)
 
         print 'cut {0}: {1}'.format(level, data_cut.shape[0])
-        data_cut[misc].to_csv('data/amumu_sync/event_list_{0}_cut{1}_2016.csv'.format(cat, level), index=False) 
+        data_cut[misc].to_csv('data/amumu_sync/event_list_{0}_cut{1}_{2}.csv'.format(cat, level, period), index=False) 
+        data_cut[['dimuon_mass']].to_csv('data/dimuon_mass_{0}_cut{1}_{2}.csv'.format(cat, level, period), index=False) 

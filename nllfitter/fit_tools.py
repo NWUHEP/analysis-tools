@@ -12,6 +12,7 @@ from scipy.stats import chi2, norm
 from scipy import integrate
 from scipy.optimize import minimize
 from scipy.special import wofz
+#import ROOT as r # Need this for validating scipy Faddeeva function implementation
 
 import emcee as mc
 import numdifftools as nd
@@ -94,9 +95,18 @@ def voigt(x, a):
     x: data
     a: model paramters (mean, gamma, and sigma)
     '''
-    z = ((x - a[0]) + 1j*a[1])/(a[2]*np.sqrt(2))
-    v = np.real(wofz(z))/(a[2]*np.sqrt(2*np.pi))
-    return v
+    mu = a[0]
+    gamma = a[1]
+    sigma = a[2]
+
+    if gamma == 0:
+        return norm.pdf(x, [mu, sigma])
+    elif sigma == 0:
+        return lorentzian(x, [mu, gamma])
+    else:
+        z = ((x - mu) + 1j*gamma)/(sigma*np.sqrt(2))
+        y = np.real(wofz(z))/(sigma*np.sqrt(2*np.pi))
+        return y
 
 
 def bg_pdf(x, a): 
@@ -119,7 +129,12 @@ def sig_pdf(x, a):
     x: data
     a: model parameters (a1, a2, mu, and sigma)
     '''
-    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*norm.pdf(x, a[1], a[2])
+
+    bg = bg_pdf(x, a[3:5])
+    sig = norm.pdf(x, a[1], a[2]) 
+    sig_norm = integrate.quad(lambda z: norm.pdf(z, a[1], a[2]), -1, 1)[0]
+
+    return (1 - a[0])*bg + a[0]*sig/sig_norm
 
 def sig_pdf_alt(x, a):
     '''
@@ -130,10 +145,14 @@ def sig_pdf_alt(x, a):
     Parameters:
     ===========
     x: data
-    a: model parameters (a1, a2, mu, and gamma)
+    a: model parameters (A, a1, a2, mu, and gamma)
     '''
-    return (1 - a[0])*bg_pdf(x, a[3:5]) + a[0]*voigt(x, [a[1], a[2], 0.0155])
 
+    bg = bg_pdf(x, a[3:5])
+    sig = voigt(x, [a[1], a[2], 0.0155]) 
+    sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.0155]), -1, 1)[0]
+
+    return (1 - a[0])*bg + a[0]*sig/sig_norm
 
 ### toy MC p-value calculator ###
 def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
@@ -222,7 +241,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
 ### plotting tools ###
 ######################
 
-def plot_pvalue_scan_1D(qscan, x, suffix):
+def plot_pvalue_scan_1D(qscan, x, path):
     '''
     Helper function for plotting 1D pvalue scans.
     '''
@@ -241,18 +260,22 @@ def plot_pvalue_scan_1D(qscan, x, suffix):
     
     plt.yscale('log')
     plt.title(r'')
-    plt.ylim([0.5*np.min(p_val), 1.])
+    plt.ylim([np.min(0.5*np.min(p_val), 0.5*norm.sf(3)), 1.])
     plt.xlim([x[0], x[-1]])
     plt.xlabel(r'$m_{\mu\mu}$ [GeV]')
     plt.ylabel(r'$p_{local}$')
-    plt.savefig('plots/scan_fits/pvalue_scans_{0}_1D.png'.format(suffix))
+    plt.savefig(path)
     plt.close()
 
-def plot_pvalue_scan_2D(qscan, x, y, suffix):
+def plot_pvalue_scan_2D(qscan, x, y, path, nchannels=1):
     '''
     Helper function for plotting 1D pvalue scans.
     '''
-    p_val = np.array(0.5*chi2.sf(qscan, 1) + 0.25*chi2.sf(qscan, 2))
+    if nchannels == 1:
+        p_val = np.array(0.5*chi2.sf(qscan, 1))
+    elif nchannels == 2:
+        p_val = np.array(0.5*chi2.sf(qscan, 1) + 0.25*chi2.sf(qscan, 2))
+
     p_val = p_val.reshape(x.size, y.size).transpose()
     z_val = -norm.ppf(p_val)
 
@@ -271,7 +294,7 @@ def plot_pvalue_scan_2D(qscan, x, y, suffix):
     plt.ylabel(r'$\sigma$ [GeV]')
     plt.xlim(x[0], x[-1])
     plt.ylim(y[0], y[-1])
-    plt.savefig('plots/scan_fits/pvalue_scans_{0}_2D.png'.format(suffix))
+    plt.savefig(path)
     plt.close()
 
 

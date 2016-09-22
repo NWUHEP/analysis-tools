@@ -52,6 +52,7 @@ if __name__ == '__main__':
     xlimits    = (12., 70.)
     make_plots = True
     is_batch   = False
+    model      = 'Voigt'
 
     ########################
     ### Define fit model ###
@@ -96,8 +97,10 @@ if __name__ == '__main__':
                         ('sigma' , 0.03 , True , 0.02 , 1.   , None)
                        )
     sig_params += bg_params.copy()
-
-    sig_model  = Model(ft.sig_pdf, sig_params)
+    if model == 'Gaussian':
+        sig_model  = Model(ft.sig_pdf, sig_params)
+    elif model == 'Voigt':
+        sig_model  = Model(ft.sig_pdf_alt, sig_params)
     sig_fitter = NLLFitter(sig_model, verbose=False)#, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
 
@@ -119,15 +122,15 @@ if __name__ == '__main__':
     mu_max    = sig_params['mu'].value
     sigma_max = sig_params['sigma'].value
     if ndim == 1:
-        nscans = [50, 1]
-        bnds   = [(-0.8, 0.8), (sigma_max, sigma_max)]
+        nscans = [30, 1]
+        bnds   = [(-0.9, 0.9), (sigma_max, sigma_max)]
         scan_params = ScanParameters(names  = ['mu', 'sigma'],
                                      bounds = bnds,
                                      nscans = nscans
                                     )
     elif ndim == 2:
-        nscans = [50, 50]
-        bnds   = [(-0.8, 0.8), (0.02, 0.15)]
+        nscans = [30, 20]
+        bnds   = [(-0.9, 0.9), (0.02, 0.07)]
         scan_params = ScanParameters(names = ['mu', 'sigma'],
                                      bounds = bnds,
                                      nscans = nscans 
@@ -139,7 +142,7 @@ if __name__ == '__main__':
     u_0       = np.linspace(0.01, 30., 300)
     mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
                             xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
-    sigma     = np.linspace(0.02, 0.15, nscans[1])
+    sigma     = np.linspace((xlimits[1]-xlimits[0])/2*0.02, (xlimits[1]-xlimits[0])/2*0.15, nscans[1])
     for i, sim in enumerate(sims):
         if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
 
@@ -165,12 +168,16 @@ if __name__ == '__main__':
         phiscan.append([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0])
 
         if make_plots and i < 50:
+            sig_model.update_parameters(params)
+            bg_model.update_parameters(bg_result.x)
             ft.fit_plot(sim, xlimits, sig_model, bg_model,
                         '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
             if ndim == 1:
-                ft.plot_pvalue_scan_1D(qscan.flatten(), mu, '{0}_{1}'.format(channel, i+1))
+                ft.plot_pvalue_scan_1D(qscan.flatten(), mu, 
+                                       path ='plots/scan_fits/pvalue_scans_{0}_{1}_1D.png'.format(channel, i+1))
             if ndim == 2:
-                ft.plot_pvalue_scan_2D(qscan.flatten(), mu, sigma, '{0}_{1}'.format(channel, i+1))
+                ft.plot_pvalue_scan_2D(qscan.flatten(), mu, sigma,
+                                       path ='plots/scan_fits/pvalue_scans_{0}_{1}_2D.png'.format(channel, i+1))
 
     phiscan     = np.array(phiscan)
     paramscan   = np.array(paramscan)
@@ -185,13 +192,19 @@ if __name__ == '__main__':
         pickle.dump(paramscan, outfile)
         outfile.close()
     else:
-        ################################
-        ### Calculate LEE correction ###
-        ################################
+        #################################
+        ### Calculate GV coefficients ###
+        #################################
 
+        param_init = ndim*[1.,]
+        param_bnds = ndim*[(0., np.inf), ]
+        kvals      = [1]
+        scales     = [0.5]
+        nvals      = lee.get_GV_coefficients(u_0, phiscan, param_init, param_bnds, kvals, scales)
+
+        ### Calculate statistics ###
         p_local  = 0.5*chi2.sf(qmax, 1)
         z_local  = -norm.ppf(p_local)
-        nvals    = lee.get_GV_coefficients(u_0, phiscan, j=ndim)
         p_global = lee.get_p_global(qmax, [1], nvals, [0.5])
         z_global = -norm.ppf(p_global)
 
@@ -201,8 +214,8 @@ if __name__ == '__main__':
                                    '{0}_{1}D'.format(channel, ndim))
 
         print ''
-        for i, n in enumerate(nvals): 
-            print 'N{0} = {1:.2f}'.format(i, n)
+        for i, n in enumerate(nvals.flatten()): 
+            print 'N{0} = {1:.2f}'.format(i+1, n)
 
         print 'local p_value       = {0:.3e}'.format(p_local)
         print 'local significance  = {0:.2f}'.format(z_local)

@@ -75,6 +75,7 @@ def exp_phi_u(u, n_j, k=1):
     
     return chi2.sf(u,k) + np.sum([n*rho_g(u, j+1, k) for j,n in enumerate(n_j)], axis=0)
 
+
 def lee_objective(a, Y, dY, X, ndim, kvals, scales):
     '''
     Defines the objective function for regressing the <EC> of the chi-squared field.
@@ -95,16 +96,16 @@ def lee_objective(a, Y, dY, X, ndim, kvals, scales):
     ephi = np.zeros(X.size)
     for i, (s, k) in enumerate(zip(scales, kvals)):
         ephi += s*exp_phi_u(X, a[i*ndim:(i+1)*ndim], k) 
-    quadratic_cost = np.sum((Y - ephi)**2/dY)
-    objective = quadratic_cost 
+
+    objective = np.sum((Y - ephi)**2/dY)
     return objective
 
-def get_GV_coefficients(u, phiscan, j=1, kvals=[1], scales=[0.5], fix_dof=True):
+def get_GV_coefficients(u, phiscan, p_init, p_bnds, kvals, scales):
     '''
     Carries GV style look elsewhere corrections with a twist.  Allows for an
-    arbitrary number of search dimensions/nuisance parameters and allows the
-    number of degrees of freedom of the chi2 random field to be a parameter of
     the model.  Cool shit.
+    number of degrees of freedom of the chi2 random field to be a parameter of
+    the model.
 
     Parameters
     ----------
@@ -128,16 +129,14 @@ def get_GV_coefficients(u, phiscan, j=1, kvals=[1], scales=[0.5], fix_dof=True):
     ### if variance on phi is 0, use the poisson error on dY ###
     var_phi[var_phi==0] = 1./np.sqrt(phiscan.shape[0])
     
-    n_coeff = j*len(kvals)
-    bnds    = n_coeff*[(0., np.inf),]
-    p_init  = n_coeff*[1.,]
+    ndim = int(len(p_init)/len(kvals))
     result = minimize(lee_objective,
                       p_init,
                       method = 'SLSQP',
-                      args   = (exp_phi, var_phi, u, j, kvals, scales),
-                      bounds = bnds
+                      args   = (exp_phi, var_phi, u, ndim, kvals, scales),
+                      bounds = p_bnds
                       )
-    return np.reshape(result.x, (len(kvals), j))
+    return np.reshape(result.x, (len(kvals), ndim))
 
 def get_p_global(qmax, kvals, nvals, scales): 
     '''

@@ -45,7 +45,7 @@ class NLLFitter:
         if nll is not np.nan:
             obj += nll
 
-        return nll + self._lmult[0] * np.sum(np.abs(params)) + self._lmult[1] * np.sum(params**2)
+        return nll #+ self._lmult[0] * np.sum(np.abs(params)) + self._lmult[1] * np.sum(params**2)
 
     def _get_corr(self, data, params):
 
@@ -158,7 +158,7 @@ class NLLFitter:
                     nll_min = nll
 
                 if amps:
-                    dofs.append(np.sum(result.x[amps] > 0.0001))
+                    dofs.append(np.sum(result.x[amps] > 1e-6))
             else:
                 continue
 

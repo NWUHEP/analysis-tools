@@ -12,7 +12,7 @@ class Model:
 
     Parameters
     ==========
-    model      : a function describing the model that takes argurements (params, data)
+    pdf        : a function describing the model that takes argurements (params, data)
     parameters : lmfit Parameter object
     '''
     def __init__(self, pdf, parameters):

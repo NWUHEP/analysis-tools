@@ -67,22 +67,22 @@ if __name__ == '__main__':
     sig1_params = Parameters()
     sig1_params.add_many(
                         ('A1'    , 0.01 , True , 0.0 , 1.   , None),
-                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
+                        ('mu'    , -0.5 , True , -0.9 , 0.9  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
     sig1_params += bg1_params.copy()
-    sig1_model = Model(ft.sig_pdf, sig1_params)
+    sig1_model = Model(ft.sig_pdf_alt, sig1_params)
     sig_fitter = NLLFitter(sig1_model)
     sig_result = sig_fitter.fit(datasets[0])
 
     sig2_params = Parameters()
     sig2_params.add_many(
                         ('A2'    , 0.01 , True , 0.0 , 1.   , None),
-                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
+                        ('mu'    , -0.5 , True , -0.9 , 0.9  , None),
                         ('sigma' , 0.01 , True , 0.02 , 1.   , None)
                        )
     sig2_params += bg2_params.copy()
-    sig2_model = Model(ft.sig_pdf, sig2_params)
+    sig2_model = Model(ft.sig_pdf_alt, sig2_params)
     sig_fitter = NLLFitter(sig2_model)
     sig_result = sig_fitter.fit(datasets[1])
 
@@ -138,8 +138,8 @@ if __name__ == '__main__':
 
         x = np.linspace(0, 20, 2000)
         plt.yscale('log')
-        plt.hist(qmax, bins=50, normed=True, histtype='step', color='k')
-        plt.plot(x, 0.5*chi2.pdf(x, 1) + 0.25*chi2.pdf(x, 2), 'r--')
+        plt.hist(qmax, bins=50, normed=True, histtype='step', color='k', linewidth=2)
+        plt.plot(x, 0.5*chi2.pdf(x, 1) + 0.25*chi2.pdf(x, 2), 'r--', linewidth=2)
 
         plt.grid()
         plt.xlim(0, 15)

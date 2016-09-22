@@ -17,26 +17,27 @@ if __name__ == '__main__':
 
     start = timer()
 
-    ndim       = 2
+    ndim       = 1
     minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
+    model      = 'Gaussian'
     #channels   = ['1b1f_2016', '1b1c_2016', '1b1f_2012', '1b1c_2012', '2016', '2012', 'all']      
     #channels   = ['2016', '2012', 'all']      
-    channels   = ['1b1f_2012', '1b1c_2012', '2012']      
+    channels   = ['1b1f_2012', '1b1c_2012', 'combined_2012']      
 
     ### Get the data
     data = {}
     #data['1b1f_2012'], _ = ft.get_data('data/muon_2012_1b1f.csv', 'dimuon_mass', xlimits)
     #data['1b1c_2012'], _ = ft.get_data('data/muon_2012_1b1c.csv', 'dimuon_mass', xlimits)
-    data['1b1f_2012'], _ = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-    data['1b1c_2012'], _ = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
-    data['2012']         = np.concatenate((data['1b1f_2012'], data['1b1c_2012']))
+    data['1b1f_2012'], _  = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+    data['1b1c_2012'], _  = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+    data['combined_2012'] = np.concatenate((data['1b1f_2012'], data['1b1c_2012']))
 
-    data['1b1f_2016'], _ = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
-    data['1b1c_2016'], _ = ft.get_data('data/muon_2016_1b1c.csv', 'dimuon_mass', xlimits)
-    data['2016']         = np.concatenate((data['1b1f_2016'], data['1b1c_2016']))
+    data['1b1f_2016'], _  = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
+    data['1b1c_2016'], _  = ft.get_data('data/muon_2016_1b1c.csv', 'dimuon_mass', xlimits)
+    data['combined_2016'] = np.concatenate((data['1b1f_2016'], data['1b1c_2016']))
 
-    data['all']          = np.concatenate((data['2012'], data['2016']))
+    data['all']          = np.concatenate((data['combined_2012'], data['combined_2016']))
 
     ### Initialize fit models
     bg_params = Parameters()
@@ -55,7 +56,7 @@ if __name__ == '__main__':
                         ('sigma' , 0.03 , True , 0.02 , 1.   , None)
                        )
     sig_params += bg_params.copy()
-    sig_model  = Model(ft.sig_pdf, sig_params)
+    sig_model  = Model(ft.sig_pdf_alt, sig_params)
     sig_fitter = NLLFitter(sig_model, verbose=False)#, fcons=sig_constraint)
 
     if ndim == 1:
@@ -65,8 +66,9 @@ if __name__ == '__main__':
                                      nscans = [100, 1]
                                     )
 
-        mu = np.linspace(17.8, 64.2, 200)
+        mu = np.linspace(17.8, 64.2, 100)
         pscan = {}
+        ymin = 1
         for channel in channels:
             print 'Scanning channel {0}'.format(channel)
 
@@ -77,27 +79,32 @@ if __name__ == '__main__':
             # scan over signal parameters
             nllscan, params, dof = sig_fitter.scan(scan_params, data[channel]) 
             qscan = -2*(nllscan - nll_bg)
-            p_val = 0.5*chi2.sf(qscan, 1)
-            pscan[channel] = p_val
+            pval = 0.5*chi2.sf(qscan, 1)
+            pscan[channel] = pval
+            
+            pmin = np.min(pval)
+            if pmin < ymin:
+                ymin = pmin
 
-            print '{0} p_local = {1:.3e}'.format(channel, np.min(p_val))
-            plt.plot(mu, p_val)
+            print '{0} p_local = {1:.3e}'.format(channel, pmin)
+            plt.plot(mu, pval, linewidth=2.)
         
         # Draw significance lines
         ones = np.ones(mu.size)
-        plt.plot(mu, norm.sf(1)*ones, 'r--')
+        plt.plot(mu, norm.sf(1)*ones, 'k--', linewidth=2.)
         for i in xrange(2, 7):
-            plt.plot(mu, norm.sf(i)*ones, 'r--')
-            plt.text(60, norm.sf(i)*1.25, r'${0} \sigma$'.format(i), color='red')
+            plt.plot(mu, norm.sf(i)*ones, 'k--', linewidth=2.)
+            plt.text(60, norm.sf(i)*1.25, r'${0} \sigma$'.format(i), color='red', fontsize=16)
 
         plt.yscale('log')
         plt.title(r'')
-        #plt.ylim([0., 1.5*np.max(h[0])])
+        plt.ylim([0.5*ymin, 1.])
         plt.xlim([mu[0], mu[-1]])
         plt.xlabel(r'$m_{\mu\mu}$ [GeV]')
         plt.ylabel(r'$p_{local}$')
-        plt.savefig('plots/pvalue_scans.pdf')
-        plt.savefig('plots/pvalue_scans.png')
+        plt.legend([ch.split('_')[0] for ch in channels], bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=3, mode="expand", borderaxespad=0.)
+        plt.savefig('plots/pvalue_scans_{0}_1D.pdf'.format(model))
+        plt.savefig('plots/pvalue_scans_{0}_1D.png'.format(model))
         plt.close()
 
     elif ndim == 2:
@@ -116,33 +123,10 @@ if __name__ == '__main__':
             # scan over signal parameters
             nllscan, params, dof = sig_fitter.scan(scan_params, data[channel]) 
             qscan = -2*(nllscan - nll_bg)
-            p_val = 0.5*chi2.sf(qscan, 1)
-
-            print '{0} p_local = {1:.3e}'.format(channel, np.min(p_val))
-
-            # Make the plot
             x = np.linspace(14.9, 67.1, 100)
             y = np.linspace(0.435, 4.35, 100)
-            p_val = p_val.reshape(100, 100).transpose()
-            z_val = -norm.ppf(p_val)
+            ft.plot_pvalue_scan_2D(qscan, x, y, path='plots/pvalue_scans_{0}_{1}_2D.pdf'.format(channel, model))
+            ft.plot_pvalue_scan_2D(qscan, x, y, path='plots/pvalue_scans_{0}_{1}_2D.png'.format(channel, model))
 
-            ### draw the p values as a colormesh
-            plt.pcolormesh(x, y, p_val[:-1, :-1], cmap='viridis_r', norm=LogNorm(vmin=0.25*p_val.min(), vmax=p_val.max()), linewidth=0, rasterized=True)
-            cbar = plt.colorbar()
-            cbar.set_label(r'$p_{local}$')
-
-            ### draw the z scores as contours 
-            vmap = plt.get_cmap('gray_r')
-            vcol = [vmap(float(u)/5) for i in range(5)]
-            cs = plt.contour(x, y, z_val, [1, 2, 3, 4, 5], colors=vcol)
-            plt.clabel(cs, inline=1, fontsize=10, fmt='%d')
-
-            plt.xlabel(r'$m_{\mu\mu}$ [GeV]')
-            plt.ylabel(r'$\sigma$ [GeV]')
-            plt.xlim(14.9, 67.1)
-            plt.ylim(0.435, 4.35)
-            plt.savefig('plots/pvalue_scans_{0}_2D.pdf'.format(channel))
-            plt.savefig('plots/pvalue_scans_{0}_2D.png'.format(channel))
-            plt.close()
 
     print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
