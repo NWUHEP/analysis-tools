@@ -31,20 +31,6 @@ if __name__ == '__main__':
         cat     = '1b1f'
         period  = 2012
 
-    # split features into categories for improved plotting
-    muon_features = [
-                     'muon1_pt', 'muon1_eta', 'muon1_phi', 'muon1_iso', 
-                     'muon2_pt', 'muon2_eta', 'muon2_phi', 'muon2_iso', 
-                    ]
-    dimuon_features = [
-                     'muon_delta_eta', 'muon_delta_phi', 'muon_delta_r',
-                     'dimuon_mass', 'dimuon_pt', 'dimuon_eta', 'dimuon_phi'
-                     ]
-    four_body_features = ['delta_phi', 'delta_eta', 'four_body_mass']
-    jet_features       = ['jet_pt', 'jet_eta', 'jet_phi', 'n_jets', 'n_fwdjets']
-    bjet_features      = ['bjet_pt', 'bjet_eta', 'bjet_phi', 'bjet_d0', 'n_bjets']
-    dijet_features     = ['dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi']
-    met_features       = ['met_mag', 'met_phi']
     misc               = ['event_number', 'run_number', 'lumi']
 
     # conditions for querying non-zero jet/b jet events
@@ -69,29 +55,12 @@ if __name__ == '__main__':
         data['cut6'] = np.abs(data['delta_phi']) > 2.5
         cut_list = ['cut1', 'cut2', 'cut3', 'cut4', 'cut5', 'cut6']
 
-    # Save some rough histograms for sanity checks and print yields for each cut level
-    save_histograms(data                       , cat, 0, 'muon'     , muon_features)
-    save_histograms(data                       , cat, 0, 'dimuon'   , dimuon_features)
-    save_histograms(data                       , cat, 0, 'met'      , met_features)
-    save_histograms(data.query(jet_condition)  , cat, 0, 'jet'      , jet_features)
-    save_histograms(data.query(bjet_condition) , cat, 0, 'bjet'     , bjet_features)
-    save_histograms(data.query(dijet_condition), cat, 0, 'dijet'    , dijet_features)
-    save_histograms(data.query(dijet_condition), cat, 0, 'four_body', four_body_features)
     print 'cut 0: {0}'.format(data.shape[0])
     data[misc].to_csv('data/amumu_sync/event_list_cut0_{0}.csv'.format(period), index=False) 
 
     for level in xrange(1,len(cut_list)+1):
         cut_matrix = data[cut_list[:level]]
         data_cut   = data[cut_matrix.all(axis = 1)]
-
-        # Save some rough histograms
-        save_histograms(data_cut                       , cat, level, 'muon'     , muon_features)
-        save_histograms(data_cut                       , cat, level, 'dimuon'   , dimuon_features)
-        save_histograms(data_cut                       , cat, level, 'met'      , met_features)
-        save_histograms(data_cut.query(jet_condition)  , cat, level, 'jet'      , jet_features)
-        save_histograms(data_cut.query(bjet_condition) , cat, level, 'bjet'     , bjet_features)
-        save_histograms(data_cut.query(dijet_condition), cat, level, 'dijet'    , dijet_features)
-        save_histograms(data_cut.query(dijet_condition), cat, level, 'four_body', four_body_features)
 
         print 'cut {0}: {1}'.format(level, data_cut.shape[0])
         data_cut[misc].to_csv('data/amumu_sync/event_list_{0}_cut{1}_{2}.csv'.format(cat, level, period), index=False) 

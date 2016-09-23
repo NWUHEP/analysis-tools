@@ -8,13 +8,8 @@ import ROOT as r
 import json
 
 '''
-Simple script for getting data out of ROOT files and into CSV format.
+Script for getting blt data out of ROOT files and into CSV format.
 '''
-
-def fill_flatuple(df, entry):
-    '''
-    Fills dataframe from entry of blt
-    '''
 
 if __name__ == '__main__':
 
@@ -22,27 +17,38 @@ if __name__ == '__main__':
     infile       = 'data/bltuples/output_mumu_2012.root'
     selection    = 'mumu'
     period       = 2012
-    dataset_list = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 'ttbar_lep', 'zjets_m-50']
+    dataset_list = [
+                    'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                    'ttbar_lep', 
+                    'zjets_m-50', 'zjets_m-10to50',
+                    't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                    'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu'
+                    ]
 
     ### Get input bltuple ###
     print 'Opening file {0}'.format(infile)
     froot  = r.TFile(infile)
 
+    event_count = {}
     for dataset in dataset_list:
+        ecount  = froot.Get('TotalEvents_{0}'.format(dataset))
+        event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
+
         tree    = froot.Get('tree_{0}'.format(dataset))
         n       = tree.GetEntriesFast()
         ntuple  = {
+                   'run_number':[], 'event_number':[], 'lumi':[], 'weight':[],
                    'muon1_pt':[], 'muon1_eta':[], 'muon1_phi':[], 'muon1_iso':[], 
                    'muon2_pt':[], 'muon2_eta':[], 'muon2_phi':[], 'muon2_iso':[], 
                    'muon_delta_eta':[], 'muon_delta_phi':[], 'muon_delta_r':[],
                    'dimuon_mass':[], 'dimuon_pt':[], 'dimuon_eta':[], 'dimuon_phi':[], 
-                   'dijet_mass':[], 'dijet_pt':[], 'dijet_eta':[], 'dijet_phi':[], 
-                   'delta_phi':[], 'delta_eta':[], 'four_body_mass':[],
+                   'n_jets':[], 'n_fwdjets':[], 'n_bjets':[],
                    'bjet_pt':[], 'bjet_eta':[], 'bjet_phi':[], 'bjet_d0':[],
                    'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 'jet_d0':[], 
-                   'n_jets':[], 'n_fwdjets':[], 'n_bjets':[],
+                   'dijet_mass':[], 'dijet_pt':[], 'dijet_eta':[], 'dijet_phi':[], 
+                   'delta_phi':[], 'delta_eta':[], 'four_body_mass':[],
+                   #'dimuon_b_mass':[], 'dimuon_b_pt':[],
                    'met_mag':[], 'met_phi':[],
-                   'run_number':[], 'event_number':[], 'lumi':[], 'weight':[]
                    }
 
         print 'Reading {0} with {1} events...'.format(dataset, n)
@@ -91,6 +97,8 @@ if __name__ == '__main__':
             ntuple['delta_eta'].append(abs(dijet.Eta() - dimuon.Eta()))
             ntuple['four_body_mass'].append(quadbody.M())
 
+            # dimuon + b jet variables
+
             # jets
             ntuple['bjet_pt'].append(bjet.Pt())
             ntuple['bjet_eta'].append(bjet.Eta())
@@ -110,3 +118,6 @@ if __name__ == '__main__':
 
         df = pd.DataFrame(ntuple)
         df.to_csv('data/flatuples/{0}_{1}/ntuple_{2}.csv'.format(selection, period, dataset), index=False)
+
+    df = pd.DataFrame(event_count)
+    df.to_csv('data/flatuples/{0}_{1}/event_counts.csv'.format(selection, period))
