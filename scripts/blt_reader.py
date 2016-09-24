@@ -19,7 +19,7 @@ if __name__ == '__main__':
     period       = 2012
     dataset_list = [
                     'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
-                    'ttbar_lep', 
+                    'ttbar_lep', 'ttbar_semilep',
                     'zjets_m-50', 'zjets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu'
@@ -42,12 +42,14 @@ if __name__ == '__main__':
                    'muon2_pt':[], 'muon2_eta':[], 'muon2_phi':[], 'muon2_iso':[], 
                    'muon_delta_eta':[], 'muon_delta_phi':[], 'muon_delta_r':[],
                    'dimuon_mass':[], 'dimuon_pt':[], 'dimuon_eta':[], 'dimuon_phi':[], 
+                   'dimuon_pt_over_m':[],
                    'n_jets':[], 'n_fwdjets':[], 'n_bjets':[],
                    'bjet_pt':[], 'bjet_eta':[], 'bjet_phi':[], 'bjet_d0':[],
                    'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 'jet_d0':[], 
                    'dijet_mass':[], 'dijet_pt':[], 'dijet_eta':[], 'dijet_phi':[], 
-                   'delta_phi':[], 'delta_eta':[], 'four_body_mass':[],
-                   #'dimuon_b_mass':[], 'dimuon_b_pt':[],
+                   'dijet_pt_over_m':[],
+                   'dimuon_b_mass':[], 'dimuon_b_pt':[], 'dimuon_b_delta_eta':[], 'dimuon_b_delta_phi':[],
+                   'four_body_delta_phi':[], 'four_body_delta_eta':[], 'four_body_mass':[],
                    'met_mag':[], 'met_phi':[],
                    }
 
@@ -60,14 +62,14 @@ if __name__ == '__main__':
             met, met_phi        = tree.met, tree.metPhi
             dimuon              = mu1 + mu2
             dijet               = jet + bjet
-            quadbody            = dimuon + dijet
+            fourbody            = dimuon + dijet
             tribody             = dimuon + bjet
 
             # event info
             ntuple['run_number'].append(tree.runNumber)
             ntuple['event_number'].append(tree.evtNumber)
             ntuple['lumi'].append(tree.lumiSection)
-            ntuple['weight'].append(1)
+            ntuple['weight'].append(tree.eventWeight)
 
             ### muon
             ntuple['muon1_pt'].append(mu1.Pt())
@@ -79,25 +81,15 @@ if __name__ == '__main__':
             ntuple['muon2_phi'].append(mu2.Phi())
             ntuple['muon2_iso'].append(tree.muonTwoIso)
             ntuple['muon_delta_eta'].append(abs(mu1.Eta() - mu2.Eta()))
-            ntuple['muon_delta_phi'].append(mu1.DeltaPhi(mu2))
+            ntuple['muon_delta_phi'].append(abs(mu1.DeltaPhi(mu2)))
             ntuple['muon_delta_r'].append(mu1.DeltaR(mu2))
 
-            ### dimuon and dijet
+            ### dimuon 
             ntuple['dimuon_mass'].append(dimuon.M())
             ntuple['dimuon_pt'].append(dimuon.Pt())
             ntuple['dimuon_eta'].append(dimuon.Eta())
             ntuple['dimuon_phi'].append(dimuon.Phi())
-            ntuple['dijet_mass'].append(dijet.M())
-            ntuple['dijet_pt'].append(dijet.Pt())
-            ntuple['dijet_eta'].append(dijet.Eta())
-            ntuple['dijet_phi'].append(dijet.Phi())
-
-            # four body variables
-            ntuple['delta_phi'].append(dijet.DeltaPhi(dimuon))
-            ntuple['delta_eta'].append(abs(dijet.Eta() - dimuon.Eta()))
-            ntuple['four_body_mass'].append(quadbody.M())
-
-            # dimuon + b jet variables
+            ntuple['dimuon_pt_over_m'].append(dimuon.Pt()/dimuon.M())
 
             # jets
             ntuple['bjet_pt'].append(bjet.Pt())
@@ -115,6 +107,23 @@ if __name__ == '__main__':
             # MET
             ntuple['met_mag'].append(met)
             ntuple['met_phi'].append(met_phi)
+
+            ntuple['dijet_mass'].append(dijet.M())
+            ntuple['dijet_pt'].append(dijet.Pt())
+            ntuple['dijet_eta'].append(dijet.Eta())
+            ntuple['dijet_phi'].append(dijet.Phi())
+            ntuple['dijet_pt_over_m'].append(dijet.Pt()/dijet.M() if dijet.M() > 0 else -1)
+
+            # dimuon + b jet variables
+            ntuple['dimuon_b_mass'].append(tribody.M())
+            ntuple['dimuon_b_pt'].append(tribody.Pt())
+            ntuple['dimuon_b_delta_eta'].append(abs(dimuon.Eta() - bjet.Eta()))
+            ntuple['dimuon_b_delta_phi'].append(abs(dimuon.DeltaPhi(bjet)))
+
+            # four body variables
+            ntuple['four_body_delta_phi'].append(abs(dijet.DeltaPhi(dimuon)))
+            ntuple['four_body_delta_eta'].append(abs(dijet.Eta() - dimuon.Eta()))
+            ntuple['four_body_mass'].append(fourbody.M())
 
         df = pd.DataFrame(ntuple)
         df.to_csv('data/flatuples/{0}_{1}/ntuple_{2}.csv'.format(selection, period, dataset), index=False)
