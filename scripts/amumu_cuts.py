@@ -27,11 +27,12 @@ if __name__ == '__main__':
         cat     = sys.argv[2]
         period  = sys.argv[3]
     else:
-        infile  = 'data/ntuple_dimuon.csv'
+        indir   = 'data/flatuple/mumu_2012'
         cat     = '1b1f'
         period  = 2012
 
-    misc               = ['event_number', 'run_number', 'lumi']
+    data = []
+    pd.read_csv(infile)
 
     # conditions for querying non-zero jet/b jet events
     jet_condition   = 'n_jets + n_fwdjets > 0'
@@ -39,7 +40,6 @@ if __name__ == '__main__':
     dijet_condition = '(n_jets + n_fwdjets) > 0 and (n_bjets > 0)'
 
     # Add columns telling us whether has passed each analysis cut
-    data = pd.read_csv(infile)
     cut_list = []
     data['cut1'] = data['n_jets'] + data['n_bjets'] > 0
     data['cut2'] = data['n_bjets'] > 0
@@ -56,6 +56,7 @@ if __name__ == '__main__':
         cut_list = ['cut1', 'cut2', 'cut3', 'cut4', 'cut5', 'cut6']
 
     print 'cut 0: {0}'.format(data.shape[0])
+    misc = ['event_number', 'run_number']
     data[misc].to_csv('data/amumu_sync/event_list_cut0_{0}.csv'.format(period), index=False) 
 
     for level in xrange(1,len(cut_list)+1):

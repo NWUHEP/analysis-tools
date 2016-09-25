@@ -13,6 +13,22 @@ from lmfit import Parameter, Parameters
 from nllfitter import Model, NLLFitter
 import nllfitter.fit_tools as ft
 
+plt.style.use('classic')
+plt.rcParams['font.family']       = 'serif'
+plt.rcParams['font.serif']        = 'Ubuntu'
+plt.rcParams['font.monospace']    = 'Ubuntu Mono'
+plt.rcParams['mathtext.fontset']  = 'custom'
+plt.rcParams['mathtext.sf']       = 'Ubuntu'
+plt.rcParams['font.size']         = 18
+plt.rcParams['axes.labelsize']    = 20
+#plt.rcParams['axes.labelweight'] = 'bold'
+plt.rcParams['xtick.labelsize']   = 18
+plt.rcParams['ytick.labelsize']   = 18
+plt.rcParams['legend.fontsize']   = 20
+plt.rcParams['figure.titlesize']  = 20
+plt.rcParams['figure.figsize']    = [11, 8]
+plt.rcParams['legend.numpoints']  = 1
+
 def sig_constraint(sig_pdf, a):
     '''
     Constraint for preventing signal pdf from going negative.  Evaluates
@@ -40,7 +56,7 @@ if __name__ == '__main__':
     verbose = True
     doToys  = False
     doKS    = False
-    model   = 'Voigt'
+    model   = 'Gaussian'
     nsims   = 50000
 
     if len(sys.argv) > 2:
@@ -62,9 +78,8 @@ if __name__ == '__main__':
             n_total = n_1b1f + n_1b1c
         else:
             #data, n_total = ft.get_data('data/muon_2012_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-            #data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
             #data, n_total = ft.get_data('data/emu_2012_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-            data, n_total = ft.get_data('data/dimuon_mass_{0}_cut2_2012.csv'.format(channel), 'dimuon_mass', xlimits)
     elif period == 2016:
         if channel == 'combined':
             data_1b1f, n_1b1f = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
@@ -100,15 +115,15 @@ if __name__ == '__main__':
     if model == 'Gaussian':
         sig_params.add_many(
                             ('A'     , 0.01  , True , 0.0   , 1.   , None),
-                            ('mu'    , -0.43 , True , -0.1  , -0.7 , None),
+                            ('mu'    , -0.43 , True , -0.8  , 0.8 , None),
                             ('sigma' , 0.04  , True , 0.015 , 0.2  , None)
                            )
         sig_model  = Model(ft.sig_pdf, sig_params)
     elif model == 'Voigt':
         sig_params.add_many(
-                            ('A'     , 0.01   , True , 0.0    , 1.     , None),
-                            ('mu'    , -0.43  , True , -0.45  , -0.4   , None),
-                            ('gamma' , 0.033  , True , 0.02   , 0.04   , None),
+                            ('A'     , 0.01   , True , 0.0   , 1.    , None),
+                            ('mu'    , -0.43  , True , -0.8  , 0.8   , None),
+                            ('gamma' , 0.033  , True , 0.01  , 0.1   , None),
                            )
         sig_model  = Model(ft.sig_pdf_alt, sig_params)
     sig_params += bg_params.copy()
@@ -118,7 +133,8 @@ if __name__ == '__main__':
 
     ### Plots!!! ###
     print 'Making plot of fit results...'
-    ft.fit_plot(data, xlimits, sig_model, bg_model, '{0}_{1}_{2}'.format(channel, period, model))
+    ft.fit_plot(data, xlimits, sig_model, bg_model, 
+                '{0}_{1}'.format(channel, model), path='plots/fits/{0}'.format(period))
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
@@ -164,7 +180,7 @@ if __name__ == '__main__':
         plt.xlabel(r'$|\rm CDF_{model} - CDF_{data}|$')
         plt.legend(['ks residuals (data)', 'sup(ks residuals) (toys)'])
 
-        plt.savefig('plots/ks_test_{0}_{1}.pdf'.format(channel, period))
+        plt.savefig('plots/fits/{0}/ks_test_{0}.pdf'.format(period, channel))
         plt.close()
 
         print 'Carrying out KS test'
@@ -206,7 +222,7 @@ if __name__ == '__main__':
         plt.xlabel(r'$q$')
         plt.ylabel(r'Entries')
 
-        plt.savefig('plots/q_distribution_{0}_{1}_{2}.pdf'.format(channel, period, model))
+        plt.savefig('plots/fits/{0}/q_distribution_{1}_{2}.pdf'.format(period, channel, model))
         plt.close()
 
     print ''

@@ -319,34 +319,42 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
     plt.close()
 
     fig, ax = plt.subplots()
-    ax.plot(x, y_sig, 'b-', linewidth=2.)
-    ax.plot(x, y_bg1, 'b--', linewidth=2.) 
-    ax.plot(x, y_bg2, 'r-.', linewidth=2.) 
-    ax.errorbar(bincenters, h[0], yerr=binerrs, fmt='ko')
+    ax.plot(x , y_sig , 'b-'  , linewidth=2.5)
+    ax.plot(x , y_bg1 , 'b--' , linewidth=2.5)
+    ax.plot(x , y_bg2 , 'r-.' , linewidth=2.5)
+    ax.errorbar(bincenters, h[0], yerr=binerrs, 
+                fmt='ko', capsize=0, elinewidth=2, markersize=9)
     ax.legend(['bg+sig.', 'bg', 'bg only', 'data']) 
 
     if suffix[:4] == '1b1f':
-        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 forward jet')
-        ax.set_ylim([0., 2*np.max(h[0])])
-        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
+        ax.set_title(r'1b1f', loc='left')
+        ax.set_ylim([0., 1.75*np.max(h[0])])
+        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('Entries / 2 GeV')
     elif suffix[:4] == '1b1c':
-        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 central jet + MET < 40 + $\Delta\phi (\mu\mu ,bj)$')
+        ax.set_title(r'1b1c', loc='left')
         ax.set_ylim([0., 1.5*np.max(h[0])])
-        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
+        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('Entries / 2 GeV')
     elif suffix[:8] == 'combined':
-        ax.set_title(r'$\mu\mu$ + 1 b jet + 1 jet')
+        ax.set_title(r'combined', loc='left')
         ax.set_ylim([0., 1.5*np.max(h[0])])
-        ax.set_xlabel(r'$m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
+        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+        ax.set_ylabel('Entries / 2 GeV')
     elif suffix[:4] == 'hgg':
-        ax.set_title(r'$h(125)\rightarrow \gamma\gamma$')
+        ax.set_title(r'$\sf h(125)\rightarrow \gamma\gamma$')
         #ax.set_ylim([0., 50.])
-        ax.set_xlabel(r'$m_{\gamma\gamma}$ [GeV]')
-        ax.set_ylabel('entries / 2 GeV')
+        ax.set_xlabel(r'$\sf m_{\gamma\gamma}$ [GeV]')
+        ax.set_ylabel('Entries / 2 GeV')
 
     ax.set_xlim(xlim)
+    ax.grid()
+
+    ### Add lumi text ###
+    ax.text(0.06, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
+    ax.text(0.17, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
+    ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
+
 
     fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
     fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
