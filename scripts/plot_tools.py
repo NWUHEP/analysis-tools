@@ -58,7 +58,7 @@ if __name__ == '__main__':
     ### Configuration
     ntuple_dir = 'data/flatuples/mumu_2012'
     lumi       = 19.8e3
-    selection  = 'mumu_preselection'
+    selection  = 'mumu_2b'
     period     = 2012
     plot_data  = True
     datasets   = [
@@ -86,14 +86,16 @@ if __name__ == '__main__':
                ]
 
     ### Cuts ###
-    selection_cut = ''
-    #selection_cut = 'n_fwdjets > 0 and n_bjets == 1 and n_jets == 0'
-    #selection_cut = 'n_fwdjets == 0 and n_bjets == 1 and n_jets == 1 \
-    #                 and four_body_delta_phi > 2.5 and met_mag < 40'
-    #selection_cut = 'n_bjets == 1 and \
-    #                 ((n_fwdjets > 0 and n_jets == 0) or \
-    #                 (n_fwdjets == 0 and n_jets == 1 and \
-    #                 four_body_delta_phi > 2.5 and met_mag < 40))'
+    selection_cut = {}
+    selection_cut['mumu_preselection'] = ''
+    selection_cut['mumu_2b']           = 'n_bjets == 2' 
+    selection_cut['mumu_1b1f']         = 'n_fwdjets > 0 and n_bjets == 1 and n_jets == 0'
+    selection_cut['mumu_1b1c']         = 'n_fwdjets == 0 and n_bjets == 1 and n_jets == 1 \
+                                          and four_body_delta_phi > 2.5 and met_mag < 40'
+    selection_cut['mumu_combined']     = 'n_bjets == 1 and \
+                                          ((n_fwdjets > 0 and n_jets == 0) or \
+                                          (n_fwdjets == 0 and n_jets == 1 and \
+                                          four_body_delta_phi > 2.5 and met_mag < 40))'
 
     ### Get dataframes with styles, cross-sections, event_counts, etc.
     lut_datasets = pd.read_excel('data/plotting_lut.xlsx', sheetname='datasets', index_col='dataset_name').dropna(how='all')
@@ -108,8 +110,8 @@ if __name__ == '__main__':
         label     = lut_entry.label
 
         ### apply selection cuts ###
-        if selection_cut != '':
-            df = df.query(selection_cut)
+        if selection_cut[selection] != '':
+            df = df.query(selection_cut[selection])
         
         ### update weights with lumi scale factors ###
         if label != 'data':
@@ -151,12 +153,13 @@ if __name__ == '__main__':
 
         ### Need to histogram the stack without weights to get the errors ### 
         stack_noscale = np.histogram(np.concatenate(stack_data), 
-                                     bins=lut_entry.n_bins, 
-                                     range=(lut_entry.xmin, lut_entry.xmax)
+                                     bins  = lut_entry.n_bins,
+                                     range = (lut_entry.xmin, lut_entry.xmax),
+                                     weights = np.concatenate(stack_weights)**2
                                     )[0] 
         stack_sum = stack[0][-1]
         stack_x   = (stack[1][1:] + stack[1][:-1])/2.
-        stack_err = stack_sum*(1./np.sqrt(stack_noscale))
+        stack_err = np.sqrt(stack_noscale)
         no_blanks = stack_sum > 0
         stack_sum, stack_x, stack_err = stack_sum[no_blanks], stack_x[no_blanks], stack_err[no_blanks]
         axes.errorbar(stack_x, stack_sum, yerr=stack_err, 
@@ -199,9 +202,11 @@ if __name__ == '__main__':
         legend_text = [lut_datasets.loc[label].text for label in stack_labels[::-1]] 
         legend_text += ['BG error']
         legend_text += [lut_datasets.loc[label].text for label in overlay_labels[::-1]]
+        if plot_data:
+            legend_text += ['Data']
         axes.legend(legend_text)
 
-        ### maker 'er pretty ###
+        ### labels and x limits ###
         axes.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
         axes.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
         axes.set_xlim((lut_entry.xmin, lut_entry.xmax))
@@ -220,13 +225,13 @@ if __name__ == '__main__':
         ### linear scale ###
         axes.set_ylim((0., 1.8*np.max(stack_sum)))
         fig.savefig('plots/overlays/{0}_{1}/linear/{2}/{3}.png'.format(selection, period, lut_entry.category, feature))
-        fig.savefig('plots/overlays/{0}_{1}/linear/{2}/{3}.pdf'.format(selection, period, lut_entry.category, feature))
+        #fig.savefig('plots/overlays/{0}_{1}/linear/{2}/{3}.pdf'.format(selection, period, lut_entry.category, feature))
 
         ### log scale ###
         axes.set_yscale('log')
         axes.set_ylim((0.1*np.min(stack_sum), 15.*np.max(stack_sum)))
         fig.savefig('plots/overlays/{0}_{1}/log/{2}/{3}.png'.format(selection, period, lut_entry.category, feature))
-        fig.savefig('plots/overlays/{0}_{1}/log/{2}/{3}.pdf'.format(selection, period, lut_entry.category, feature))
+        #fig.savefig('plots/overlays/{0}_{1}/log/{2}/{3}.pdf'.format(selection, period, lut_entry.category, feature))
 
         fig.clear()
         plt.close()
