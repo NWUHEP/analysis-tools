@@ -151,7 +151,7 @@ if __name__ == '__main__':
                           weights   = stack_weights
                         )
 
-        ### Need to histogram the stack without weights to get the errors ### 
+        ### Need to histogram the stack with the square of the weights to get the errors ### 
         stack_noscale = np.histogram(np.concatenate(stack_data), 
                                      bins  = lut_entry.n_bins,
                                      range = (lut_entry.xmin, lut_entry.xmax),
@@ -184,7 +184,7 @@ if __name__ == '__main__':
                      weights   = overlay_weights
                     )
 
-        ### Make datapoints with errors ###
+        ### If there's data to overlay: apply feature condition and get datapoints plus errors ###
         if plot_data:
             data, weights = get_data_and_weights(dataframes, ['data'], lut_entry.condition)
             y, x, yerr = hist_to_errorbar(data, 
