@@ -48,8 +48,10 @@ if __name__ == '__main__':
                    'jet_pt':[], 'jet_eta':[], 'jet_phi':[], 'jet_d0':[], 
                    'dijet_mass':[], 'dijet_pt':[], 'dijet_eta':[], 'dijet_phi':[], 
                    'dijet_pt_over_m':[],
-                   'dimuon_b_mass':[], 'dimuon_b_pt':[], 'dimuon_b_delta_eta':[], 'dimuon_b_delta_phi':[],
-                   'four_body_delta_phi':[], 'four_body_delta_eta':[], 'four_body_mass':[],
+                   'dimuon_b_mass':[], 'dimuon_b_pt':[], 
+                   'dimuon_b_delta_eta':[], 'dimuon_b_delta_phi':[], 'dimuon_b_delta_r':[],
+                   'four_body_mass':[],
+                   'four_body_delta_phi':[], 'four_body_delta_eta':[], 'four_body_delta_r':[],
                    'met_mag':[], 'met_phi':[],
                    }
 
@@ -119,11 +121,13 @@ if __name__ == '__main__':
             ntuple['dimuon_b_pt'].append(tribody.Pt())
             ntuple['dimuon_b_delta_eta'].append(abs(dimuon.Eta() - bjet.Eta()))
             ntuple['dimuon_b_delta_phi'].append(abs(dimuon.DeltaPhi(bjet)))
+            ntuple['dimuon_b_delta_r'].append(dimuon.DeltaPhi(bjet))
 
             # four body variables
-            ntuple['four_body_delta_phi'].append(abs(dijet.DeltaPhi(dimuon)))
-            ntuple['four_body_delta_eta'].append(abs(dijet.Eta() - dimuon.Eta()))
             ntuple['four_body_mass'].append(fourbody.M())
+            ntuple['four_body_delta_eta'].append(abs(dijet.Eta() - dimuon.Eta()))
+            ntuple['four_body_delta_phi'].append(abs(dijet.DeltaPhi(dimuon)))
+            ntuple['four_body_delta_r'].append(dijet.DeltaR(dimuon))
 
         df = pd.DataFrame(ntuple)
         df.to_csv('data/flatuples/{0}_{1}/ntuple_{2}.csv'.format(selection, period, dataset), index=False)

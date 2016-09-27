@@ -12,7 +12,6 @@ from scipy.stats import chi2, norm
 from scipy import integrate
 from scipy.optimize import minimize
 from scipy.special import wofz
-#import ROOT as r # Need this for validating scipy Faddeeva function implementation
 
 import emcee as mc
 import numdifftools as nd
@@ -39,40 +38,6 @@ def get_data(filename, varname, xlim):
     n_total = data.size
 
     return data, n_total
-  
-def ks_test(data, model_pdf, xlim=(-1, 1), make_plots=False, suffix=None):
-    '''
-    Kolmogorov-Smirnov test.  Returns the residuals of |CDF_model - CDF_data|.
-    '''
-    
-    n_points = 1e5
-    x = np.linspace(xlim[0], xlim[1], n_points)
-    pdf = model_pdf(x)
-    cdf = np.cumsum(pdf)*(xlim[1] - xlim[0])/n_points
-
-    data.sort()
-    x_i = np.array([np.abs(d - x).argmin() for d in data])
-    cdf_i = np.linspace(1, data.size, data.size)/data.size
-
-    ks_residuals = np.abs(cdf[x_i] - cdf_i)
-
-    if make_plots:
-        plt.hist(ks_residuals, bins=25, histtype='step')
-        plt.ylabel('Entries')
-        plt.xlabel(r'$|\rm CDF_{model} - CDF_{data}|$')
-        plt.savefig('plots/ks_residuals_{0}.pdf'.format(suffix))
-        plt.close()
-
-        plt.plot(x, cdf)
-        plt.plot(data, cdf_i)
-        plt.ylabel('CDF(x)')
-        plt.xlabel('x')
-        plt.title(suffix)
-        plt.legend(['model', 'data'])
-        plt.savefig('plots/ks_cdf_overlay_{0}.pdf'.format(suffix))
-        plt.close()
-
-    return ks_residuals
 
 ### PDF definitions (maybe put these in a separate file)
 def lorentzian(x, a):
@@ -120,7 +85,7 @@ def bg_pdf(x, a):
     '''
     return 0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
 
-def sig_pdf(x, a):
+def sig_pdf(x, a, normalize=False):
     '''
     Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
 
@@ -132,11 +97,14 @@ def sig_pdf(x, a):
 
     bg = bg_pdf(x, a[3:5])
     sig = norm.pdf(x, a[1], a[2]) 
-    sig_norm = integrate.quad(lambda z: norm.pdf(z, a[1], a[2]), -1, 1)[0]
+    if normalize:
+        sig_norm = integrate.quad(lambda z: norm.pdf(z, a[1], a[2]), -1, 1)[0]
+    else:
+        sig_norm = 1.
 
     return (1 - a[0])*bg + a[0]*sig/sig_norm
 
-def sig_pdf_alt(x, a):
+def sig_pdf_alt(x, a, normalize=True):
     '''
     Second order Legendre Polynomial (normalized to unity) plus a Voigt
     profile. N.B. The width of the convolutional Gaussian is set to 0.17 which
@@ -150,7 +118,10 @@ def sig_pdf_alt(x, a):
 
     bg = bg_pdf(x, a[3:5])
     sig = voigt(x, [a[1], a[2], 0.0155]) 
-    sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.0155]), -1, 1)[0]
+    if normalize:
+        sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.0155]), -1, 1)[0]
+    else:
+        sig_norm = 1.
 
     return (1 - a[0])*bg + a[0]*sig/sig_norm
 
@@ -360,3 +331,36 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
     fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
     plt.close()
 
+def ks_test(data, model_pdf, xlim=(-1, 1), make_plots=False, suffix=None):
+    '''
+    Kolmogorov-Smirnov test.  Returns the residuals of |CDF_model - CDF_data|.
+    '''
+    
+    n_points = 1e5
+    x = np.linspace(xlim[0], xlim[1], n_points)
+    pdf = model_pdf(x)
+    cdf = np.cumsum(pdf)*(xlim[1] - xlim[0])/n_points
+
+    data.sort()
+    x_i = np.array([np.abs(d - x).argmin() for d in data])
+    cdf_i = np.linspace(1, data.size, data.size)/data.size
+
+    ks_residuals = np.abs(cdf[x_i] - cdf_i)
+
+    if make_plots:
+        plt.hist(ks_residuals, bins=25, histtype='step')
+        plt.ylabel('Entries')
+        plt.xlabel(r'$|\rm CDF_{model} - CDF_{data}|$')
+        plt.savefig('plots/ks_residuals_{0}.pdf'.format(suffix))
+        plt.close()
+
+        plt.plot(x, cdf)
+        plt.plot(data, cdf_i)
+        plt.ylabel('CDF(x)')
+        plt.xlabel('x')
+        plt.title(suffix)
+        plt.legend(['model', 'data'])
+        plt.savefig('plots/ks_cdf_overlay_{0}.pdf'.format(suffix))
+        plt.close()
+
+    return ks_residuals

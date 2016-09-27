@@ -10,10 +10,13 @@ from lmfit import Parameter, Parameters
 
 from nllfitter.fit_tools import get_data, fit_plot, scale_data
 import nllfitter.fit_tools as ft
+from nllfitter.plot_tools import set_new_tdr
 from nllfitter import Model, CombinedModel, NLLFitter
 
 
 if __name__ == '__main__':
+
+    set_new_tdr()
 
     ### Start the timer
     start = timer()
@@ -149,7 +152,7 @@ if __name__ == '__main__':
         plt.xlabel(r'$q$')
         plt.ylabel(r'Entries')
 
-        plt.savefig('plots/q_distribution_{0}_{1}.pdf'.format('combination', period))
+        plt.savefig('plots/fits/q_distribution_{0}_{1}.pdf'.format('combination', period))
         plt.close()
 
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

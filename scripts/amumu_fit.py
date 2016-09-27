@@ -12,22 +12,8 @@ from lmfit import Parameter, Parameters
 
 from nllfitter import Model, NLLFitter
 import nllfitter.fit_tools as ft
+from nllfitter.plot_tools import set_new_tdr
 
-plt.style.use('classic')
-plt.rcParams['font.family']       = 'serif'
-plt.rcParams['font.serif']        = 'Ubuntu'
-plt.rcParams['font.monospace']    = 'Ubuntu Mono'
-plt.rcParams['mathtext.fontset']  = 'custom'
-plt.rcParams['mathtext.sf']       = 'Ubuntu'
-plt.rcParams['font.size']         = 18
-plt.rcParams['axes.labelsize']    = 20
-#plt.rcParams['axes.labelweight'] = 'bold'
-plt.rcParams['xtick.labelsize']   = 18
-plt.rcParams['ytick.labelsize']   = 18
-plt.rcParams['legend.fontsize']   = 20
-plt.rcParams['figure.titlesize']  = 20
-plt.rcParams['figure.figsize']    = [11, 8]
-plt.rcParams['legend.numpoints']  = 1
 
 def sig_constraint(sig_pdf, a):
     '''
@@ -49,12 +35,14 @@ def sig_constraint(sig_pdf, a):
 
 if __name__ == '__main__':
 
+    set_new_tdr()
+
     ### Start the timer
     start = timer()
 
     ### Configuration
     verbose = True
-    doToys  = False
+    doToys  = True
     doKS    = False
     model   = 'Gaussian'
     nsims   = 50000
@@ -198,7 +186,7 @@ if __name__ == '__main__':
 
         qmax = []
         for i, sim in enumerate(sims):
-            if i%1000 == 0: print 'Carrying out fit to pseudodata {0}...'.format(i+1)
+            if i%100 == 0: print 'Carrying out fit to pseudodata {0}...'.format(i+1)
 
             bg_result  = bg_fitter.fit(sim, calculate_corr=False)
             sig_result = sig_fitter.fit(sim, calculate_corr=False)
