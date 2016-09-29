@@ -7,6 +7,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+def make_directory(filePath, clear=True):
+    if not os.path.exists(filePath):
+        os.system('mkdir -p '+filePath)
+
+    if clear and len(os.listdir(filePath)) != 0:
+        os.system('rm '+filePath+'/*')
+
 def set_new_tdr():
     plt.style.use('classic')
     plt.rcParams['font.family']       = 'serif'
@@ -36,13 +43,6 @@ def hist_to_errorbar(data, nbins, xlim, normed=False):
 
     return y, x, yerr
 
-def make_directory(filePath, clear=True):
-    if not os.path.exists(filePath):
-        os.system('mkdir -p '+filePath)
-
-    if clear and len(os.listdir(filePath)) != 0:
-        os.system('rm '+filePath+'/*')
-
 def get_data_and_weights(dataframes, feature, labels, condition):
     data    = []
     weights = []
@@ -57,16 +57,16 @@ def get_data_and_weights(dataframes, feature, labels, condition):
     return data, weights
 
 class DataManager():
-    def __init__(self, input_dir, dataset_names, features, scale=1, cuts=''):
+    def __init__(self, input_dir, dataset_names, selection, scale=1, cuts=''):
         self._input_dir     = input_dir
         self._dataset_names = dataset_names
-        self._features      = features
+        self._selection     = selection
         self._scale         = scale
         self._cuts          = cuts
-        self._get_luts()
-        self._get_dataframes()
+        self._load_luts()
+        self._load_dataframes()
 
-    def _get_luts(self):
+    def _load_luts(self):
         '''
         Retrieve look-up tables for datasets and variables
         '''
@@ -74,13 +74,18 @@ class DataManager():
                                           sheetname='datasets', 
                                           index_col='dataset_name'
                                          ).dropna(how='all')
-        self._lut_features = pd.read_excel('data/plotting_lut.xlsx', 
-                                          sheetname='variables', 
-                                          index_col='variable_name'
-                                         ).dropna(how='all')
-        self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir))
+        lut_features_default =  pd.read_excel('data/plotting_lut.xlsx', 
+                                              sheetname='variables',
+                                              index_col='variable_name'
+                                              ).dropna(how='all')
+        lut_features_select  =  pd.read_excel('data/plotting_lut.xlsx', 
+                                              sheetname='variables_{0}'.format(self._selection),
+                                              index_col='variable_name'
+                                              ).dropna(how='all')
+        self._lut_features = pd.concat([lut_features_default, lut_features_select])
+        self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir, self._selection))
 
-    def _get_dataframes(self):
+    def _load_dataframes(self):
         ''' 
         Get dataframes from input directory.  This method is only for execution
         while initializing the class instance.
@@ -109,10 +114,20 @@ class DataManager():
 
         self._dataframes =  dataframes
 
+    def get_dataframe(self, dataset_name, condition=''):
+        df = self._dataframes[dataset_name]
+        if condition != '':
+            return df.query(condition)
+        else:
+            return df
+
+    def get_dataset_names(self):
+        return self._dataset_names
 
 class PlotManager():
-    def __init__(self, data_manager, stack_labels, overlay_labels, plot_data=True):
+    def __init__(self, data_manager, features, stack_labels, overlay_labels, plot_data=True):
         self._dm             = data_manager
+        self._features       = features
         self._stack_labels   = stack_labels
         self._overlay_labels = overlay_labels
         self._plot_data      = plot_data
@@ -126,8 +141,23 @@ class PlotManager():
     def make_overlays(self, features, output_path='plots', file_ext='png', do_cms_text=True, do_ratio=False):
         dm = self._dm
         make_directory(output_path)
+
+        ### alias dataframes and datasets lut###
+        dataframes   = dm._dataframes
+        lut_datasets = dm._lut_datasets
+
+        ### initialize legend text ###
+        legend_text = []
+        legend_text.extend([lut_datasets.loc[label].text for label in self._stack_labels[::-1]])
+        legend_text.extend([lut_datasets.loc[label].text for label in self._overlay_labels[::-1]])
+
+        if len(self._stack_labels) > 0:
+            legend_text.append('BG error')
+        if self._plot_data:
+            legend_text.append('Data')
+
         for feature in features :
-            if feature not in dm._features:
+            if feature not in self._features:
                 print '{0} not in features.'
                 continue
             else:
@@ -136,26 +166,25 @@ class PlotManager():
             ### Get style data for the feature ###
             lut_entry = dm._lut_features.loc[feature]
 
-            ### alias dataframes and datasets lut###
-            dataframes   = dm._dataframes
-            lut_datasets = dm._lut_datasets
-
             ### initialize figure ###
-            fig, axes = plt.subplots(1, 1)
+            fig, axes      = plt.subplots(1, 1)
+            #legend_handles = []
 
             ### Get stack data and apply mask if necessary ###
+            stack_max = 0
             if len(self._stack_labels) > 0:
                 stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, lut_entry.condition)
-                stack = axes.hist(stack_data, 
-                                  bins      = lut_entry.n_bins,
-                                  range     = (lut_entry.xmin, lut_entry.xmax),
-                                  color     = self._stack_colors,
-                                  alpha     = 1.,
-                                  linewidth = 0.5,
-                                  stacked   = True,
-                                  histtype  = 'stepfilled',
-                                  weights   = stack_weights
-                                )
+                stack, bins, p = axes.hist(stack_data, 
+                                           bins      = lut_entry.n_bins,
+                                           range     = (lut_entry.xmin, lut_entry.xmax),
+                                           color     = self._stack_colors,
+                                           alpha     = 1.,
+                                           linewidth = 0.5,
+                                           stacked   = True,
+                                           histtype  = 'stepfilled',
+                                           weights   = stack_weights
+                                          )
+                #legend_handles.append(p)
 
                 ### Need to histogram the stack with the square of the weights to get the errors ### 
                 stack_noscale = np.histogram(np.concatenate(stack_data), 
@@ -163,34 +192,40 @@ class PlotManager():
                                              range = (lut_entry.xmin, lut_entry.xmax),
                                              weights = np.concatenate(stack_weights)**2
                                             )[0] 
-                stack_sum = stack[0][-1]
-                stack_x   = (stack[1][1:] + stack[1][:-1])/2.
+                stack_sum = stack[-1]
+                stack_x   = (bins[1:] + bins[:-1])/2.
                 stack_err = np.sqrt(stack_noscale)
                 no_blanks = stack_sum > 0
                 stack_sum, stack_x, stack_err = stack_sum[no_blanks], stack_x[no_blanks], stack_err[no_blanks]
-                axes.errorbar(stack_x, stack_sum, yerr=stack_err, 
+                eb = axes.errorbar(stack_x, stack_sum, yerr=stack_err, 
                               fmt        = 'none',
                               ecolor     = 'k',
                               capsize    = 0,
                               elinewidth = 10,
                               alpha      = 0.15
                              )
+                stack_max = np.max(stack_sum)
+                #legend_handles.append(eb[0])
 
             ### Get overlay data and apply mask if necessary ###
+            overlay_max = 0
             if len(self._overlay_labels) > 0:
-                overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, overlay_labels, lut_entry.condition)
-                axes.hist(overlay_data,
-                         bins      = lut_entry.n_bins,
-                         range     = (lut_entry.xmin, lut_entry.xmax),
-                         color     = self._overlay_colors,
-                         alpha     = 0.9,
-                         stacked   = True,
-                         histtype  = 'step',
-                         linewidth = 2.,
-                         weights   = overlay_weights
-                        )
+                overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, self._overlay_labels, lut_entry.condition)
+                hists, bins, p = axes.hist(overlay_data,
+                                           bins      = lut_entry.n_bins,
+                                           range     = (lut_entry.xmin, lut_entry.xmax),
+                                           color     = self._overlay_colors,
+                                           alpha     = 0.9,
+                                           histtype  = 'step',
+                                           linewidth = 2.,
+                                           weights   = overlay_weights
+                                          )
+                overlay_max = np.max(hists.flatten())
+                #legend_handles.append(p)
 
-            ### If there's data to overlay: apply feature condition and get datapoints plus errors ###
+            ### If there's data to overlay: apply feature condition and get
+            ### datapoints plus errors
+            data_max = 0
             if self._plot_data:
                 data, _ = get_data_and_weights(dataframes, feature, ['data'], lut_entry.condition)
                 y, x, yerr = hist_to_errorbar(data, 
@@ -198,18 +233,15 @@ class PlotManager():
                                               xlim  = (lut_entry.xmin, lut_entry.xmax)
                                              )
                 y, x, yerr = y[y>0], x[y>0], yerr[y>0]
-                axes.errorbar(x, y, yerr=yerr, 
+                eb = axes.errorbar(x, y, yerr=yerr, 
                               fmt        = 'ko',
                               capsize    = 0,
                               elinewidth = 2
                              )
+                data_max = np.max(y)
+                #legend_handles.append(eb[0])
 
             ### make the legend ###
-            legend_text = [lut_datasets.loc[label].text for label in self._stack_labels[::-1]] 
-            legend_text += ['BG error']
-            legend_text += [lut_datasets.loc[label].text for label in self._overlay_labels[::-1]]
-            if self._plot_data:
-                legend_text += ['Data']
             axes.legend(legend_text)
 
             ### labels and x limits ###
@@ -221,9 +253,6 @@ class PlotManager():
             ### Add lumi text ###
             if do_cms_text:
                 add_lumi_text(axes)
-                #axes.text(0.06, 0.9, r'$\bf CMS$', fontsize=30, transform=axes.transAxes)
-                #axes.text(0.17, 0.9, r'$\it Preliminary $', fontsize=20, transform=axes.transAxes)
-                #axes.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=axes.transAxes)
 
             ### Make output directory if it does not exist ###
             make_directory('{0}/linear/{1}'.format(output_path, lut_entry.category), False)
@@ -231,13 +260,13 @@ class PlotManager():
 
             ### Save output plot ###
             ### linear scale ###
-
-            axes.set_ylim((0., 1.77*np.max(stack_sum)))
+            y_max = np.max((stack_max, overlay_max, data_max))
+            axes.set_ylim((0., 1.8*y_max))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(output_path, lut_entry.category, feature, file_ext))
 
             ### log scale ###
             axes.set_yscale('log')
-            axes.set_ylim((0.1*np.min(stack_sum), 15.*np.max(stack_sum)))
+            axes.set_ylim((0.1*np.min(stack_sum), 15.*y_max))
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(output_path, lut_entry.category, feature, file_ext))
 
             fig.clear()

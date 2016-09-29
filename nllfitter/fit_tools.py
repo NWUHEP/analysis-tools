@@ -297,27 +297,13 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
                 fmt='ko', capsize=0, elinewidth=2, markersize=9)
     ax.legend(['bg+sig.', 'bg', 'bg only', 'data']) 
 
-    if suffix[:4] == '1b1f':
-        ax.set_title(r'1b1f', loc='left')
-        ax.set_ylim([0., 1.75*np.max(h[0])])
-        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('Entries / 2 GeV')
-    elif suffix[:4] == '1b1c':
-        ax.set_title(r'1b1c', loc='left')
-        ax.set_ylim([0., 1.5*np.max(h[0])])
-        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('Entries / 2 GeV')
-    elif suffix[:8] == 'combined':
-        ax.set_title(r'combined', loc='left')
-        ax.set_ylim([0., 1.5*np.max(h[0])])
-        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
-        ax.set_ylabel('Entries / 2 GeV')
-    elif suffix[:4] == 'hgg':
+    if suffix[:3] == 'hgg':
         ax.set_title(r'$\sf h(125)\rightarrow \gamma\gamma$')
-        #ax.set_ylim([0., 50.])
         ax.set_xlabel(r'$\sf m_{\gamma\gamma}$ [GeV]')
-        ax.set_ylabel('Entries / 2 GeV')
-
+    else:
+        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+    ax.set_ylim([0., 1.65*np.max(h[0])])
+    ax.set_ylabel('Entries / 2 GeV')
     ax.set_xlim(xlim)
     ax.grid()
 
