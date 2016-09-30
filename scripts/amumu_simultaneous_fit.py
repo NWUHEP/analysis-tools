@@ -7,6 +7,7 @@ import pandas as pd
 from scipy.stats import norm, chi2
 import matplotlib.pyplot as plt
 from lmfit import Parameter, Parameters
+from tqdm import tqdm
 
 from nllfitter.fit_tools import get_data, fit_plot, scale_data
 import nllfitter.fit_tools as ft
@@ -16,12 +17,12 @@ from nllfitter import Model, CombinedModel, NLLFitter
 
 if __name__ == '__main__':
 
-    set_new_tdr()
 
     ### Start the timer
     start = timer()
 
     ### get data and convert variables to be on the range [-1, 1]
+    set_new_tdr()
     xlimits  = (12., 70.)
     period   = 2012
     channels = ['1b1f', '1b1c']
@@ -29,7 +30,7 @@ if __name__ == '__main__':
     ### For post fit tests
     doToys   = True
     model    = 'Gaussian'
-    nsims    = 10000
+    nsims    = 50000
 
     datasets  = []
     if period == 2012:
@@ -71,7 +72,7 @@ if __name__ == '__main__':
     sig1_params = Parameters()
     if model == 'Gaussian':
         sig1_params.add_many(
-                             ('A'     , 0.01  , True , 0.0   , 1.   , None),
+                             ('A1'    , 0.01  , True , 0.0   , 1.   , None),
                              ('mu'    , -0.43 , True , -0.8  , 0.8 , None),
                              ('sigma' , 0.04  , True , 0.015 , 0.2  , None)
                             )
@@ -79,7 +80,7 @@ if __name__ == '__main__':
         sig1_model  = Model(ft.sig_pdf, sig1_params)
     elif model == 'Voigt':
         sig1_params.add_many(
-                             ('A'     , 0.01   , True , 0.0   , 1.    , None),
+                             ('A1'    , 0.01   , True , 0.0   , 1.    , None),
                              ('mu'    , -0.43  , True , -0.8  , 0.8   , None),
                              ('gamma' , 0.033  , True , 0.01  , 0.1   , None),
                             )
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     sig2_params = Parameters()
     if model == 'Gaussian':
         sig2_params.add_many(
-                             ('A'     , 0.01  , True , 0.0   , 1.   , None),
+                             ('A2'    , 0.01  , True , 0.0   , 1.   , None),
                              ('mu'    , -0.43 , True , -0.8  , 0.8 , None),
                              ('sigma' , 0.04  , True , 0.015 , 0.2  , None)
                             )
@@ -100,7 +101,7 @@ if __name__ == '__main__':
         sig2_model  = Model(ft.sig_pdf, sig2_params)
     elif model == 'Voigt':
         sig2_params.add_many(
-                             ('A'     , 0.01   , True , 0.0   , 1.    , None),
+                             ('A2'    , 0.01   , True , 0.0   , 1.    , None),
                              ('mu'    , -0.43  , True , -0.8  , 0.8   , None),
                              ('gamma' , 0.033  , True , 0.01  , 0.1   , None),
                             )
@@ -121,7 +122,9 @@ if __name__ == '__main__':
     print 'p_local = {0:.3e}'.format(p_value)
     print 'z_local = {0}'.format(-norm.ppf(p_value))
     print ''
+
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
+    print ''
 
     ### Turn off fit verbosity for further tests
     bg_fitter.verbose  = False
@@ -142,8 +145,7 @@ if __name__ == '__main__':
 
         qmax = []
         params = []
-        for i, sim in enumerate(sims):
-            if i%1000 == 0: print 'Carrying out fit to pseudodata {0}...'.format(i+1)
+        for i, sim in enumerate(tqdm(sims, desc='Fitting toys', unit_scale=True, total=nsims)):
 
             sim = list(sim) # something doesn't like tuples downstream...
             bg_result  = bg_fitter.fit(sim, calculate_corr=False)

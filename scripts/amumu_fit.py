@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm, chi2
 from scipy import integrate
 from lmfit import Parameter, Parameters
+from tqdm import tqdm
 
 from nllfitter import Model, NLLFitter
 import nllfitter.fit_tools as ft
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     ### Configuration
     set_new_tdr()
     verbose = True
-    doToys  = False
+    doToys  = True
     doKS    = False
     model   = 'Gaussian'
     nsims   = 50000
@@ -186,8 +187,7 @@ if __name__ == '__main__':
         sig_model.set_bounds('sigma', sig_result.x[2], sig_result.x[2])
 
         qmax = []
-        for i, sim in enumerate(sims):
-            if i%100 == 0: print 'Carrying out fit to pseudodata {0}...'.format(i+1)
+        for i, sim in enumerate(tqdm(sims, total=nsims)):
 
             bg_result  = bg_fitter.fit(sim, calculate_corr=False)
             sig_result = sig_fitter.fit(sim, calculate_corr=False)
@@ -207,7 +207,7 @@ if __name__ == '__main__':
         plt.xlim(0, 15)
         plt.ylim(.5/nsims, 5)
         plt.title('{0} {1}: {2:d} toys'.format(period, channel, nsims))
-        plt.legend([r'$\frac{1}{2}\chi^{2}_{1} + \frac{1}{4}\delta_{0}$', 'pseudodata'])
+        plt.legend([r'$\frac{1}{2}\chi^{2}_{1} + \frac{1}{2}\delta_{0}$', 'pseudodata'])
         plt.xlabel(r'$q$')
         plt.ylabel(r'Entries')
 

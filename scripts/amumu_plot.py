@@ -19,7 +19,7 @@ if __name__ == '__main__':
     ### Configuration
     ntuple_dir  = 'data/flatuples/mumu_2012'
     lumi        = 19.8e3
-    selection   = ('mumu', 'same-sign')
+    selection   = ('mumu', 'combined')
     period      = 2012
     output_path = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
     plot_data   = True
@@ -49,8 +49,8 @@ if __name__ == '__main__':
 
                  'dilepton_b_mass', 'dilepton_b_pt', 
                  'dilepton_b_delta_r', 'dilepton_b_delta_eta', 'dilepton_b_delta_phi',
-                 #'dilepton_j_mass', 'dilepton_j_pt', 
-                 #'dilepton_j_delta_r', 'dilepton_j_delta_eta', 'dilepton_j_delta_phi',
+                 'dilepton_j_mass', 'dilepton_j_pt', 
+                 'dilepton_j_delta_r', 'dilepton_j_delta_eta', 'dilepton_j_delta_phi',
                  'four_body_mass',
                  'four_body_delta_r', 'four_body_delta_eta', 'four_body_delta_phi', 
                ]
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     plot_manager.make_overlays(features, 
                                output_path = output_path,
                                file_ext    = 'png'
-                               )
+                              )
     '''
 
     ### Overlay sideband and signal region ###

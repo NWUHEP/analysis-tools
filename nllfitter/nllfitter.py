@@ -5,6 +5,7 @@ import numpy as np
 import numdifftools as nd
 from scipy.optimize import minimize
 from lmfit import Parameter, Parameters, report_fit
+from tqdm import tqdm
 
 class NLLFitter:
     '''
@@ -134,7 +135,7 @@ class NLLFitter:
         best_params = 0.
         nll_min     = 1e9
         scan_vals, scan_div = scan_params.get_scan_vals()
-        for i, scan in enumerate(scan_vals):
+        for i, scan in enumerate(tqdm(scan_vals, desc='scanning parameters', totat=len(scan_vals))):
             ### set bounds of model parameters being scanned over
             for j, name in enumerate(scan_params.names):
                 self.model.set_bounds(name, scan[j], scan[j]+scan_div[j])
