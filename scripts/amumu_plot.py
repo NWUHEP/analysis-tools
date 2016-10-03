@@ -17,20 +17,21 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    ntuple_dir  = 'data/flatuples/mumu_2012'
+    ntuple_dir  = 'data/flatuples/ee_2012'
     lumi        = 19.8e3
-    selection   = ('mumu', 'combined')
+    selection   = ('ee', 'preselection')
     period      = 2012
     output_path = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
     plot_data   = True
 
     datasets   = [
-                  'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                  #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                  'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
                   'ttbar_lep', 
                   'zjets_m-50', 'zjets_m-10to50',
                   't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                   'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                  'bprime_Xb'
+                  'bprime_xb'
                  ]
 
     features = [
@@ -79,8 +80,7 @@ if __name__ == '__main__':
 
     if selection[1] not in cuts.keys():
         cuts[selection[1]] = ''
-
-    if selection[1] != 'same-sign':
+    elif selection[1] != 'same-sign':
         cuts[selection[1]] += ' and ' + cuts['opp-sign']
 
     ### Get dataframes with features for each of the datasets ###

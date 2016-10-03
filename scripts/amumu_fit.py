@@ -43,10 +43,10 @@ if __name__ == '__main__':
     ### Configuration
     set_new_tdr()
     verbose = True
-    doToys  = True
+    doToys  = False
     doKS    = False
     model   = 'Gaussian'
-    nsims   = 50000
+    nsims   = 1000
 
     if len(sys.argv) > 2:
         channel = str(sys.argv[1])
@@ -59,12 +59,11 @@ if __name__ == '__main__':
     xlimits = (12., 70.)
     if period == 2012:
         if channel == 'combined':
-            #data_1b1f, n_1b1f = ft.get_data('data/muon_2012_1b1f.csv', 'dimuon_mass', xlimits)
-            #data_1b1c, n_1b1c = ft.get_data('data/muon_2012_1b1c.csv', 'dimuon_mass', xlimits)
-            data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-            data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
-            data = np.concatenate((data_1b1f, data_1b1c))
-            n_total = n_1b1f + n_1b1c
+            #data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+            #data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+            #data = np.concatenate((data_1b1f, data_1b1c))
+            #n_total = n_1b1f + n_1b1c
+            data, n_total = ft.get_data('data/test.csv'.format(channel), 'dilepton_mass', xlimits)
         else:
             data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
             #data, n_total = ft.get_data('data/fit/ssmumu_2012.csv', 'dilepton_mass', xlimits)
@@ -104,7 +103,7 @@ if __name__ == '__main__':
     if model == 'Gaussian':
         sig_params.add_many(
                             ('A'     , 0.01  , True , 0.0   , 1.   , None),
-                            ('mu'    , -0.43 , True , -0.44 , -0.42 , None),
+                            ('mu'    , -0.43 , True , -0.8  , 0.8 , None),
                             ('sigma' , 0.04  , True , 0.015 , 0.2  , None)
                            )
         sig_params += bg_params.copy()
@@ -135,11 +134,11 @@ if __name__ == '__main__':
     print 'z_local = {0}'.format(-norm.ppf(p_value))
 
     ### Calculate the number of events in around the peak
-    f_bg    = lambda x: ft.bg_pdf(x, (sig_result.x[3], sig_result.x[4]))
+    f_bg    = lambda x: ft.bg_pdf(x, (bg_result.x[0], bg_result.x[1]))
     xlim    = (sig_result.x[1] - 2*sig_result.x[2], sig_result.x[1] + 2*sig_result.x[2])
     N_b     = (1 - sig_result.x[0])*n_total*integrate.quad(f_bg, xlim[0], xlim[1])[0]
     sig_b   = N_b/np.sqrt(n_total*sig_result.x[0])
-    N_s     = n_total*sig_result.x[0]
+    N_s     = sig_result.x[0]*n_total
     sig_s   = np.sqrt(N_s)
 	#sig_s   = n_total*comb_sigma[0]
 
@@ -187,7 +186,7 @@ if __name__ == '__main__':
         sig_model.set_bounds('sigma', sig_result.x[2], sig_result.x[2])
 
         qmax = []
-        for i, sim in enumerate(tqdm(sims, total=nsims)):
+        for i, sim in enumerate(tqdm(sims, total=nsims, ncols=75)):
 
             bg_result  = bg_fitter.fit(sim, calculate_corr=False)
             sig_result = sig_fitter.fit(sim, calculate_corr=False)

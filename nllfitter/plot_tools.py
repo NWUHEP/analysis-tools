@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 def make_directory(filePath, clear=True):
     if not os.path.exists(filePath):
@@ -70,6 +71,7 @@ class DataManager():
         '''
         Retrieve look-up tables for datasets and variables
         '''
+        self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir, self._selection))
         self._lut_datasets = pd.read_excel('data/plotting_lut.xlsx', 
                                           sheetname='datasets', 
                                           index_col='dataset_name'
@@ -83,7 +85,6 @@ class DataManager():
                                               index_col='variable_name'
                                               ).dropna(how='all')
         self._lut_features = pd.concat([lut_features_default, lut_features_select])
-        self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir, self._selection))
 
     def _load_dataframes(self):
         ''' 
@@ -156,12 +157,12 @@ class PlotManager():
         if self._plot_data:
             legend_text.append('Data')
 
-        for feature in features :
+        for feature in tqdm(features, desc='Plotting', unit_scale=True, ncols=75, total=len(features)):
             if feature not in self._features:
                 print '{0} not in features.'
                 continue
-            else:
-                print feature
+            #else:
+            #    print feature
 
             ### Get style data for the feature ###
             lut_entry = dm._lut_features.loc[feature]

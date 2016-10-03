@@ -21,18 +21,43 @@ def make_directory(filePath, clear=True):
 if __name__ == '__main__':
 
     ### Configuration ###
-    selection    = 'mumu'
+    selection    = 'ee'
     period       = 2012
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
     dataset_list = [
-                    'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                    #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                    'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
                     'ttbar_lep', 'ttbar_semilep',
                     'zjets_m-50', 'zjets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    'bprime_Xb'
+                    'bprime_xb'
                     ]
+    features = [
+               'run_number', 'event_number', 'lumi', 'weight',
+               'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 
+               'lepton1_iso', 'lepton1_q', 'lepton1_flavor',
+               'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  
+               'lepton2_iso', 'lepton2_q', 'lepton2_flavor',
+               'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
+               'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
+               'dilepton_pt_over_m',
+
+               'met_mag', 'met_phi',
+               'n_jets', 'n_fwdjets', 'n_bjets',
+               'bjet_pt', 'bjet_eta', 'bjet_phi', 'bjet_d0',
+               'jet_pt', 'jet_eta', 'jet_phi', 'jet_d0', 
+               'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
+               'dijet_pt_over_m',
+
+               'dilepton_j_mass', 'dilepton_j_pt', 
+               'dilepton_j_delta_eta', 'dilepton_j_delta_phi', 'dilepton_j_delta_r',
+               'dilepton_b_mass', 'dilepton_b_pt', 
+               'dilepton_b_delta_eta', 'dilepton_b_delta_phi', 'dilepton_b_delta_r',
+               'four_body_mass',
+               'four_body_delta_phi', 'four_body_delta_eta', 'four_body_delta_r',
+               ]
     make_directory(output_path)
 
     ### Get input bltuple ###
@@ -46,30 +71,6 @@ if __name__ == '__main__':
 
         tree    = froot.Get('tree_{0}'.format(dataset))
         n       = tree.GetEntriesFast()
-        features = [
-                   'run_number', 'event_number', 'lumi', 'weight',
-                   'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 
-                   'lepton1_iso', 'lepton1_q', 'lepton1_flavor',
-                   'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  
-                   'lepton2_iso', 'lepton2_q', 'lepton2_flavor',
-                   'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
-                   'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
-                   'dilepton_pt_over_m',
-
-                   'met_mag', 'met_phi',
-                   'n_jets', 'n_fwdjets', 'n_bjets',
-                   'bjet_pt', 'bjet_eta', 'bjet_phi', 'bjet_d0',
-                   'jet_pt', 'jet_eta', 'jet_phi', 'jet_d0', 
-                   'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
-                   'dijet_pt_over_m',
-
-                   'dilepton_j_mass', 'dilepton_j_pt', 
-                   'dilepton_j_delta_eta', 'dilepton_j_delta_phi', 'dilepton_j_delta_r',
-                   'dilepton_b_mass', 'dilepton_b_pt', 
-                   'dilepton_b_delta_eta', 'dilepton_b_delta_phi', 'dilepton_b_delta_r',
-                   'four_body_mass',
-                   'four_body_delta_phi', 'four_body_delta_eta', 'four_body_delta_r',
-                   ]
         ntuple = {f:[] for f in features}
 
         print 'Reading {0} with {1} events...'.format(dataset, n)

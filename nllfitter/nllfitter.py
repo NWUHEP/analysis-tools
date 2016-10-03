@@ -38,6 +38,9 @@ class NLLFitter:
         a: model parameters in an numpy array
         '''
 
+        model_params = self.model.get_parameters()
+        params = np.array([params[i] if p.vary else p.value 
+                        for i,p in enumerate(model_params.itervalues())])
         obj = 0.
         if self._fcons:
             obj += self._fcons(self.model._pdf, params)
@@ -46,7 +49,7 @@ class NLLFitter:
         if nll is not np.nan:
             obj += nll
 
-        return nll #+ self._lmult[0] * np.sum(np.abs(params)) + self._lmult[1] * np.sum(params**2)
+        return nll + self._lmult[0]*np.sum(np.abs(params)) + self._lmult[1]*np.sum(params**2)
 
     def _get_corr(self, data, params):
 
@@ -63,7 +66,7 @@ class NLLFitter:
 
         return sig, mcorr
 
-    def fit(self, data, min_algo='SLSQP', params_init=None, calculate_corr=True):
+    def fit(self, data, params_init=None, calculate_corr=True):
         '''
         Fits the model to the given dataset using scipy.optimize.minimize.
         Returns the fit result object.
@@ -71,9 +74,6 @@ class NLLFitter:
         Parameter:
         ==========
         data           : dataset to be fit the model to
-        min_algo       : minimization algorithm to be used (defaults to SLSQP
-                         since it doesn't require gradient information and accepts bounds and
-                         constraints).
         params_init    : initialization parameters; if not specified, current values are used
         calculate_corr : specify whether the covariance matrix should be
                          calculated.  If true, this will do a numerical calculation of the
@@ -135,7 +135,7 @@ class NLLFitter:
         best_params = 0.
         nll_min     = 1e9
         scan_vals, scan_div = scan_params.get_scan_vals()
-        for i, scan in enumerate(tqdm(scan_vals, desc='scanning parameters', totat=len(scan_vals))):
+        for i, scan in enumerate(tqdm(scan_vals, desc='scanning parameters', total=len(scan_vals))):
             ### set bounds of model parameters being scanned over
             for j, name in enumerate(scan_params.names):
                 self.model.set_bounds(name, scan[j], scan[j]+scan_div[j])
