@@ -180,7 +180,8 @@ if __name__ == '__main__':
     plt.contour(z1, z2, fx, 
                 levels     = np.linspace(0, 6., 40),
                 alpha      = 0.7,
-                cmap       = 'hot',
+                colors     = 'k',
+                #cmap       = 'hot',
                 linewidths = 2.5,
                )
 
