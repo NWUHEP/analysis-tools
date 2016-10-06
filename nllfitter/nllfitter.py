@@ -103,7 +103,6 @@ class NLLFitter:
                 sigma, corr = result.x, 0.
 
             self.model.update_parameters(result.x, (sigma, corr))
-
             if self.verbose:
                 report_fit(self.model.get_parameters(), show_correl=False)
                 print ''

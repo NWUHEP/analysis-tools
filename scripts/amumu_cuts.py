@@ -1,68 +1,56 @@
 #!/usr/bin/env python
 
 import sys
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-#def stack_by_group(df, by, var, histtype='stepfilled', bins=30., range=None):
-#
-#    g = df.groupby(by)
-#    data = [g.get_group(group)[var] for group in g.groups.keys()] 
-#    plt.hist(data, histtype=histtype, bins=bins, stacked=True)
-
-def save_histograms(df, cat, level, prefix, columns=None, period='2016'):
-    if columns:
-        df[columns].hist(bins=40, histtype='step')
-    else:
-        df.hist(bins=40, histtype='step')
-
-    plt.savefig('plots/amumu_cuts/{0}_{1}_cut{2}_{3}.pdf'.format(prefix, cat, level, period))
-    plt.close()
+import nllfitter.plot_tools as pt
 
 if __name__ == '__main__':
 
     if len(sys.argv) > 3:
-        infile  = sys.argv[1]
+        indir   = sys.argv[1]
         cat     = sys.argv[2]
         period  = sys.argv[3]
     else:
-        indir   = 'data/flatuple/mumu_2012'
+        indir   = 'data/flatuples/mumu_2012'
         cat     = '1b1f'
         period  = 2012
 
-    data = []
-    pd.read_csv(infile)
+    output_path = 'data/amumu_sync/{0}'.format(period)
+    datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
+    data_manager = pt.DataManager(input_dir     = indir,
+                                  dataset_names = datasets,
+                                  selection     = 'mumu'
+                                 )
 
     # conditions for querying non-zero jet/b jet events
-    jet_condition   = 'n_jets + n_fwdjets > 0'
-    bjet_condition  = 'n_bjets > 0'
-    dijet_condition = '(n_jets + n_fwdjets) > 0 and (n_bjets > 0)'
+    cuts = [
+            '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
+              and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
+              and lepton1_q != lepton2_q and 12 < dilepton_mass < 70)',
+            '(n_jets > 0 or n_bjets > 0)',
+            'n_bjets > 0',
+            'n_bjets == 1',
 
-    # Add columns telling us whether has passed each analysis cut
-    cut_list = []
-    data['cut1'] = data['n_jets'] + data['n_bjets'] > 0
-    data['cut2'] = data['n_bjets'] > 0
-    data['cut3'] = data['n_bjets'] == 1
+           ]
     if cat == '1b1f':
-        data['cut4'] = data['n_jets'] == 0 
-        data['cut5'] = data['n_fwdjets'] > 0
-        cut_list = ['cut1', 'cut2', 'cut3', 'cut4', 'cut5']
-
+        cuts.extend(['n_jets == 0', 'n_fwdjets > 0'])
     elif cat == '1b1c':
-        data['cut4'] = data['n_jets'] == 1 
-        data['cut5'] = data['met_mag'] < 40
-        data['cut6'] = np.abs(data['delta_phi']) > 2.5
-        cut_list = ['cut1', 'cut2', 'cut3', 'cut4', 'cut5', 'cut6']
+        cuts.extend(['(n_jets > 0 and n_fwdjets == 0)', 'met_mag < 40', 'four_body_delta_phi > 2.5'])
+    else:
+        print 'what are you doing, man!?'
 
-    print 'cut 0: {0}'.format(data.shape[0])
-    misc = ['event_number', 'run_number']
-    data[misc].to_csv('data/amumu_sync/event_list_cut0_{0}.csv'.format(period), index=False) 
+    cuts.append('25 < dilepton_mass < 32')
 
-    for level in xrange(1,len(cut_list)+1):
-        cut_matrix = data[cut_list[:level]]
-        data_cut   = data[cut_matrix.all(axis = 1)]
-
-        print 'cut {0}: {1}'.format(level, data_cut.shape[0])
-        data_cut[misc].to_csv('data/amumu_sync/event_list_{0}_cut{1}_{2}.csv'.format(cat, level, period), index=False) 
-        data_cut[['dimuon_mass']].to_csv('data/dimuon_mass_{0}_cut{1}_{2}.csv'.format(cat, level, period), index=False) 
+    pt.make_directory(output_path) 
+    for i in range(len(cuts)):
+        df = data_manager.get_dataframe('data', ' and '.join(cuts[:i+1]))
+        df.to_csv('{0}/cut{1}_{2}.csv'.format(output_path, i, cat), 
+                  columns = ['event_number', 'run_number'],
+                  index=False
+                 ) 
+        print 'cut {0}: {1}'.format(i, df.shape[0])

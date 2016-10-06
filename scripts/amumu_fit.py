@@ -36,7 +36,6 @@ def sig_constraint(sig_pdf, a):
 
 if __name__ == '__main__':
 
-
     ### Start the timer
     start = timer()
 
@@ -45,7 +44,7 @@ if __name__ == '__main__':
     verbose = True
     doToys  = False
     doKS    = False
-    model   = 'Gaussian'
+    model   = 'Voigt'
     nsims   = 1000
 
     if len(sys.argv) > 2:
@@ -59,15 +58,18 @@ if __name__ == '__main__':
     xlimits = (12., 70.)
     if period == 2012:
         if channel == 'combined':
-            #data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-            #data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+            data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+            data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+            data = np.concatenate((data_1b1f, data_1b1c))
+            n_total = n_1b1f + n_1b1c
+
+            #data_1b1f, n_1b1f = ft.get_data('data/mumu_2D_1b1f.csv', 'dilepton_mass', xlimits)
+            #data_1b1c, n_1b1c = ft.get_data('data/mumu_2D_1b1c.csv', 'dilepton_mass', xlimits)
             #data = np.concatenate((data_1b1f, data_1b1c))
             #n_total = n_1b1f + n_1b1c
-            data, n_total = ft.get_data('data/test.csv'.format(channel), 'dilepton_mass', xlimits)
         else:
             data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-            #data, n_total = ft.get_data('data/fit/ssmumu_2012.csv', 'dilepton_mass', xlimits)
-            #data, n_total = ft.get_data('data/fit/ee_2012_1b1c.csv', 'dimuon_mass', xlimits)
+            #data, n_total = ft.get_data('data/mumu_2D_{0}.csv'.format(channel), 'dilepton_mass', xlimits)
     elif period == 2016:
         if channel == 'combined':
             data_1b1f, n_1b1f = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
@@ -93,7 +95,6 @@ if __name__ == '__main__':
                        ('a1', 0., True, None, None, None),
                        ('a2', 0., True, None, None, None)
                       )
-
     bg_model  = Model(ft.bg_pdf, bg_params)
     bg_fitter = NLLFitter(bg_model)
     bg_result = bg_fitter.fit(data)
@@ -112,10 +113,10 @@ if __name__ == '__main__':
         sig_params.add_many(
                             ('A'     , 0.01   , True , 0.0   , 1.    , None),
                             ('mu'    , -0.43  , True , -0.8  , 0.8   , None),
-                            ('gamma' , 0.033  , True , 0.01  , 0.1   , None),
+                            ('gamma' , 0.033  , True , 0.01  , 0.2   , None),
                            )
         sig_params += bg_params.copy()
-        sig_model  = Model(ft.sig_pdf_alt, sig_params)
+        sig_model  = Model(lambda x, a: ft.sig_pdf_alt(x, a, True), sig_params)
 
     sig_fitter = NLLFitter(sig_model)
     sig_result = sig_fitter.fit(data)
@@ -140,12 +141,10 @@ if __name__ == '__main__':
     sig_b   = N_b/np.sqrt(n_total*sig_result.x[0])
     N_s     = sig_result.x[0]*n_total
     sig_s   = np.sqrt(N_s)
-	#sig_s   = n_total*comb_sigma[0]
 
     print 'N_b = {0:.2f} +\- {1:.2f}'.format(N_b, sig_b)
     print 'N_s = {0:.2f} +\- {1:.2f}'.format(N_s, sig_s)
     print ''
-
 
     ### Turn off fit verbosity for further tests
     bg_fitter.verbose  = False

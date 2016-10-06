@@ -107,7 +107,7 @@ def sig_pdf(x, a, normalize=False):
 def sig_pdf_alt(x, a, normalize=True):
     '''
     Second order Legendre Polynomial (normalized to unity) plus a Voigt
-    profile. N.B. The width of the convolutional Gaussian is set to 0.17 which
+    profile. N.B. The width of the convolutional Gaussian is set to 0.155 which
     corresponds to a dimuon mass resolution 0.5 GeV.
 
     Parameters:
@@ -116,8 +116,8 @@ def sig_pdf_alt(x, a, normalize=True):
     a: model parameters (A, a1, a2, mu, and gamma)
     '''
 
-    bg = bg_pdf(x, a[3:5])
-    sig = voigt(x, [a[1], a[2], 0.0155]) 
+    bg  = bg_pdf(x, a[3:5])
+    sig = voigt(x, [a[1], a[2]/2., 0.0155])
     if normalize:
         sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.0155]), -1, 1)[0]
     else:

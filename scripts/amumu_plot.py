@@ -17,16 +17,16 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    ntuple_dir  = 'data/flatuples/ee_2012'
+    ntuple_dir  = 'data/flatuples/mumu_test_2012'
     lumi        = 19.8e3
-    selection   = ('ee', 'preselection')
+    selection   = ('mumu', '1b1f')
     period      = 2012
     output_path = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
     plot_data   = True
 
     datasets   = [
-                  #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
-                  'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
+                  'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                  #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
                   'ttbar_lep', 
                   'zjets_m-50', 'zjets_m-10to50',
                   't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
@@ -58,7 +58,10 @@ if __name__ == '__main__':
 
     ### Cuts ###
     cuts = {
-            'opp-sign'  : 'lepton1_q != lepton2_q',
+            'preselection' : '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
+                               and lepton2_pt > 5 and abs(lepton2_eta) < 2.1 \
+                               and lepton1_q != lepton2_q and 12 < dilepton_mass < 70\
+                               and lepton1_trigger == True)',
             'same-sign' : 'lepton1_q == lepton2_q',
             '2b'        : 'n_bjets == 2', 
             '1b1f'      : 'n_fwdjets > 0 and n_bjets == 1 and n_jets == 0',
@@ -68,7 +71,6 @@ if __name__ == '__main__':
                            ((n_fwdjets > 0 and n_jets == 0) or \
                            (n_fwdjets == 0 and n_jets == 1 and \
                            four_body_delta_phi > 2.5 and met_mag < 40))',
-            #'enhance'   : '100 < dilepton_b_mass < 200 and dilepton_pt_over_m > 2',
             'enhance'   : 'dilepton_pt_over_m > 2',
            }
 
@@ -81,7 +83,7 @@ if __name__ == '__main__':
     if selection[1] not in cuts.keys():
         cuts[selection[1]] = ''
     elif selection[1] != 'same-sign':
-        cuts[selection[1]] += ' and ' + cuts['opp-sign']
+        cuts[selection[1]] += ' and ' + cuts['preselection']
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,

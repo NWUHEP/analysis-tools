@@ -76,11 +76,11 @@ class DataManager():
                                           sheetname='datasets', 
                                           index_col='dataset_name'
                                          ).dropna(how='all')
-        lut_features_default =  pd.read_excel('data/plotting_lut.xlsx', 
+        lut_features_default = pd.read_excel('data/plotting_lut.xlsx', 
                                               sheetname='variables',
                                               index_col='variable_name'
                                               ).dropna(how='all')
-        lut_features_select  =  pd.read_excel('data/plotting_lut.xlsx', 
+        lut_features_select = pd.read_excel('data/plotting_lut.xlsx', 
                                               sheetname='variables_{0}'.format(self._selection),
                                               index_col='variable_name'
                                               ).dropna(how='all')
@@ -92,7 +92,7 @@ class DataManager():
         while initializing the class instance.
         '''
         dataframes = {}
-        for dataset in self._dataset_names:
+        for dataset in tqdm(self._dataset_names, desc='Loading dataframes', unit_scale=True, ncols=75, total=len(self._dataset_names)):
             df         = pd.read_csv('{0}/ntuple_{1}.csv'.format(self._input_dir, dataset))
             init_count = self._event_counts[dataset][0]
             lut_entry  = self._lut_datasets.loc[dataset]

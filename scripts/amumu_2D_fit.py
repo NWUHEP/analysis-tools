@@ -54,16 +54,18 @@ if __name__ == '__main__':
 
     datasets = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
     features = ['dilepton_mass', 'dilepton_b_mass', 'dilepton_pt_over_m']
-    cuts     = 'lepton1_q != lepton2_q and n_bjets == 1' #and dilepton_pt_over_m > 2'
+    cuts     = 'lepton1_q != lepton2_q and 12 < dilepton_mass < 70'
     
     if selection[1] == '1b1f':
-        cuts += 'and (n_fwdjets > 0 and n_jets == 0)'
+        cuts += ' and n_bjets == 1 and (n_fwdjets > 0 and n_jets == 0)'
     elif selection[1] == '1b1c':
-        cuts += 'and (n_fwdjets == 0 and n_jets == 1) \
-                 and four_body_delta_phi > 2.5 and met_mag < 40'
+        cuts += ' and n_bjets == 1 \
+                  and (n_fwdjets == 0 and n_jets == 1) \
+                  and four_body_delta_phi > 2.5 and met_mag < 40'
     elif selection[1] == 'combined':
-        cuts += 'and ((n_fwdjets > 0 and n_jets == 0) or \
-                (n_fwdjets == 0 and n_jets == 1 and four_body_delta_phi > 2.5 and met_mag < 40))'
+        cuts += ' and n_bjets == 1 \
+                  and ((n_fwdjets > 0 and n_jets == 0) or \
+                  (n_fwdjets == 0 and n_jets == 1 and four_body_delta_phi > 2.5 and met_mag < 40))'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -78,25 +80,6 @@ if __name__ == '__main__':
     data_scaled = [ft.scale_data(data[0], xmin=12, xmax=70), 
                    ft.scale_data(data[1], xmin=50, xmax=350)]
 
-    '''
-    ### work on this ###
-    df_data['test'] = ['1b1f' if x == 1 else '1b1c' for x in df_data.n_fwdjets]
-    df_data['test'] = np.where(((df_data['dilepton_mass'] > 24) & (df_data['dilepton_mass'] < 32)), df_data['test']+'_sr', 'sideband')
-    g = sns.pairplot(df_data, 
-                 vars      = ['dilepton_mass', 'dilepton_b_mass', 'dilepton_pt'],
-                 hue       = 'test',
-                 palette   = 'husl',
-                 kind      = 'scatter',
-                 diag_kind = 'hist',
-                 markers   = ['o', 's', 'D'],
-                 plot_kws  = dict(s=50, linewidth=0.5),
-                 diag_kws  = dict(bins=30, histtype='stepfilled', stacked=True, alpha=0.5, linewidth=1),
-                 size=3, aspect=2,
-                )
-    g.savefig('plots/pairplot.png')
-    plt.close()
-    '''
-
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
     bg_params.add_many(
@@ -110,10 +93,6 @@ if __name__ == '__main__':
                        ('b4', 0., True, None, None, None),
                        ('b5', 0., True, None, None, None),
                        ('b6', 0., True, None, None, None),
-                       #('b7', 0., True, None, None, None),
-                       #('b8', 0., True, None, None, None),
-                       #('b9', 0., True, None, None, None),
-                       #('b10', 0., True, None, None, None),
                       )
 
     bg_model  = Model(bg_pdf, bg_params)
