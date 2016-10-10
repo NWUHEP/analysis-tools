@@ -125,15 +125,8 @@ class Model:
         
         if np.any(params) == None:
             params = [p.value for p in self._parameters.values()]
-        else:
-            if isinstance(params, Parameters):
-                params = [params[n].value if params[n].vary \
-                            else self._parameters[n] \
-                                for n in params.keys()]
-            else:
-                params = [p if self._parameters.items()[i][1].vary \
-                            else self._parameters.items()[i][1].value \
-                                for i,p in enumerate(params)]
+        elif isinstance(params, Parameters):
+                params = [params[n].value for n in params.keys()]
 
         pdf = self._pdf(data, params)
         nll = -np.sum(np.log(pdf))

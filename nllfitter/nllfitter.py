@@ -21,7 +21,7 @@ class NLLFitter:
     fcons    : constraint function; should take arguments of the form (sig_pdf, params)
     '''
     def __init__(self, model, min_algo='SLSQP', verbose=True, lmult=(0., 0.), fcons=None):
-       self.model     = model
+       self._model    = model
        self.min_algo  = min_algo
        self.verbose   = verbose
        self._lmult    = lmult
@@ -38,33 +38,33 @@ class NLLFitter:
         a: model parameters in an numpy array
         '''
 
-        model_params = self.model.get_parameters()
+        model_params = self._model.get_parameters()
         params = np.array([params[i] if p.vary else p.value 
                         for i,p in enumerate(model_params.itervalues())])
         obj = 0.
         if self._fcons:
-            obj += self._fcons(self.model._pdf, params)
+            obj += self._fcons(self._model._pdf, params)
 
-        nll = self.model.calc_nll(data, params)
+        nll = self._model.calc_nll(data, params)
         if nll is not np.nan:
             obj += nll
 
         return nll + self._lmult[0]*np.sum(np.abs(params)) + self._lmult[1]*np.sum(params**2)
 
-    def _get_corr(self, data, params):
+    def _get_corr(self, x, params):
 
-        f_obj   = lambda a: self._objective(a, data)
-        hcalc   = nd.Hessian(f_obj, step=0.01, method='central', full_output=True) 
-        hobj    = hcalc(params)[0]
-        hinv    = np.linalg.inv(hobj)
+        f_obj = lambda a: self._model.calc_nll(x, a)
+        hcalc = nd.Hessian(f_obj, step=0.01, method='central', full_output=True) 
+        hobj  = hcalc(params)[0]
+        hinv  = np.linalg.inv(hobj)
 
         # get uncertainties on parameters
         sig = np.sqrt(hinv.diagonal())
 
         # calculate correlation matrix
-        mcorr = hinv/np.outer(sig, sig)
+        corr_matrix = hinv/np.outer(sig, sig)
 
-        return sig, mcorr
+        return sig, corr_matrix
 
     def fit(self, data, params_init=None, calculate_corr=True):
         '''
@@ -82,15 +82,15 @@ class NLLFitter:
         '''
 
         if params_init: 
-            self.model.update_params(params_init)
+            self._model.update_params(params_init)
         else:
-            params_init = self.model.get_parameters(by_value=True)
+            params_init = self._model.get_parameters(by_value=True)
 
         result = minimize(self._objective, 
                           params_init,
                           method = self.min_algo, 
-                          bounds = self.model.get_bounds(),
-                          #constraints = self.model.get_constraints(),
+                          bounds = self._model.get_bounds(),
+                          #constraints = self._model.get_constraints(),
                           args   = (data)
                           )
         if self.verbose:
@@ -102,9 +102,9 @@ class NLLFitter:
             else:
                 sigma, corr = result.x, 0.
 
-            self.model.update_parameters(result.x, (sigma, corr))
+            self._model.update_parameters(result.x, (sigma, corr))
             if self.verbose:
-                report_fit(self.model.get_parameters(), show_correl=False)
+                report_fit(self._model.get_parameters(), show_correl=False)
                 print ''
                 print '[[Correlation matrix]]'
                 print corr, '\n'
@@ -125,7 +125,7 @@ class NLLFitter:
         ### Save bounds for parameters to be scanned so that they can be reset
         ### when finished
         saved_bounds = {}
-        params = self.model.get_parameters()
+        params = self._model.get_parameters()
         for name in scan_params.names:
             saved_bounds[name] = (params[name].min, params[name].max)
 
@@ -137,21 +137,21 @@ class NLLFitter:
         for i, scan in enumerate(tqdm(scan_vals, desc='scanning parameters', total=len(scan_vals))):
             ### set bounds of model parameters being scanned over
             for j, name in enumerate(scan_params.names):
-                self.model.set_bounds(name, scan[j], scan[j]+scan_div[j])
-                self.model.set_parameter_value(name, scan[j])
+                self._model.set_bounds(name, scan[j], scan[j]+scan_div[j])
+                self._model.set_parameter_value(name, scan[j])
 
             ### Get initialization values
             params_init = [p.value for p in params.values()]
             result = minimize(self._objective, 
                               params_init,
                               method = self.min_algo, 
-                              bounds = self.model.get_bounds(),
-                              #constraints = self.model.get_constraints(),
+                              bounds = self._model.get_bounds(),
+                              #constraints = self._model.get_constraints(),
                               args   = (data)
                               )
 
             if result.status == 0:
-                nll = self.model.calc_nll(data, result.x)
+                nll = self._model.calc_nll(data, result.x)
                 nllscan.append(nll)
                 if nll < nll_min:
                     best_params = result.x
@@ -164,7 +164,7 @@ class NLLFitter:
 
         ## Reset parameter bounds
         for name in scan_params.names:
-            self.model.set_bounds(name, saved_bounds[name][0], saved_bounds[name][1])
+            self._model.set_bounds(name, saved_bounds[name][0], saved_bounds[name][1])
 
         nllscan = np.array(nllscan)
         dofs = np.array(dofs)

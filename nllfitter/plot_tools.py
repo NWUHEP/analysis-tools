@@ -58,10 +58,11 @@ def get_data_and_weights(dataframes, feature, labels, condition):
     return data, weights
 
 class DataManager():
-    def __init__(self, input_dir, dataset_names, selection, scale=1, cuts=''):
+    def __init__(self, input_dir, dataset_names, selection, period, scale=1, cuts=''):
         self._input_dir     = input_dir
         self._dataset_names = dataset_names
         self._selection     = selection
+        self._period        = period
         self._scale         = scale
         self._cuts          = cuts
         self._load_luts()
@@ -73,7 +74,7 @@ class DataManager():
         '''
         self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir, self._selection))
         self._lut_datasets = pd.read_excel('data/plotting_lut.xlsx', 
-                                          sheetname='datasets', 
+                                          sheetname='datasets_{0}'.format(self._period), 
                                           index_col='dataset_name'
                                          ).dropna(how='all')
         lut_features_default = pd.read_excel('data/plotting_lut.xlsx', 
@@ -93,10 +94,13 @@ class DataManager():
         '''
         dataframes = {}
         for dataset in tqdm(self._dataset_names, desc='Loading dataframes', unit_scale=True, ncols=75, total=len(self._dataset_names)):
-            df         = pd.read_csv('{0}/ntuple_{1}.csv'.format(self._input_dir, dataset))
+            df         = pd.read_pickle('{0}/ntuple_{1}.pkl'.format(self._input_dir, dataset))
             init_count = self._event_counts[dataset][0]
             lut_entry  = self._lut_datasets.loc[dataset]
             label      = lut_entry.label
+
+            ### create a colum with label name for training ###
+            df[label] = np.ones(df.shape[0])
 
             ### apply selection cuts ###
             if self._cuts != '':
@@ -122,16 +126,31 @@ class DataManager():
         else:
             return df
 
+    def get_dataframes(self, dataset_names, condition=''):
+        dataframes = {}
+        for dataset in dataset_names:
+            df = self._dataframes[dataset_name]
+            if condition == '':
+                dataframes[datset] = df
+            else:
+                dataframes[datset] = df.query(condition)
+
     def get_dataset_names(self):
         return self._dataset_names
 
 class PlotManager():
-    def __init__(self, data_manager, features, stack_labels, overlay_labels, plot_data=True):
+    def __init__(self, data_manager, features, stack_labels, overlay_labels, 
+                 plot_data   = True,
+                 output_path = 'plots',
+                 file_ext    = 'png'
+                ):
         self._dm             = data_manager
         self._features       = features
         self._stack_labels   = stack_labels
         self._overlay_labels = overlay_labels
         self._plot_data      = plot_data
+        self._output_path    = output_path
+        self._file_ext       = file_ext
         self._initialize_colors()
 
     def _initialize_colors(self):
@@ -139,9 +158,9 @@ class PlotManager():
         self._stack_colors   = [lut.loc[l].color for l in self._stack_labels]
         self._overlay_colors = [lut.loc[l].color for l in self._overlay_labels]
 
-    def make_overlays(self, features, output_path='plots', file_ext='png', do_cms_text=True, do_ratio=False):
+    def make_overlays(self, features, do_cms_text=True, do_ratio=False):
         dm = self._dm
-        make_directory(output_path)
+        make_directory(self._output_path)
 
         ### alias dataframes and datasets lut###
         dataframes   = dm._dataframes
@@ -256,20 +275,93 @@ class PlotManager():
                 add_lumi_text(axes)
 
             ### Make output directory if it does not exist ###
-            make_directory('{0}/linear/{1}'.format(output_path, lut_entry.category), False)
-            make_directory('{0}/log/{1}'.format(output_path, lut_entry.category), False)
+            make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
+            make_directory('{0}/log/{1}'.format(self._output_path, lut_entry.category), False)
 
             ### Save output plot ###
             ### linear scale ###
             y_max = np.max((stack_max, overlay_max, data_max))
             axes.set_ylim((0., 1.8*y_max))
-            fig.savefig('{0}/linear/{1}/{2}.{3}'.format(output_path, lut_entry.category, feature, file_ext))
+            fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, lut_entry.category, feature, self._file_ext))
 
             ### log scale ###
             axes.set_yscale('log')
             axes.set_ylim((0.1*np.min(stack_sum), 15.*y_max))
-            fig.savefig('{0}/log/{1}/{2}.{3}'.format(output_path, lut_entry.category, feature, file_ext))
+            fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, lut_entry.category, feature, self._file_ext))
 
             fig.clear()
             plt.close()
 
+    def make_sideband_overlays(self, label, cuts, features, 
+                               do_cms_text = True,
+                               do_ratio    = False,
+                               do_stacked  = False
+                              ):
+
+        ### alias dataframes and datasets lut###
+        df_pre = self._dm.get_dataframe(label)
+        df_sr  = df_pre.query(cuts[0])
+        df_sb  = df_pre.query(cuts[1])
+        for feature in tqdm(features, 
+                            desc       = 'Plotting',
+                            unit_scale = True,
+                            ncols      = 75,
+                            total      = len(features
+                           )):
+            if feature not in self._features:
+                print '{0} not in features.'
+                continue
+
+            fig, ax = plt.subplots(1, 1)
+            lut_entry = self._dm._lut_features.loc[feature]
+            x_sr = df_sr[feature].values
+            x_sb = df_sb[feature].values
+            hist, bins, _ = ax.hist([x_sr, x_sb],
+                                    bins      = lut_entry.n_bins,
+                                    range     = (lut_entry.xmin, lut_entry.xmax),
+                                    color     = ['k', 'r'],
+                                    alpha     = 0.9,
+                                    histtype  = 'step',
+                                    linewidth = 2.,
+                                    normed    = True,
+                                    stacked   = do_stacked
+                                   )
+
+            ### make the legend ###
+            #legend_text = cuts # Need to do something with this
+            legend_text = [r'$\sf M_{\mu\mu}\,\notin\,[24,33]$', r'$\sf M_{\mu\mu}\,\in\,[24, 33]$']
+            ax.legend(legend_text)
+
+            ### labels and x limits ###
+            ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
+            ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
+            ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
+            ax.grid()
+
+            ### Add lumi text ###
+            add_lumi_text(ax)
+
+            ### Make output directory if it does not exist ###
+            make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
+            make_directory('{0}/log/{1}'.format(self._output_path, lut_entry.category), False)
+
+            ### Save output plot ###
+            ### linear scale ###
+            y_max = np.max(hist)
+            ax.set_ylim((0., 1.8*y_max))
+            fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
+                                                        lut_entry.category, 
+                                                        feature, 
+                                                        self._file_ext
+                                                       ))
+
+            ### log scale ###
+            ax.set_yscale('log')
+            ax.set_ylim((0.1*np.min(hist), 15.*y_max))
+            fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
+                                                     lut_entry.category, 
+                                                     feature, 
+                                                     self._file_ext
+                                                    ))
+            fig.clear()
+            plt.close()

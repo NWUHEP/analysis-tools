@@ -17,21 +17,24 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    ntuple_dir  = 'data/flatuples/mumu_test_2012'
+    ntuple_dir  = 'data/flatuples/mumu_2016'
     lumi        = 19.8e3
-    selection   = ('mumu', '1b1f')
-    period      = 2012
-    output_path = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
+    selection   = ('mumu', 'test')
+    period      = 2016
     plot_data   = True
 
     datasets   = [
-                  'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
-                  #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
-                  'ttbar_lep', 
+                  'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                  'ttbar', 
                   'zjets_m-50', 'zjets_m-10to50',
-                  't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
-                  'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                  'bprime_xb'
+
+                  #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                  #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
+                  #'ttbar_lep', 'ttbar_semilep', 
+                  #'zjets_m-50', 'zjets_m-10to50',
+                  #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                  #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                  #'bprime_xb'
                  ]
 
     features = [
@@ -58,10 +61,15 @@ if __name__ == '__main__':
 
     ### Cuts ###
     cuts = {
+            'test' : '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
+                       and lepton2_pt > 20 and abs(lepton2_eta) < 2.4 \
+                       and lepton1_q != lepton2_q \
+                       and lepton1_trigger == True\
+                       and n_jets == 0 and n_bjets == 0)',
             'preselection' : '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
-                               and lepton2_pt > 5 and abs(lepton2_eta) < 2.1 \
-                               and lepton1_q != lepton2_q and 12 < dilepton_mass < 70\
-                               and lepton1_trigger == True)',
+                               and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
+                               and lepton1_q != lepton2_q and 12 < dilepton_mass < 70)',
+                               #and lepton1_trigger == True)',
             'same-sign' : 'lepton1_q == lepton2_q',
             '2b'        : 'n_bjets == 2', 
             '1b1f'      : 'n_fwdjets > 0 and n_bjets == 1 and n_jets == 0',
@@ -71,8 +79,8 @@ if __name__ == '__main__':
                            ((n_fwdjets > 0 and n_jets == 0) or \
                            (n_fwdjets == 0 and n_jets == 1 and \
                            four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2',
-           }
+            'enhance'   : 'dilepton_pt_over_m > 2 and four_body_delta_phi > 2.5 and met_mag < 40'  
+            }
 
     cuts['combined_sideband'] = cuts['combined'] + \
                                 'and (dilepton_mass > 36 or dilepton_mass < 24)'
@@ -82,86 +90,37 @@ if __name__ == '__main__':
 
     if selection[1] not in cuts.keys():
         cuts[selection[1]] = ''
-    elif selection[1] != 'same-sign':
+    elif selection[1] not in ['same-sign', 'test']:
         cuts[selection[1]] += ' and ' + cuts['preselection']
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                   dataset_names = datasets,
                                   selection     = selection[0],
+                                  period        = period,
                                   scale         = lumi,
                                   cuts          = cuts[selection[1]]
                                  )
 
     ### Loop over features and make the plots ###
+    output_path  = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
-                                  stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
-                                  overlay_labels = []
+                                  #stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
+                                  stack_labels   = ['ttbar', 'zjets'],
+                                  overlay_labels = [],
+                                  output_path    = output_path,
+                                  file_ext       = 'png'
                                  )
-    plot_manager.make_overlays(features, 
-                               output_path = output_path,
-                               file_ext    = 'png'
-                              )
-    '''
 
-    ### Overlay sideband and signal region ###
-    label       = 'data'
-    do_stacked  = False
-    output_path = 'plots/overlays/sb_over_sr/{0}_overlayed'.format(selection[1])
-    file_ext    = 'png'
-    conditions  = ['dilepton_mass < 24 or dilepton_mass > 33', '24 < dilepton_mass < 33']
+    if True:
+        plot_manager.make_overlays(features)
+    else:
+        cut = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
+        plot_manager.make_sideband_overlays('data', cut, features)
 
-    df_pre      = data_manager.get_dataframe(label, cuts[selection[1]])
-    df_sr       = df_pre.query(conditions[0])
-    df_sb       = df_pre.query(conditions[1])
-    for feature in features:
-        print feature
+    ### Dalitz plots ###
 
-        fig, ax = plt.subplots(1, 1)
-        lut_entry = data_manager._lut_features.loc[feature]
-        x_sr = df_sr[feature].values
-        x_sb = df_sb[feature].values
-        hist, bins, _ = ax.hist([x_sr, x_sb],
-                                bins      = lut_entry.n_bins,
-                                range     = (lut_entry.xmin, lut_entry.xmax),
-                                color     = ['k', 'r'],
-                                alpha     = 0.9,
-                                histtype  = 'step',
-                                linewidth = 2.,
-                                stacked   = True if do_stacked else False
-                               )
-
-        ### make the legend ###
-        legend_text = [r'$\sf M_{\mu\mu}\,\in\,[24, 33]$', r'$\sf M_{\mu\mu}\,\notin\,[24,33]$']
-        ax.legend(legend_text)
-
-        ### labels and x limits ###
-        ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
-        ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
-        ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
-        ax.grid()
-
-        ### Add lumi text ###
-        pt.add_lumi_text(ax)
-
-        ### Make output directory if it does not exist ###
-        pt.make_directory('{0}/linear/{1}'.format(output_path, lut_entry.category), False)
-        pt.make_directory('{0}/log/{1}'.format(output_path, lut_entry.category), False)
-
-        ### Save output plot ###
-        ### linear scale ###
-        y_max = np.max(hist)
-        ax.set_ylim((0., 1.8*y_max))
-        fig.savefig('{0}/linear/{1}/{2}.{3}'.format(output_path, lut_entry.category, feature, file_ext))
-
-        ### log scale ###
-        ax.set_yscale('log')
-        ax.set_ylim((0.1*np.min(hist), 15.*y_max))
-        fig.savefig('{0}/log/{1}/{2}.{3}'.format(output_path, lut_entry.category, feature, file_ext))
-        fig.clear()
-        plt.close()
-    '''
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

@@ -8,9 +8,11 @@ import numpy as np
 from numpy.polynomial.legendre import legval
 import pandas as pd
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
 import seaborn as sns
 from scipy.special import erf
-from scipy.stats import chi2, norm, multivariate_normal
+from scipy.stats import chi2, norm, gamma, multivariate_normal
+from scipy import integrate
 from lmfit import Parameter, Parameters
 
 from nllfitter import Model, NLLFitter
@@ -22,20 +24,29 @@ np.set_printoptions(precision=3.)
 
 def bg_pdf(x, a):
     '''
-    Legendre polynomial background pdf
+    Legendre polynomial times a gamma distribution background pdf
     '''
-    fx = legval(x[0], a[:3])
-    fx *= legval(x[1], a[3:])
+    z   = ft.scale_data(x[0], xmin=12, xmax=70)
+    fx  = legval(z, [0.5, a[0], a[1]])*2/(70 - 12)
+    fx *= gamma.pdf(x[1], a=a[2], loc=a[3], scale=a[4])
     return fx
 
 def sig_pdf(x, a, normalize=False):
     '''
     2D Legendre polynomial plus a bivariate Gaussian.
     '''
-    bg  = bg_pdf(x, a[6:])
-    mvn = multivariate_normal([a[1], a[3]], [[a[2]**2, 0.], [0., a[4]**2]])
-    sig = mvn.pdf(zip(x[0], x[1])) 
-    fx = (1 - a[0])*bg + a[0]*sig
+    bg  = bg_pdf(x, a[5:])
+
+    #mvn = multivariate_normal([a[1], a[3]], [[a[2]**2, 0.], [0., a[4]**2]])
+    #sig = mvn.pdf(zip(x[0], x[1])) 
+
+    sig = ft.voigt(x[0], [a[1], a[2], 0.45])*ft.voigt(x[1], [a[3], a[4], 4.])
+    if normalize:
+        sig_norm = integrate.dblquad(lambda z1, z2: ft.voigt(z1, [a[1], a[2], 0.45])*ft.voigt(z1, [a[3], a[4], 3.]), 12, 70, lambda l:50, lambda l:350)[0]
+    else:
+        sig_norm = 1.
+
+    fx = (1 - a[0])*bg + a[0]*sig/0.97#sig_norm
     return fx
 
 if __name__ == '__main__':
@@ -46,69 +57,57 @@ if __name__ == '__main__':
     ### Configuration
     pt.set_new_tdr()
     ntuple_dir  = 'data/flatuples/mumu_2012'
-    lumi        = 19.8e3
     selection   = ('mumu', 'combined')
     period      = 2012
     model       = 'Gaussian'
     output_path = 'plots/fits/{0}_{1}'.format('_'.join(selection), period)
 
-    datasets = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
-    features = ['dilepton_mass', 'dilepton_b_mass', 'dilepton_pt_over_m']
-    cuts     = 'lepton1_q != lepton2_q and 12 < dilepton_mass < 70'
-    
+    datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
+    features    = ['dilepton_mass', 'dilepton_b_mass', 'dilepton_pt_over_m']
+    cuts        = 'lepton1_q != lepton2_q and n_bjets == 1 \
+                   and 12 < dilepton_mass < 70 and 50 < dilepton_b_mass < 350'
+
     if selection[1] == '1b1f':
-        cuts += ' and n_bjets == 1 and (n_fwdjets > 0 and n_jets == 0)'
+        cuts += ' and n_fwdjets > 0 and n_jets == 0'
     elif selection[1] == '1b1c':
-        cuts += ' and n_bjets == 1 \
-                  and (n_fwdjets == 0 and n_jets == 1) \
+        cuts += ' and n_fwdjets == 0 and n_jets == 1 \
                   and four_body_delta_phi > 2.5 and met_mag < 40'
     elif selection[1] == 'combined':
-        cuts += ' and n_bjets == 1 \
-                  and ((n_fwdjets > 0 and n_jets == 0) or \
+        cuts += ' and ((n_fwdjets > 0 and n_jets == 0) or \
                   (n_fwdjets == 0 and n_jets == 1 and four_body_delta_phi > 2.5 and met_mag < 40))'
-
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                   dataset_names = datasets,
                                   selection     = selection[0],
-                                  scale         = lumi,
                                   cuts          = cuts
                                  )
     df_data = data_manager.get_dataframe('data')
     data = df_data[features]
     data = data.values.transpose()
-    data_scaled = [ft.scale_data(data[0], xmin=12, xmax=70), 
-                   ft.scale_data(data[1], xmin=50, xmax=350)]
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
     bg_params.add_many(
-                       ('a0', 0.5, False, 0.45, 0.55, None),
-                       ('a1', 0., True, None, None, None),
-                       ('a2', 0., True, None, None, None),
-                       ('b0', 0.5, False, 0.45, 0.55, None),
-                       ('b1', 0., True, None, None, None),
-                       ('b2', 0., True, None, None, None),
-                       ('b3', 0., True, None, None, None),
-                       ('b4', 0., True, None, None, None),
-                       ('b5', 0., True, None, None, None),
-                       ('b6', 0., True, None, None, None),
+                       ('a1'    , 0.  , True , None , None , None) ,
+                       ('a2'    , 0.  , True , None , None , None) ,
+                       ('a'     , 2.  , True , 1.   , None  , None) ,
+                       ('loc'   , 50. , True , 20   , 60   , None) ,
+                       ('scale' , 30. , True , 0    , None , None) ,
                       )
 
     bg_model  = Model(bg_pdf, bg_params)
-    bg_fitter = NLLFitter(bg_model, min_algo='SLSQP', lmult=(20, 0))
-    bg_result = bg_fitter.fit(data_scaled, calculate_corr=False)
+    bg_fitter = NLLFitter(bg_model, min_algo='SLSQP')
+    bg_result = bg_fitter.fit(data, calculate_corr=True)
 
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
     if model == 'Gaussian':
         sig_params.add_many(
-                            ('A'       , 0.01  , True , 0.0   , 1.  , None) ,
-                            ('mu1'     , -0.4 , True , -0.8  , -0.1 , None) ,
-                            ('sigma1'  , 0.02  , True , 0.015 , 0.2 , None) ,
-                            ('mu2'    , -0.3 , True , -0.8  , -0.1  , None) ,
-                            ('sigma2' , 0.08  , True , 0.001 , 0.1 , None),
-                            ('sigma12' , 0.0  , True , -0.2 , 0.2, None),
+                            ('A'      , 0.01 , True , 0.0  , 1.   , None) ,
+                            ('mu1'    , 30.  , True , 20.  , 40.  , None) ,
+                            ('sigma1' , 1.   , True , 0.45 , 2.5  , None) ,
+                            ('mu2'    , 150. , True , 120. , 180. , None) ,
+                            ('sigma2' , 5.   , True , 2.   , 15.  , None) ,
                            )
         #for n,p in bg_params.iteritems():
         #    p.vary = False
@@ -124,46 +123,49 @@ if __name__ == '__main__':
    #     sig_params += bg_params.copy()
    #     sig_model  = Model(ft.sig_pdf_alt, sig_params)
 
-    sig_fitter = NLLFitter(sig_model, lmult=(0,0))
-    sig_result = sig_fitter.fit(data_scaled, calculate_corr=False)
+    sig_fitter = NLLFitter(sig_model)
+    sig_result = sig_fitter.fit(data, calculate_corr=True)
 
-    #x0 = np.linspace(-1, 1, 10000)
-    #h, b, p = plt.hist(data_scaled[1], bins=45, range=(-1, 1), histtype='step',  normed=True)
-    #plt.plot(x0, legval(x0, bg_result.x[3:]))
-    #plt.plot(x0, sig_pdf([x0, x0], sig_result.x[]))
-    #plt.xlim((-1, 1))
+    #h, b, p = plt.hist(data[0], bins=29, range=(12, 70), histtype='step',  normed=True)
+    #x1 = np.linspace(12, 70, 10000)
+    #y1 = bg_pdf([x1,x2], bg_result.x)
+    #y2 = sig_pdf([x], sig_result.x)
+    #plt.plot(x1, y1, 'r-')
+    #plt.plot(x2, y1, 'b--')
+    #plt.xlim((12, 70))
     #plt.ylim((0, 1.3*np.max(h)))
 
-    x = np.linspace(-1, 1, 1000)
-    xx = list(product(*[x, x]))
-    x1, x2 = zip(*xx)
-    fx = bg_pdf([x1, x2], bg_result.x)
-    fx = fx.reshape(1000, 1000).transpose()
+    ### Plots!!! ###
     z1, z2 = np.linspace(12, 70, 1000), np.linspace(50, 350, 1000)
+    x  = np.array(list(product(*[z1, z2]))).transpose()
+    fx = bg_pdf(x, bg_result.x)
+    fx = fx.reshape(1000, 1000).transpose()
     plt.pcolormesh(z1, z2, fx, 
                    alpha = 0.75,
                    cmap  = 'viridis',
                    vmin  = 0.,
                    rasterized=True
                   )
+    #cbar = plt.colorbar()
+    #cbar.set_label(r'probability')
+
     plt.scatter(data[0], data[1], 
                 s=30*(1+data[2]/3), 
                 cmap = 'viridis',
                 #c=50*(1+data[2]/3), 
-                c='w',
-                alpha=0.75
+                c='k',
+                alpha=0.7
                )
 
-    fx = sig_pdf([x1, x2], sig_result.x)
+    fx = sig_pdf(x, sig_result.x)
     fx = fx.reshape(1000, 1000).transpose()
     plt.contour(z1, z2, fx, 
-                levels     = np.linspace(0, 6., 40),
+                levels     = np.linspace(0, 0.0006, 15),
                 alpha      = 0.7,
-                colors     = 'k',
+                colors     = 'w',
                 #cmap       = 'hot',
-                linewidths = 2.5,
+                linewidths = 3.,
                )
-
     plt.xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
     plt.ylabel(r'$\sf m_{\mu\mu b}$ [GeV]')
     plt.xlim(12, 70)
@@ -173,15 +175,17 @@ if __name__ == '__main__':
     plt.savefig('plots/fits/test.pdf')
     plt.close()
 
-
-    ### Plots!!! ###
-    #print 'Making plot of fit results...'
-    #ft.fit_plot(data, xlimits, sig_model, bg_model, 
-    #            '{0}_{1}'.format(channel, model), path='plots/fits/{0}'.format(period))
+	#fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    #ax.plot_surface(a1, a2, fx.transpose(), rstride=4, cstride=4, alpha=0.2, cmap='coolwarm')
+    #ax.contour(a1, a2, fx.transpose(), zdir='z', offset=0, cmap='coolwarm')
+    #ax.contour(a1, a2, fx.transpose(), zdir='y', offset=350, cmap='coolwarm')
+    #ax.contour(a1, a2, fx.transpose(), zdir='x', offset=30, cmap='coolwarm')
+    #plt.show()
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
-    q_max = 2*(bg_model.calc_nll(data_scaled) - sig_model.calc_nll(data_scaled))
+    q_max = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
     p_value = 0.5*chi2.sf(q_max, 1)
     z_score = -norm.ppf(p_value)
     print 'q       = {0:.3f}'.format(q_max)

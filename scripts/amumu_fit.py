@@ -58,8 +58,8 @@ if __name__ == '__main__':
     xlimits = (12., 70.)
     if period == 2012:
         if channel == 'combined':
-            data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-            data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+            data_1b1f, n_1b1f = ft.get_data('data/fit/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
+            data_1b1c, n_1b1c = ft.get_data('data/fit/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
             data = np.concatenate((data_1b1f, data_1b1c))
             n_total = n_1b1f + n_1b1c
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             #data = np.concatenate((data_1b1f, data_1b1c))
             #n_total = n_1b1f + n_1b1c
         else:
-            data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            data, n_total = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
             #data, n_total = ft.get_data('data/mumu_2D_{0}.csv'.format(channel), 'dilepton_mass', xlimits)
     elif period == 2016:
         if channel == 'combined':

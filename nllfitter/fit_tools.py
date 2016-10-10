@@ -115,9 +115,8 @@ def sig_pdf_alt(x, a, normalize=True):
     x: data
     a: model parameters (A, a1, a2, mu, and gamma)
     '''
-
     bg  = bg_pdf(x, a[3:5])
-    sig = voigt(x, [a[1], a[2]/2., 0.0155])
+    sig = voigt(x, [a[1], a[2], 0.0155])
     if normalize:
         sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.0155]), -1, 1)[0]
     else:

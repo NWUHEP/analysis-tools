@@ -24,17 +24,22 @@ if __name__ == '__main__':
 
     ### Configuration ###
     selection    = 'mumu'
-    period       = 2012
+    period       = 2016
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
     dataset_list = [
-                    'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
-                    #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
-                    'ttbar_lep', 'ttbar_semilep',
+                    'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                    'ttbar', 
                     'zjets_m-50', 'zjets_m-10to50',
-                    't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
-                    'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    'bprime_xb'
+
+                    
+                    #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                    ##'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
+                    #'ttbar_lep', 'ttbar_semilep',
+                    #'zjets_m-50', 'zjets_m-10to50',
+                    #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                    #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                    #'bprime_xb'
                     ]
     features = [
                'run_number', 'event_number', 'lumi', 'weight',
@@ -75,8 +80,12 @@ if __name__ == '__main__':
 
     event_count = {}
     for dataset in tqdm(dataset_list, desc='Unpacking', unit_scale=True, ncols=75, total=len(dataset_list)):
-        ecount  = froot.Get('TotalEvents_{0}'.format(dataset))
-        event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
+        ecount = froot.Get('TotalEvents_{0}'.format(dataset))
+        if ecount:
+            event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
+        else:
+            print 'Could not find dataset {0} in root file...'
+            continue
 
         tree    = froot.Get('tree_{0}'.format(dataset))
         n       = tree.GetEntriesFast()
@@ -191,7 +200,7 @@ if __name__ == '__main__':
             ntuple['t_bj'].append((bjet - jet).M()**2)
 
         df = pd.DataFrame(ntuple)
-        df.to_csv('{0}/ntuple_{1}.csv'.format(output_path, dataset), index=False)
+        df.to_pickle('{0}/ntuple_{1}.pkl'.format(output_path, dataset))
 
     df = pd.DataFrame(event_count)
     df.to_csv('{0}/event_counts.csv'.format(output_path))

@@ -18,12 +18,17 @@ if __name__ == '__main__':
     else:
         indir   = 'data/flatuples/mumu_2012'
         cat     = '1b1f'
-        period  = 2012
+        period  = '2012'
 
     output_path = 'data/amumu_sync/{0}'.format(period)
-    datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
+    if period == '2012':
+        datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
+    elif period == '2016':
+        datasets    = ['muon_2016B', 'muon_2016C', 'muon_2016D'] 
+
     data_manager = pt.DataManager(input_dir     = indir,
                                   dataset_names = datasets,
+                                  period        = period,
                                   selection     = 'mumu'
                                  )
 
