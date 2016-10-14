@@ -105,6 +105,7 @@ class NLLFitter:
             self._model.update_parameters(result.x, (sigma, corr))
             if self.verbose:
                 report_fit(self._model.get_parameters(), show_correl=False)
+                #report_fit(result, show_correl=False)
                 print ''
                 print '[[Correlation matrix]]'
                 print corr, '\n'

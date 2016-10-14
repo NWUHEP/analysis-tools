@@ -64,7 +64,7 @@ if __name__ == '__main__':
                    'zjets_m-50', 'zjets_m-10to50',
                    #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                    #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                   'bprime_xb'
+                   #'bprime_xb'
                   ]
     features = [
                 #'run_number', 'event_number', 'lumi', 'weight',
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     cuts     = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                 and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
                 and lepton1_q != lepton2_q and 12 < dilepton_mass < 70' 
-                #and n_bjets == 1 and (n_jets > 0 or n_fwdjets > 0)'
+                #and n_bjets >= 1 and (n_jets > 0 or n_fwdjets > 0)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                                  )
 
     ### prepare data for training ###
-    targets   = ['ttbar', 'zjets', 'bprime_xb']
+    targets   = ['ttbar', 'zjets']#, 'bprime_xb']
     dataframe = pd.concat([data_manager.get_dataframe(t) for t in targets])
     dataframe = dataframe[features+targets]
     dataframe = dataframe.fillna(0)
@@ -154,16 +154,16 @@ if __name__ == '__main__':
 
     ### initialize and run ###
     init = tf.initialize_all_variables()
-    with tf.Session() as sess:
-        sess.run(init)
+    sess = tf.Session()
+    sess.run(init)
 
-        acc = []
-        n_epochs = 100
-        for i in tqdm(range(n_epochs), desc='Training', ncols=75, total=n_epochs):
-            sess.run(train_step, feed_dict={x:train_x, y_:train_y})
-            acc.append(sess.run(accuracy, feed_dict={x:test_x, y_:test_y}))
+    acc = []
+    n_epochs = 1000
+    for i in tqdm(range(n_epochs), desc='Training', ncols=75, total=n_epochs):
+        sess.run(train_step, feed_dict={x:train_x, y_:train_y})
+        acc.append(sess.run(accuracy, feed_dict={x:test_x, y_:test_y}))
 
-        acc = np.array(acc)
+    acc = np.array(acc)
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

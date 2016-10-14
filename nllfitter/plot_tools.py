@@ -32,10 +32,13 @@ def set_new_tdr():
     plt.rcParams['legend.fontsize']   = 20
     plt.rcParams['legend.numpoints']  = 1
 
-def add_lumi_text(ax):
+def add_lumi_text(ax, period):
     ax.text(0.06, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
     ax.text(0.17, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
-    ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
+    if period == 2012:
+        ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
+    elif period == 2016:
+        ax.text(0.68, 1.01, r'$\sf{12\,fb^{-1}}\,(\sqrt{\it{s}}=13\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
 
 def hist_to_errorbar(data, nbins, xlim, normed=False):
     y, bins = np.histogram(data, bins=nbins, range=xlim)
@@ -272,7 +275,7 @@ class PlotManager():
 
             ### Add lumi text ###
             if do_cms_text:
-                add_lumi_text(axes)
+                add_lumi_text(axes, dm._period)
 
             ### Make output directory if it does not exist ###
             make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)

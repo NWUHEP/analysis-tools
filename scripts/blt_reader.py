@@ -27,22 +27,27 @@ if __name__ == '__main__':
     period       = 2016
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
-    dataset_list = [
-                    'muon_2016B', 'muon_2016C', 'muon_2016D', 
-                    'ttbar', 
-                    'zjets_m-50', 'zjets_m-10to50',
 
-                    
-                    #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
-                    ##'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
-                    #'ttbar_lep', 'ttbar_semilep',
-                    #'zjets_m-50', 'zjets_m-10to50',
-                    #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
-                    #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    #'bprime_xb'
-                    ]
+    if period == 2016:
+        dataset_list = [
+                        'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                        'ttjets', 
+                        't_t', 't_tw', 'tbar_t', 'tbar_tw', 
+                        'zjets_m-50', 'zjets_m-10to50',
+                        ]
+    elif period == 2012:
+        dataset_list = [
+                        'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                        #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
+                        'ttbar_lep', 'ttbar_semilep',
+                        'zjets_m-50', 'zjets_m-10to50',
+                        't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                        'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                        'bprime_xb', 'fcnc'
+                       ]
+
     features = [
-               'run_number', 'event_number', 'lumi', 'weight',
+               'run_number', 'event_number', 'lumi', 'weight', 'trigger_status', 'n_pu',
                'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 
                'lepton1_iso', 'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
                'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  
@@ -84,7 +89,7 @@ if __name__ == '__main__':
         if ecount:
             event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
         else:
-            print 'Could not find dataset {0} in root file...'
+            print 'Could not find dataset {0} in root file...'.format(dataset)
             continue
 
         tree    = froot.Get('tree_{0}'.format(dataset))
@@ -111,6 +116,8 @@ if __name__ == '__main__':
             ntuple['event_number'].append(tree.evtNumber)
             ntuple['lumi'].append(tree.lumiSection)
             ntuple['weight'].append(tree.eventWeight)
+            ntuple['trigger_status'].append(tree.triggerStatus)
+            ntuple['n_pu'].append(tree.nPU)
 
             ### lepton
             ntuple['lepton1_pt'].append(lep1.Pt())

@@ -18,26 +18,32 @@ if __name__ == '__main__':
 
     ### Configuration
     ntuple_dir  = 'data/flatuples/mumu_2016'
-    lumi        = 19.8e3
-    selection   = ('mumu', 'test')
+    selection   = ('mumu', 'preselection')
     period      = 2016
+    lumi        = 19.8e3 if period == 2012 else 12e3
     plot_data   = True
 
-    datasets   = [
-                  'muon_2016B', 'muon_2016C', 'muon_2016D', 
-                  'ttbar', 
-                  'zjets_m-50', 'zjets_m-10to50',
-
-                  #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
-                  #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
-                  #'ttbar_lep', 'ttbar_semilep', 
-                  #'zjets_m-50', 'zjets_m-10to50',
-                  #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
-                  #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                  #'bprime_xb'
-                 ]
+    if period == 2016:
+        datasets = [
+                    'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                    'ttjets', 
+                    't_t', 't_tw', 'tbar_t', 'tbar_tw', 
+                    'zjets_m-50', 'zjets_m-10to50',
+                   ]
+    elif period == 2012:
+        datasets = [
+                    'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
+                    #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
+                    'ttbar_lep', 'ttbar_semilep',
+                    'zjets_m-50', 'zjets_m-10to50',
+                    't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                    'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                    'bprime_xb'
+                   ]
 
     features = [
+                 'n_pu',
+
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
                  'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
@@ -68,8 +74,7 @@ if __name__ == '__main__':
                        and n_jets == 0 and n_bjets == 0)',
             'preselection' : '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                                and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
-                               and lepton1_q != lepton2_q and 12 < dilepton_mass < 70)',
-                               #and lepton1_trigger == True)',
+                               and lepton1_q != lepton2_q and 12 < dilepton_mass < 70)', 
             'same-sign' : 'lepton1_q == lepton2_q',
             '2b'        : 'n_bjets == 2', 
             '1b1f'      : 'n_fwdjets > 0 and n_bjets == 1 and n_jets == 0',
@@ -79,7 +84,7 @@ if __name__ == '__main__':
                            ((n_fwdjets > 0 and n_jets == 0) or \
                            (n_fwdjets == 0 and n_jets == 1 and \
                            four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2 and four_body_delta_phi > 2.5 and met_mag < 40'  
+            'enhance'   : 'dilepton_pt_over_m > 2 and four_body_delta_phi > 2.5 and met_mag < 50'  
             }
 
     cuts['combined_sideband'] = cuts['combined'] + \
@@ -89,9 +94,15 @@ if __name__ == '__main__':
     cuts['combined_enhance']  = cuts['combined'] + ' and ' + cuts['enhance']
 
     if selection[1] not in cuts.keys():
-        cuts[selection[1]] = ''
-    elif selection[1] not in ['same-sign', 'test']:
-        cuts[selection[1]] += ' and ' + cuts['preselection']
+        cut = ''
+    else:
+        cut = cuts[selection[1]]
+        if selection[1] not in ['same-sign', 'test']:
+            cut += ' and ' + cuts['preselection']
+
+    ### Blind 2016 signal region ###
+    if period == 2016 and selection[1] in ['1b1f', '1b1c', 'combined']:
+        cut += ' and (dilepton_mass > 32 or dilepton_mass < 26)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -99,7 +110,7 @@ if __name__ == '__main__':
                                   selection     = selection[0],
                                   period        = period,
                                   scale         = lumi,
-                                  cuts          = cuts[selection[1]]
+                                  cuts          = cut
                                  )
 
     ### Loop over features and make the plots ###
@@ -107,7 +118,7 @@ if __name__ == '__main__':
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
                                   #stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
-                                  stack_labels   = ['ttbar', 'zjets'],
+                                  stack_labels   = ['t', 'ttbar', 'zjets'],
                                   overlay_labels = [],
                                   output_path    = output_path,
                                   file_ext       = 'png'
@@ -116,8 +127,8 @@ if __name__ == '__main__':
     if True:
         plot_manager.make_overlays(features)
     else:
-        cut = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
-        plot_manager.make_sideband_overlays('data', cut, features)
+        regions = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
+        plot_manager.make_sideband_overlays('data', regions, features)
 
     ### Dalitz plots ###
 

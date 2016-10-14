@@ -27,14 +27,12 @@ def scale_data(x, xmin=12., xmax=70., invert=False):
     else:
         return 0.5*(x + 1)*(xmax - xmin) + xmin
 
-def get_data(filename, varname, xlim):
+def get_data(filename, varname):
     '''
     Get data from file and convert to lie in the range [-1, 1]
     '''
     ntuple  = pd.read_csv(filename)
     data    = ntuple[varname].values
-    data    = data[np.all([(data > xlim[0]), (data < xlim[1])], axis=0)]
-    data    = np.apply_along_axis(scale_data, 0, data, xmin=xlim[0], xmax=xlim[1])
     n_total = data.size
 
     return data, n_total
@@ -60,8 +58,8 @@ def voigt(x, a):
     x: data
     a: model paramters (mean, gamma, and sigma)
     '''
-    mu = a[0]
-    gamma = a[1]
+    mu    = a[0]
+    gamma = a[1]/2
     sigma = a[2]
 
     if gamma == 0:
@@ -73,56 +71,6 @@ def voigt(x, a):
         y = np.real(wofz(z))/(sigma*np.sqrt(2*np.pi))
         return y
 
-
-def bg_pdf(x, a): 
-    '''
-    Second order Legendre Polynomial with constant term set to 0.5.
-
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (a1 and a2)
-    '''
-    return 0.5 + a[0]*x + 0.5*a[1]*(3*x**2 - 1)
-
-def sig_pdf(x, a, normalize=False):
-    '''
-    Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
-
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (a1, a2, mu, and sigma)
-    '''
-
-    bg = bg_pdf(x, a[3:5])
-    sig = norm.pdf(x, a[1], a[2]) 
-    if normalize:
-        sig_norm = integrate.quad(lambda z: norm.pdf(z, a[1], a[2]), -1, 1)[0]
-    else:
-        sig_norm = 1.
-
-    return (1 - a[0])*bg + a[0]*sig/sig_norm
-
-def sig_pdf_alt(x, a, normalize=True):
-    '''
-    Second order Legendre Polynomial (normalized to unity) plus a Voigt
-    profile. N.B. The width of the convolutional Gaussian is set to 0.155 which
-    corresponds to a dimuon mass resolution 0.5 GeV.
-
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (A, a1, a2, mu, and gamma)
-    '''
-    bg  = bg_pdf(x, a[3:5])
-    sig = voigt(x, [a[1], a[2], 0.0155])
-    if normalize:
-        sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.0155]), -1, 1)[0]
-    else:
-        sig_norm = 1.
-
-    return (1 - a[0])*bg + a[0]*sig/sig_norm
 
 ### toy MC p-value calculator ###
 def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
@@ -142,30 +90,6 @@ def lnprob(x, pdf, bounds):
         return -np.inf
     else:
         return np.log(pdf(x))
-
-def generator_emcee(pdf, samples_per_toy=100, ntoys=100, bounds=(-1, 1)):
-    '''
-    Wrapper for emcee the MCMC hammer (only does 1D distributions for now...)
-
-    Parameters
-    ==========
-    pdf             : distribution to be sampled
-    samples_per_toy : number of draws to be assigned to each pseudo-experiment
-    ntoys           : number of toy models to produce
-    bounds          : (xmin, xmax) for values of X
-    '''
-    ndim = 1
-    sampler = mc.EnsembleSampler(samples_per_toy, ndim, lnprob, args=[pdf, bounds])
-
-    p0 = [np.random.rand(1) for i in xrange(samples_per_toy)]
-    pos, prob, state = sampler.run_mcmc(p0, 1000) # Let walkers settle in
-    sampler.reset()
-    sampler.run_mcmc(pos, ntoys, rstate0=state)
-
-    print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
-    print("Autocorrelation time:", sampler.get_autocorr_time())
-
-    return sampler.flatchain[:, 0].reshape(ntoys, samples_per_toy)
 
 def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     '''
@@ -268,22 +192,20 @@ def plot_pvalue_scan_2D(qscan, x, y, path, nchannels=1):
     plt.close()
 
 
-def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
+def fit_plot_1D(data, xlim, sig_model, bg_model, suffix, path='plots'):
     N       = data.size
     binning = 2.
-    nbins   = int((xlim[1] - xlim[0])/binning)
+    nbins   = 29.
 
     # Scale pdfs and data from [-1, 1] back to the original values
-    params = sig_model.get_parameters()
-    x       = np.linspace(-1, 1, num=10000)
-    y_sig   = (N*binning/nbins)*sig_model.pdf(x) 
-    y_bg1   = (1 - params['A']) * N * binning/nbins * bg_model.pdf(x, params) 
-    y_bg2   = (N*binning/nbins)*bg_model.pdf(x)
-    x       = scale_data(x, xmin=xlim[0], xmax=xlim[1],invert=True)
-    data    = scale_data(data, xmin=xlim[0], xmax=xlim[1],invert=True)
+    params  = sig_model.get_parameters()
+    x       = np.linspace(12, 70, num=10000)
+    y_sig   = N*binning*sig_model.pdf(x) 
+    y_bg1   = (1 - params['A'])*N*binning*bg_model.pdf(x, params) 
+    y_bg2   = N*binning*bg_model.pdf(x)
 
     # Get histogram of data points
-    h = plt.hist(data, bins=nbins, range=xlim, normed=False, histtype='step')
+    h = plt.hist(data, bins=nbins, range=xlim)
     bincenters  = (h[1][1:] + h[1][:-1])/2.
     binerrs     = np.sqrt(h[0]) 
     plt.close()
@@ -294,13 +216,18 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
     ax.plot(x , y_bg2 , 'r-.' , linewidth=2.5)
     ax.errorbar(bincenters, h[0], yerr=binerrs, 
                 fmt='ko', capsize=0, elinewidth=2, markersize=9)
-    ax.legend(['bg+sig.', 'bg', 'bg only', 'data']) 
+    ax.legend(['BG+Sig.', 'BG', 'BG only', 'Data']) 
 
-    if suffix[:3] == 'hgg':
+    if suffix[0] == 'mumu':
+        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+    elif suffix[0] == 'emu':
+        ax.set_xlabel(r'$\sf m_{e\mu}$ [GeV]')
+    elif suffix[0] == 'ee':
+        ax.set_xlabel(r'$\sf m_{ee}$ [GeV]')
+    elif suffix[0] == 'hgg':
         ax.set_title(r'$\sf h(125)\rightarrow \gamma\gamma$')
         ax.set_xlabel(r'$\sf m_{\gamma\gamma}$ [GeV]')
-    else:
-        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+
     ax.set_ylim([0., 1.65*np.max(h[0])])
     ax.set_ylabel('Entries / 2 GeV')
     ax.set_xlim(xlim)
@@ -312,8 +239,8 @@ def fit_plot(data, xlim, sig_model, bg_model, suffix, path='plots'):
     ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
 
 
-    fig.savefig('{0}/dimuon_mass_fit_{1}.pdf'.format(path, suffix))
-    fig.savefig('{0}/dimuon_mass_fit_{1}.png'.format(path, suffix))
+    fig.savefig('{0}/mass_fit_{1[1]}_{1[2]}.pdf'.format(path, suffix))
+    fig.savefig('{0}/mass_fit_{1[1]}_{1[2]}.png'.format(path, suffix))
     plt.close()
 
 def ks_test(data, model_pdf, xlim=(-1, 1), make_plots=False, suffix=None):

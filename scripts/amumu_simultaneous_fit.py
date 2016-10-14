@@ -28,15 +28,15 @@ if __name__ == '__main__':
     channels = ['1b1f', '1b1c']
 
     ### For post fit tests
-    doToys   = True
+    doToys   = False
     model    = 'Gaussian'
     nsims    = 50000
 
     datasets  = []
     if period == 2012:
         for channel in channels:
-            data, n_total  = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-            #data, n_total  = ft.get_data('data/test_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            data, n_total  = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+            #data, n_total  = ft.get_data('data/fit/mumu_{0}_2012_enhance.csv'.format(channel), 'dilepton_mass', xlimits)
             datasets.append(data)
     elif period == 2016:
         for channel in channels:
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     ### Carry out combined background fit ###
     bg_model = CombinedModel([bg1_model, bg2_model])
     bg_fitter = NLLFitter(bg_model)
-    bg_result = bg_fitter.fit(datasets)
+    #bg_result = bg_fitter.fit(datasets)
 
     ### Define bg+sig model and carry out fit ###
     sig1_params = Parameters()

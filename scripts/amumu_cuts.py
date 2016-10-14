@@ -45,13 +45,13 @@ if __name__ == '__main__':
     if cat == '1b1f':
         cuts.extend(['n_jets == 0', 'n_fwdjets > 0'])
     elif cat == '1b1c':
-        cuts.extend(['(n_jets > 0 and n_fwdjets == 0)', 'met_mag < 40', 'four_body_delta_phi > 2.5'])
+        cuts.extend(['(n_jets == 1 and n_fwdjets == 0)', 'met_mag < 40', 'four_body_delta_phi > 2.5'])
     else:
         print 'what are you doing, man!?'
 
-    cuts.append('25 < dilepton_mass < 32')
+    #cuts.append('25 < dilepton_mass < 32')
 
-    pt.make_directory(output_path) 
+    pt.make_directory(output_path, clear=False) 
     for i in range(len(cuts)):
         df = data_manager.get_dataframe('data', ' and '.join(cuts[:i+1]))
         df.to_csv('{0}/cut{1}_{2}.csv'.format(output_path, i, cat), 
@@ -59,3 +59,12 @@ if __name__ == '__main__':
                   index=False
                  ) 
         print 'cut {0}: {1}'.format(i, df.shape[0])
+
+    if period == '2016':
+        df0 = pd.read_csv('data/amumu_sync/Anton/cut5_1b1f.txt', header=None, sep=' ')
+        df0.columns = ['run_number', 'event_number']
+        df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]
+
+        en0 = df0.event_number
+        en = df.event_number
+
