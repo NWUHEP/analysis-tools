@@ -16,7 +16,6 @@ class Model:
     parameters : lmfit Parameter object
     '''
     def __init__(self, pdf, parameters):
-        
         self._pdf        = pdf
         self._parameters = parameters
         self.corr        = None
@@ -126,7 +125,7 @@ class Model:
         if np.any(params) == None:
             params = [p.value for p in self._parameters.values()]
         elif isinstance(params, Parameters):
-                params = [params[n].value for n in params.keys()]
+            params = [params[n].value for n in self._parameters.keys()]
 
         pdf = self._pdf(data, params)
         nll = -np.sum(np.log(pdf))
@@ -180,6 +179,7 @@ class CombinedModel(Model):
 
         if isinstance(params, np.ndarray):
             self.update_parameters(params)
+
         params = self.get_parameters()
 
         nll         = 0.

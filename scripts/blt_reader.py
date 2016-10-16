@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     if period == 2016:
         dataset_list = [
-                        'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                        'muon_2016B', 'muon_2016C', 'muon_2016D', 'muon_2016E', 'muon_2016F', 
                         'ttjets', 
                         't_t', 't_tw', 'tbar_t', 'tbar_tw', 
                         'zjets_m-50', 'zjets_m-10to50',

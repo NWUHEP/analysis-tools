@@ -99,14 +99,19 @@ if __name__ == '__main__':
     else:
         category = 'mumu'
         channel  = '1b1f'
-        period   = 2012
+        period   = '2012'
 
     ### Configuration
     pt.set_new_tdr()
+    do_sync     = True
+    doToys      = False
+    doKS        = False
+    nsims       = 1000
+    model       = 'Voigt'
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(category, period)
     output_path = 'plots/fits/{0}_{1}'.format(category, period)
-    model       = 'Voigt'
 
+    if period == '2012':
     datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
     features    = ['dilepton_mass']
     cuts        = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
@@ -114,11 +119,6 @@ if __name__ == '__main__':
                    and lepton1_q != lepton2_q and n_bjets == 1 \
                    and 12 < dilepton_mass < 70'
 
-    do_sync = True
-    verbose = True
-    doToys  = False
-    doKS    = False
-    nsims   = 1000
 
     if channel == '1b1f':
         cuts += ' and n_fwdjets > 0 and n_jets == 0'
@@ -131,15 +131,14 @@ if __name__ == '__main__':
     ### Get dataframes with features for each of the datasets ###
     if do_sync:
         xlimits = (12, 70)
-        if category == 'combined':
+        if channel == 'combined':
             data_1b1f, n_1b1f = ft.get_data('data/fit/events_pf_1b1f.csv', 'dimuon_mass')
             data_1b1c, n_1b1c = ft.get_data('data/fit/events_pf_1b1c.csv', 'dimuon_mass')
             data = np.concatenate((data_1b1f, data_1b1c))
-            n_total = n_1b1f + n_1b1c
         else:
-            data, n_total = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 
-                                        'dimuon_mass')
-        data = data[data <= 70]
+            data, _ = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass')
+        data    = data[data <= 70]
+        n_total = data.size
     else:
         data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                       dataset_names = datasets,
@@ -196,7 +195,6 @@ if __name__ == '__main__':
                    path=output_path
                   )
 
-    '''
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
     q_max = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
@@ -204,14 +202,20 @@ if __name__ == '__main__':
     print 'q = {0:.3f}'.format(q_max)
     print 'p_local = {0:.3e}'.format(p_value)
     print 'z_local = {0}'.format(-norm.ppf(p_value))
+    print ''
 
     ### Calculate the number of events in around the peak
-    f_bg    = lambda x: ft.bg_pdf(x, (bg_result.x[0], bg_result.x[1]))
-    xlim    = (sig_result.x[1] - 2*sig_result.x[2], sig_result.x[1] + 2*sig_result.x[2])
-    N_b     = (1 - sig_result.x[0])*n_total*integrate.quad(f_bg, xlim[0], xlim[1])[0]
-    sig_b   = N_b/np.sqrt(n_total*sig_result.x[0])
+    f_bg    = lambda x: bg_pdf(x, (sig_result.x[3], sig_result.x[4]))
+    if model == 'Gaussian':
+        xlim    = (sig_result.x[1] - 2*sig_result.x[2], sig_result.x[1] + 2*sig_result.x[2])
+        sig_b   = 4*n_total*f_bg(sig_result.x[1])*sig_model.get_parameters()['sigma'].stderr
+    elif model == 'Voigt':
+        xlim    = (sig_result.x[1] - sig_result.x[2], sig_result.x[1] + sig_result.x[2])
+        sig_b   = 2*n_total*f_bg(sig_result.x[1])*sig_model.get_parameters()['gamma'].stderr
+
+    N_b     = n_total*integrate.quad(f_bg, xlim[0], xlim[1])[0]
     N_s     = sig_result.x[0]*n_total
-    sig_s   = np.sqrt(N_s)
+    sig_s   = n_total*sig_model.get_parameters()['A'].stderr
 
     print 'N_b = {0:.2f} +\- {1:.2f}'.format(N_b, sig_b)
     print 'N_s = {0:.2f} +\- {1:.2f}'.format(N_s, sig_s)
@@ -220,7 +224,6 @@ if __name__ == '__main__':
     ### Turn off fit verbosity for further tests
     bg_fitter.verbose  = False
     sig_fitter.verbose = False
-    '''
 
     if doKS:
         ks_res = ft.ks_test(data, sig_model.pdf, make_plots=True, suffix='{0}_{1}'.format(channel, period)) 

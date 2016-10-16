@@ -20,12 +20,12 @@ if __name__ == '__main__':
     ntuple_dir  = 'data/flatuples/mumu_2016'
     selection   = ('mumu', 'preselection')
     period      = 2016
-    lumi        = 19.8e3 if period == 2012 else 12e3
+    lumi        = 19.8e3 if period == 2012 else 1.4*12e3
     plot_data   = True
 
     if period == 2016:
         datasets = [
-                    'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                    'muon_2016B', 'muon_2016C', 'muon_2016D', 'muon_2016E', 'muon_2016F', 
                     'ttjets', 
                     't_t', 't_tw', 'tbar_t', 'tbar_tw', 
                     'zjets_m-50', 'zjets_m-10to50',

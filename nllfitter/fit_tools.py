@@ -227,6 +227,8 @@ def fit_plot_1D(data, xlim, sig_model, bg_model, suffix, path='plots'):
     elif suffix[0] == 'hgg':
         ax.set_title(r'$\sf h(125)\rightarrow \gamma\gamma$')
         ax.set_xlabel(r'$\sf m_{\gamma\gamma}$ [GeV]')
+    else:
+        ax.set_xlabel('x')
 
     ax.set_ylim([0., 1.65*np.max(h[0])])
     ax.set_ylabel('Entries / 2 GeV')
