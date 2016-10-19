@@ -143,7 +143,7 @@ class DataManager():
 
 class PlotManager():
     def __init__(self, data_manager, features, stack_labels, overlay_labels, 
-                 plot_data   = True,
+                 top_overlay = False,
                  output_path = 'plots',
                  file_ext    = 'png'
                 ):
@@ -151,7 +151,7 @@ class PlotManager():
         self._features       = features
         self._stack_labels   = stack_labels
         self._overlay_labels = overlay_labels
-        self._plot_data      = plot_data
+        self._top_overlay    = top_overlay
         self._output_path    = output_path
         self._file_ext       = file_ext
         self._initialize_colors()
@@ -161,7 +161,11 @@ class PlotManager():
         self._stack_colors   = [lut.loc[l].color for l in self._stack_labels]
         self._overlay_colors = [lut.loc[l].color for l in self._overlay_labels]
 
-    def make_overlays(self, features, do_cms_text=True, do_ratio=False):
+    def make_overlays(self, features, 
+                      plot_data=True, 
+                      normed=False,
+                      do_cms_text=True, 
+                      do_ratio=False):
         dm = self._dm
         make_directory(self._output_path)
 
@@ -176,7 +180,7 @@ class PlotManager():
 
         if len(self._stack_labels) > 0:
             legend_text.append('BG error')
-        if self._plot_data:
+        if plot_data:
             legend_text.append('Data')
 
         for feature in tqdm(features, desc='Plotting', unit_scale=True, ncols=75, total=len(features)):
@@ -238,18 +242,23 @@ class PlotManager():
                                            bins      = lut_entry.n_bins,
                                            range     = (lut_entry.xmin, lut_entry.xmax),
                                            color     = self._overlay_colors,
-                                           alpha     = 0.9,
+                                           alpha     = 1.,
                                            histtype  = 'step',
                                            linewidth = 2.,
+                                           #linestyle = '--',
+                                           normed    = normed,
+                                           bottom    = 0 if stack_max == 0 or not self._top_overlay else stack[-1],
                                            weights   = overlay_weights
                                           )
+
+                hists = np.array(hists)
                 overlay_max = np.max(hists.flatten())
                 #legend_handles.append(p)
 
             ### If there's data to overlay: apply feature condition and get
             ### datapoints plus errors
             data_max = 0
-            if self._plot_data:
+            if plot_data:
                 data, _ = get_data_and_weights(dataframes, feature, ['data'], lut_entry.condition)
                 y, x, yerr = hist_to_errorbar(data, 
                                               nbins = lut_entry.n_bins,
@@ -289,7 +298,7 @@ class PlotManager():
 
             ### log scale ###
             axes.set_yscale('log')
-            axes.set_ylim((0.1*np.min(stack_sum), 15.*y_max))
+            axes.set_ylim((0.05, 15.*y_max))
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, lut_entry.category, feature, self._file_ext))
 
             fig.clear()

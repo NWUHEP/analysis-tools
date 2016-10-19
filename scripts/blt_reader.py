@@ -20,11 +20,40 @@ def make_directory(filePath, clear=True):
     if clear and len(os.listdir(filePath)) != 0:
         os.system('rm '+filePath+'/*')
 
+def calculate_cos_theta(ref_p4, boost_p4, target_p4):
+    '''
+    Calculate cos(theta) of target in rest frame of boost relative with ref
+    defining the x axis in boost's reference frame.
+
+    Paramters:
+    ==========
+    ref_p4: TLorentzVector of reference particle
+    boost_p4: TLorentzVector of particle defining the rest frame
+    target_p4: TLorentzVector of particle whose cos(theta) value we would like to calculate
+    '''
+                                                                                  
+    boost = -1*boost_p4.BoostVector() 
+    B_clone.Boost(boost)  
+    ref = ref_p4.Vect()                                        
+    beam_axis = r.TLorentzVector(0, 0, 1, 1)
+    beam_axis.Boost(boost)                                                        
+                                                                                  
+    axis_z = (-1*B_threevect).Unit() 
+    axis_y = beamAxis.Vect().Cross(B_threevect).Unit()               
+    axis_x = axis_y.Cross(axis_z).Unit()                       
+    rotation = rotation.RotateAxes(axis_x, axis_y, axis_z).Inverse()    
+                                                                                  
+    target_p4.Boost(boost)                                                  
+    target_p4.Transform(rotation) 
+                                                                                  
+    return target_p4.CosTheta() 
+
+
 if __name__ == '__main__':
 
     ### Configuration ###
     selection    = 'mumu'
-    period       = 2016
+    period       = 2012
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
 

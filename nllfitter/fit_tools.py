@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 import pandas as pd
 import numpy as np
 import numpy.random as rng
+from numpy.polynomial.legendre import legval
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from scipy.stats import chi2, norm 
@@ -71,6 +72,57 @@ def voigt(x, a):
         y = np.real(wofz(z))/(sigma*np.sqrt(2*np.pi))
         return y
 
+def bg_pdf(x, a): 
+    '''
+    Second order Legendre Polynomial with constant term set to 0.5.
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1 and a2)
+    '''
+    z   = scale_data(x, xmin=12, xmax=70)
+    fx  = legval(z, [0.5, a[0], a[1]])*2/(70 - 12)
+    return fx
+
+def sig_pdf(x, a, normalize=False):
+    '''
+    Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (a1, a2, mu, and sigma)
+    '''
+
+    bg = bg_pdf(x, a[3:5])
+    sig = norm.pdf(x, a[1], a[2]) 
+    if normalize:
+        sig_norm = integrate.quad(lambda z: norm.pdf(z, a[1], a[2]), -1, 1)[0]
+    else:
+        sig_norm = 1.
+
+    return (1 - a[0])*bg + a[0]*sig/sig_norm
+
+def sig_pdf_alt(x, a, normalize=True):
+    '''
+    Second order Legendre Polynomial (normalized to unity) plus a Voigt
+    profile. N.B. The width of the convolutional Gaussian is set to 0.155 which
+    corresponds to a dimuon mass resolution 0.5 GeV.
+
+    Parameters:
+    ===========
+    x: data
+    a: model parameters (A, a1, a2, mu, and gamma)
+    '''
+    bg  = bg_pdf(x, a[3:5])
+    sig = voigt(x, [a[1], a[2], 0.45])
+    if normalize:
+        sig_norm = integrate.quad(lambda z: voigt(z, [a[1], a[2], 0.45]), 12, 70)[0]
+    else:
+        sig_norm = 1.
+
+    return (1 - a[0])*bg + a[0]*sig/sig_norm
 
 ### toy MC p-value calculator ###
 def calc_local_pvalue(N_bg, var_bg, N_sig, var_sig, ntoys=1e7):
@@ -91,7 +143,7 @@ def lnprob(x, pdf, bounds):
     else:
         return np.log(pdf(x))
 
-def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
+def generator(pdf, bounds, samples_per_toy=100, ntoys=1):
     '''
     Rejection sampling with broadcasting gives approximately the requested
     number of toys.  This works okay for simple pdfs.
@@ -103,7 +155,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     ntoys           : number of synthetic datasets to be produced
     bounds          : specify (lower, upper) bounds for the toy data
     '''
-
+    
     # Generate random numbers and map into domain defined by bounds.  Generate
     # twice the number of requested events in expectation of ~50% efficiency.
     # This will not be the case for more complicated pdfs presumably
@@ -112,7 +164,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     x = (bounds[1] - bounds[0])*x + bounds[0]
 
     # Carry out rejection sampling
-    keep = pdf(x) > rnums[1]
+    keep = pdf(x) > rnums[1]/(bounds[1] - bounds[0])
     x    = x[keep]
     
     # Remove excess events and shape to samples_per_toy.
@@ -123,7 +175,7 @@ def generator(pdf, samples_per_toy=100, ntoys=1, bounds=(-1.,1.)):
     # produce more.
     ndata = x.shape[0]
     if ndata < ntoys:
-        xplus = generator(pdf, samples_per_toy, (ntoys-ndata), bounds)
+        xplus = generator(pdf, bounds, samples_per_toy, (ntoys-ndata))
         x = np.concatenate((x, xplus))
     elif ndata > ntoys:
         x = x[:int(ntoys),]

@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm, chi2
+from tqdm import tqdm
 
 from nllfitter import Parameters, ScanParameters, Model, NLLFitter
 import nllfitter.fit_tools as ft
@@ -48,35 +49,25 @@ if __name__ == '__main__':
     ### Configuration ###
     #####################
 
-    minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
     make_plots = True
     is_batch   = False
-    model      = 'Voigt'
+    model      = 'Gaussian'
 
     ########################
     ### Define fit model ###
     ########################
 
     if channel == 'combined':
-        #data_1b1f_2012, n_1b1f_2012 = ft.get_data('data/muon_2012_1b1f.csv', 'dimuon_mass', xlimits)
-        #data_1b1c_2012, n_1b1c_2012 = ft.get_data('data/muon_2012_1b1c.csv', 'dimuon_mass', xlimits)
-        #data = np.concatenate((data_1b1f_2012, data_1b1c_2012))
-        #n_total = n_1b1f_2012 + n_1b1c_2012
-
-        #data_1b1f_2016, n_1b1f_2016 = ft.get_data('data/muon_2016_1b1f.csv', 'dimuon_mass', xlimits)
-        #data_1b1c_2016, n_1b1c_2016 = ft.get_data('data/muon_2016_1b1c.csv', 'dimuon_mass', xlimits)
-
-        #data = np.concatenate((data_1b1f_2016, data_1b1c_2016, data_1b1f_2012, data_1b1c_2012))
-        #n_total = n_1b1f_2012 + n_1b1c_2012 + n_1b1f_2016 + n_1b1c_2016
-
-        data_1b1f, n_1b1f = ft.get_data('data/events_pf_1b1f.csv', 'dimuon_mass', xlimits)
-        data_1b1c, n_1b1c = ft.get_data('data/events_pf_1b1c.csv', 'dimuon_mass', xlimits)
+        data_1b1f, n_1b1f = ft.get_data('data/fit/events_pf_1b1f.csv', 'dimuon_mass')
+        data_1b1c, n_1b1c = ft.get_data('data/fit/events_pf_1b1c.csv', 'dimuon_mass')
         data = np.concatenate((data_1b1f, data_1b1c))
         n_total = n_1b1f + n_1b1c
     else:
-        #data, n_total = ft.get_data('data/muon_2012_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
-        data, n_total = ft.get_data('data/events_pf_{0}.csv'.format(channel), 'dimuon_mass', xlimits)
+        data, n_total = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass')
+
+    data = data[data<70]
+    n_total = data.size
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
@@ -91,15 +82,21 @@ if __name__ == '__main__':
 
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
-    sig_params.add_many(
-                        ('A'     , 0.01  , True , 0. , 0.5   , None),
-                        ('mu'    , -0.5 , True , -0.9 , 0.9  , None),
-                        ('sigma' , 0.03 , True , 0.02 , 1.   , None)
-                       )
-    sig_params += bg_params.copy()
     if model == 'Gaussian':
+        sig_params.add_many(
+                            ('A'     , 0.01 , True , 0.0  , 1.  , None) ,
+                            ('mu'    , 30.  , True , 16.  , 66. , None) ,
+                            ('sigma' , 1.   , True , 0.45 , 3.  , None)
+                           )
+        sig_params += bg_params.copy()
         sig_model  = Model(ft.sig_pdf, sig_params)
     elif model == 'Voigt':
+        sig_params.add_many(
+                            ('A'     , 0.01 , True , 0.0 , 1.  , None) ,
+                            ('mu'    , 30.  , True , 16. , 66. , None) ,
+                            ('gamma' , 1.9  , True , 0.1 , 2.5 , None)
+                           )
+        sig_params += bg_params.copy()
         sig_model  = Model(ft.sig_pdf_alt, sig_params)
     sig_fitter = NLLFitter(sig_model, verbose=False)#, fcons=sig_constraint)
     sig_result = sig_fitter.fit(data)
@@ -109,28 +106,25 @@ if __name__ == '__main__':
     qmax = 2*(bg_model.calc_nll(data) - sig_model.calc_nll(data))
 
     ### Generate toy MC ###
-    print 'Generating pseudodata for likelihood scans...'
-    sims = ft.generator(bg_model.pdf, n_total, ntoys=nsims)
+    sims = ft.generator(bg_model.pdf, xlimits, n_total, ntoys=nsims)
 
     #######################################################
     ### Scan over search dimensions/nuisance parameters ###
     #######################################################
 
     ### Define scan values here ### 
-    print 'Preparing scan parameters...'
-
     mu_max    = sig_params['mu'].value
     sigma_max = sig_params['sigma'].value
     if ndim == 1:
         nscans = [30, 1]
-        bnds   = [(-0.9, 0.9), (sigma_max, sigma_max)]
+        bnds   = [(-16., 66.), (sigma_max, sigma_max)]
         scan_params = ScanParameters(names  = ['mu', 'sigma'],
                                      bounds = bnds,
                                      nscans = nscans
                                     )
     elif ndim == 2:
         nscans = [30, 20]
-        bnds   = [(-0.9, 0.9), (0.02, 0.07)]
+        bnds   = [(-16., 66.), (0.45, 2.5)]
         scan_params = ScanParameters(names = ['mu', 'sigma'],
                                      bounds = bnds,
                                      nscans = nscans 
@@ -140,11 +134,9 @@ if __name__ == '__main__':
     phiscan   = []
     qmaxscan  = []
     u_0       = np.linspace(0.01, 30., 300)
-    mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
-                            xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
-    sigma     = np.linspace((xlimits[1]-xlimits[0])/2*0.02, (xlimits[1]-xlimits[0])/2*0.15, nscans[1])
-    for i, sim in enumerate(sims):
-        if i%10 == 0: print 'Carrying out scan {0}...'.format(i+1)
+    mu        = np.linspace(-16, 66, nscans[0]) 
+    sigma     = np.linspace(0.45, 2.5, nscans[1])
+    for i, sim in tqdm(enumerate(sims), desc='Scanning simulation', unit_scale=True, ncols=75, total=len(sims)):
 
         # fit background model
         bg_result = bg_fitter.fit(sim)
@@ -170,7 +162,7 @@ if __name__ == '__main__':
         if make_plots and i < 50:
             sig_model.update_parameters(params)
             bg_model.update_parameters(bg_result.x)
-            ft.fit_plot(sim, xlimits, sig_model, bg_model,
+            ft.fit_plot_1D(sim, xlimits, sig_model, bg_model,
                         '{0}_{1}'.format(channel,i+1), path='plots/scan_fits')
             if ndim == 1:
                 ft.plot_pvalue_scan_1D(qscan.flatten(), mu, 
@@ -217,11 +209,11 @@ if __name__ == '__main__':
         for i, n in enumerate(nvals.flatten()): 
             print 'N{0} = {1:.2f}'.format(i+1, n)
 
-        print 'local p_value       = {0:.3e}'.format(p_local)
+        print 'local p value       = {0:.3e}'.format(p_local)
         print 'local significance  = {0:.2f}'.format(z_local)
-        print 'global p_value      = {0:.3e}'.format(p_global)
+        print 'global p value      = {0:.3e}'.format(p_global)
         print 'global significance = {0:.2f}'.format(z_global)
         print 'trial factor        = {0:.2f}'.format(p_global/p_local)
 
     print ''
-    print 'Runtime = {0:.2f} ms'.format(1e3*(timer() - start))
+    print 'Runtime = {0:.2f} s'.format((timer() - start))

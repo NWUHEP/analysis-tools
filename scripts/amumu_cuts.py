@@ -61,10 +61,18 @@ if __name__ == '__main__':
         print 'cut {0}: {1}'.format(i, df.shape[0])
 
     if period == '2016':
-        df0 = pd.read_csv('data/amumu_sync/Anton/cut5_1b1f.txt', header=None, sep=' ')
-        df0.columns = ['run_number', 'event_number']
+        evt_columns = ['run_number', 'event_number']
+        df0 = pd.read_csv('data/amumu_sync/Anton/cut_{0}.txt'.format(cat), header=None, sep=' ')
+        df0.columns = evt_columns
         df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]
 
-        en0 = df0.event_number
-        en = df.event_number
+        en    = df.event_number
+        en0   = df0.event_number
+        mask  = en.apply(lambda x: x not in en0.values)
+        mask0 = en0.apply(lambda x: x not in en.values)
 
+        print 'Events in my dataset, but not in sync dataset:'
+        print df[mask][evt_columns]
+        print ''
+        print 'Events in sync dataset, but not in my datset:'
+        print df0[mask0]

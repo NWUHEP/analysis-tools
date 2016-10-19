@@ -16,58 +16,6 @@ from nllfitter import Model, NLLFitter
 import nllfitter.fit_tools as ft
 import nllfitter.plot_tools as pt
 
-def bg_pdf(x, a): 
-    '''
-    Second order Legendre Polynomial with constant term set to 0.5.
-
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (a1 and a2)
-    '''
-    z   = ft.scale_data(x, xmin=12, xmax=70)
-    fx  = legval(z, [0.5, a[0], a[1]])*2/(70 - 12)
-    return fx
-
-def sig_pdf(x, a, normalize=False):
-    '''
-    Second order Legendre Polynomial (normalized to unity) plus a Gaussian.
-
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (a1, a2, mu, and sigma)
-    '''
-
-    bg = bg_pdf(x, a[3:5])
-    sig = norm.pdf(x, a[1], a[2]) 
-    if normalize:
-        sig_norm = integrate.quad(lambda z: norm.pdf(z, a[1], a[2]), -1, 1)[0]
-    else:
-        sig_norm = 1.
-
-    return (1 - a[0])*bg + a[0]*sig/sig_norm
-
-def sig_pdf_alt(x, a, normalize=True):
-    '''
-    Second order Legendre Polynomial (normalized to unity) plus a Voigt
-    profile. N.B. The width of the convolutional Gaussian is set to 0.155 which
-    corresponds to a dimuon mass resolution 0.5 GeV.
-
-    Parameters:
-    ===========
-    x: data
-    a: model parameters (A, a1, a2, mu, and gamma)
-    '''
-    bg  = bg_pdf(x, a[3:5])
-    sig = ft.voigt(x, [a[1], a[2], 0.45])
-    if normalize:
-        sig_norm = integrate.quad(lambda z: ft.voigt(z, [a[1], a[2], 0.45]), 12, 70)[0]
-    else:
-        sig_norm = 1.
-
-    return (1 - a[0])*bg + a[0]*sig/sig_norm
-
 
 def sig_constraint(sig_pdf, a):
     '''
@@ -99,11 +47,11 @@ if __name__ == '__main__':
     else:
         category = 'mumu'
         channel  = '1b1f'
-        period   = '2012'
+        period   = 2012
 
     ### Configuration
     pt.set_new_tdr()
-    do_sync     = True
+    do_sync     = False
     doToys      = False
     doKS        = False
     nsims       = 1000
@@ -111,13 +59,17 @@ if __name__ == '__main__':
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(category, period)
     output_path = 'plots/fits/{0}_{1}'.format(category, period)
 
-    if period == '2012':
-    datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
+    if period == 2012:
+        datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
+    elif period == 2016:
+        datasets    = ['muon_2016B', 'muon_2016C', 'muon_2016D']#, 'muon_2016E', 'muon_2016F']
+
     features    = ['dilepton_mass']
     cuts        = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                    and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
                    and lepton1_q != lepton2_q and n_bjets == 1 \
-                   and 12 < dilepton_mass < 70'
+                   and 12 < dilepton_mass < 70 \
+                   and dilepton_pt_over_m > 2.'
 
 
     if channel == '1b1f':
@@ -129,8 +81,8 @@ if __name__ == '__main__':
         cuts += ' and ((n_fwdjets > 0 and n_jets == 0) or \
                   (n_fwdjets == 0 and n_jets == 1 and four_body_delta_phi > 2.5 and met_mag < 40))'
     ### Get dataframes with features for each of the datasets ###
+    xlimits = (12, 70)
     if do_sync:
-        xlimits = (12, 70)
         if channel == 'combined':
             data_1b1f, n_1b1f = ft.get_data('data/fit/events_pf_1b1f.csv', 'dimuon_mass')
             data_1b1c, n_1b1c = ft.get_data('data/fit/events_pf_1b1c.csv', 'dimuon_mass')
@@ -143,15 +95,12 @@ if __name__ == '__main__':
         data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                       dataset_names = datasets,
                                       selection     = category,
-                                      period        = period,
+                                      period        = str(period),
                                       cuts          = cuts
                                      )
         df_data = data_manager.get_dataframe('data')
         data = df_data[features].values.transpose()[0]
-
-    '''
-    if channel == 'combined':
-    '''
+        n_total = data.size
 
 
     ### Define bg model and carry out fit ###
@@ -160,7 +109,7 @@ if __name__ == '__main__':
                        ('a1', 0., True, None, None, None),
                        ('a2', 0., True, None, None, None)
                       )
-    bg_model  = Model(bg_pdf, bg_params)
+    bg_model  = Model(ft.bg_pdf, bg_params)
     bg_fitter = NLLFitter(bg_model)
     bg_result = bg_fitter.fit(data)
 
@@ -173,15 +122,15 @@ if __name__ == '__main__':
                             ('sigma' , 1.   , True , 0.45 , 3.  , None)
                            )
         sig_params += bg_params.copy()
-        sig_model  = Model(sig_pdf, sig_params)
+        sig_model  = Model(ft.sig_pdf, sig_params)
     elif model == 'Voigt':
         sig_params.add_many(
                             ('A'     , 0.01 , True , 0.0 , 1.  , None) ,
-                            ('mu'    , 30.  , True , 20. , 50. , None) ,
-                            ('gamma' , 1.   , True , 0.1 , 3.  , None)
+                            ('mu'    , 29.  , True , 20. , 50. , None) ,
+                            ('gamma' , 1.9  , True , 0.1 , 3.  , None)
                            )
         sig_params += bg_params.copy()
-        sig_model  = Model(sig_pdf_alt, sig_params)
+        sig_model  = Model(ft.sig_pdf_alt, sig_params)
 
     sig_fitter = NLLFitter(sig_model)
     sig_result = sig_fitter.fit(data)
@@ -205,7 +154,7 @@ if __name__ == '__main__':
     print ''
 
     ### Calculate the number of events in around the peak
-    f_bg    = lambda x: bg_pdf(x, (sig_result.x[3], sig_result.x[4]))
+    f_bg    = lambda x: ft.bg_pdf(x, (sig_result.x[3], sig_result.x[4]))
     if model == 'Gaussian':
         xlim    = (sig_result.x[1] - 2*sig_result.x[2], sig_result.x[1] + 2*sig_result.x[2])
         sig_b   = 4*n_total*f_bg(sig_result.x[1])*sig_model.get_parameters()['sigma'].stderr

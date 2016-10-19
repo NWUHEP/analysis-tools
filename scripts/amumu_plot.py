@@ -17,9 +17,9 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    ntuple_dir  = 'data/flatuples/mumu_2016'
-    selection   = ('mumu', 'preselection')
-    period      = 2016
+    ntuple_dir  = 'data/flatuples/mumu_2012'
+    selection   = ('mumu', 'combined')
+    period      = 2012
     lumi        = 19.8e3 if period == 2012 else 1.4*12e3
     plot_data   = True
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                     'zjets_m-50', 'zjets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    'bprime_xb'
+                    'bprime_xb', 'fcnc'
                    ]
 
     features = [
@@ -84,7 +84,7 @@ if __name__ == '__main__':
                            ((n_fwdjets > 0 and n_jets == 0) or \
                            (n_fwdjets == 0 and n_jets == 1 and \
                            four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2 and four_body_delta_phi > 2.5 and met_mag < 50'  
+            'enhance'   : 'dilepton_pt_over_m > 2'
             }
 
     cuts['combined_sideband'] = cuts['combined'] + \
@@ -117,14 +117,15 @@ if __name__ == '__main__':
     output_path  = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
-                                  #stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
-                                  stack_labels   = ['t', 'ttbar', 'zjets'],
-                                  overlay_labels = [],
+                                  stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
+                                  overlay_labels = ['bprime_xb', 'fcnc'],
+                                  top_overlay    = True,
                                   output_path    = output_path,
                                   file_ext       = 'png'
                                  )
 
     if True:
+        #plot_manager.make_overlays(features, plot_data=False, normed=True)
         plot_manager.make_overlays(features)
     else:
         regions = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']

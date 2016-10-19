@@ -170,7 +170,8 @@ def gv_validation_plot(u, phiscan, qmax, nvals, kvals, scales, channel):
     '''
 
     ### Construct the survival function spectrum from maximum q of each scan ###
-    hval, hbins, _ = plt.hist(qmax, bins=30, range=(0.,30.), cumulative=True)
+    hval, hbins = np.histogram(qmax, bins=30, range=(0.,30.))
+    hval = np.cumsum(hval)
     hval = hval.max() - hval
     herr = np.sqrt(hval)
     pval = hval/hval.max()
@@ -200,21 +201,25 @@ def gv_validation_plot(u, phiscan, qmax, nvals, kvals, scales, channel):
     ax.plot(u, exp_phi_total, 'b--', linewidth=2.)
 
     ### Stylize ###
-    legend_text = [r'$1 -  \mathrm{CDF}(q(\theta))$', 
-                   r'$\overline{\phi}_{\mathrm{sim.}}$', 
-                   r'$\overline{\phi}_{\mathrm{th.}}$'
+    legend_text = [r'$\sf SF(q(\theta))$', 
+                   r'$\sf \overline{\phi}_{sim.}$', 
+                   r'$\sf \overline{\phi}_{th.}$'
                   ]
 
     ax.legend(legend_text)
     ax.set_yscale('log')
     ax.set_ylim(1e-5, 5*np.max(phiscan))
-    ax.set_ylabel(r'$\mathbb{\mathrm{P}}[q_{\mathrm{max}} > u]$')
+    ax.set_ylabel(r'$\sf \mathbf{P}[q_{max} > u]$')
     ax.set_xlim(0, 30)
-    ax.set_xlabel(r'$u$')
-    ax.set_title(channel.replace('_', ' '))
+    ax.set_xlabel(r'u')
+    #ax.set_title(channel.replace('_', ' '))
     ax.grid()
-    fig.savefig('plots/GV_validate_{0}.png'.format(channel))
-    fig.savefig('plots/GV_validate_{0}.pdf'.format(channel))
-    plt.close()
+
+    if channel == None:
+        plt.show()
+    else:
+        fig.savefig('plots/GV_validate_{0}.png'.format(channel))
+        fig.savefig('plots/GV_validate_{0}.pdf'.format(channel))
+        plt.close()
 
 

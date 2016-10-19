@@ -31,7 +31,7 @@ def bg_pdf(x, a):
     fx *= gamma.pdf(x[1], a=a[2], loc=a[3], scale=a[4])
     return fx
 
-def sig_pdf(x, a, normalize=False):
+def sig_pdf(x, a, normalize=True):
     '''
     2D Legendre polynomial plus a bivariate Gaussian.
     '''
@@ -40,13 +40,25 @@ def sig_pdf(x, a, normalize=False):
     #mvn = multivariate_normal([a[1], a[3]], [[a[2]**2, 0.], [0., a[4]**2]])
     #sig = mvn.pdf(zip(x[0], x[1])) 
 
-    sig = ft.voigt(x[0], [a[1], a[2], 0.45])*ft.voigt(x[1], [a[3], a[4], 4.])
+    sig_fx = lambda z: ft.voigt(z, [a[1], a[2], 0.45])
+    sig_fy = lambda z: norm.pdf(z, a[3], a[4])
+    #sig_y = ft.voigt(x[1], [a[3], a[4], 4.]) 
+    sig = sig_fx(x[0])*sig_fy(x[1])
+
     if normalize:
-        sig_norm = integrate.dblquad(lambda z1, z2: ft.voigt(z1, [a[1], a[2], 0.45])*ft.voigt(z1, [a[3], a[4], 3.]), 12, 70, lambda l:50, lambda l:350)[0]
+        # this would be needed if the two signal kernels are somehow
+        # correlated.  It is extremely slow so to use it in a fit would
+        # probably require a more efficient implementation
+        #integrand = lambda z2, z1: sig_fx(z1)*sig_fy(z2)
+        #sig_norm = integrate.dblquad(integrand, 12, 70, lambda lb:50, lambda ub:350)[0]
+
+        sig_norm = 1
+        sig_norm *= integrate.quad(sig_fx, 12, 70)[0]
+        sig_norm *= integrate.quad(sig_fy, 50, 350)[0]
     else:
         sig_norm = 1.
 
-    fx = (1 - a[0])*bg + a[0]*sig/0.97#sig_norm
+    fx = (1 - a[0])*bg + a[0]*sig/sig_norm
     return fx
 
 if __name__ == '__main__':
@@ -60,12 +72,21 @@ if __name__ == '__main__':
     selection   = ('mumu', 'combined')
     period      = 2012
     model       = 'Gaussian'
-    output_path = 'plots/fits/{0}_{1}'.format('_'.join(selection), period)
+    output_path = 'plots/fits/{0}_{1}'.format(selection[0], period)
+    ext         = 'png'
 
     datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
     features    = ['dilepton_mass', 'dilepton_b_mass', 'dilepton_pt_over_m']
-    cuts        = 'lepton1_q != lepton2_q and n_bjets == 1 \
-                   and 12 < dilepton_mass < 70 and 50 < dilepton_b_mass < 350'
+    
+    ### Define the selction criteria
+    cuts        = '(\
+                    lepton1_pt > 25 and abs(lepton1_eta) < 2.1\
+                    and lepton2_pt > 25 and abs(lepton2_eta) < 2.1\
+                    and lepton1_q != lepton2_q\
+                    and n_bjets == 1\
+                    and 12 < dilepton_mass < 70\
+                    and 50 < dilepton_b_mass < 350\
+                   )'
 
     if selection[1] == '1b1f':
         cuts += ' and n_fwdjets > 0 and n_jets == 0'
@@ -75,9 +96,11 @@ if __name__ == '__main__':
     elif selection[1] == 'combined':
         cuts += ' and ((n_fwdjets > 0 and n_jets == 0) or \
                   (n_fwdjets == 0 and n_jets == 1 and four_body_delta_phi > 2.5 and met_mag < 40))'
+    pt.make_directory(output_path, clear=False)
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                   dataset_names = datasets,
+                                  period        = 2012,
                                   selection     = selection[0],
                                   cuts          = cuts
                                  )
@@ -88,11 +111,11 @@ if __name__ == '__main__':
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
     bg_params.add_many(
-                       ('a1'    , 0.  , True , None , None , None) ,
-                       ('a2'    , 0.  , True , None , None , None) ,
-                       ('a'     , 2.  , True , 1.   , None  , None) ,
-                       ('loc'   , 50. , True , 20   , 60   , None) ,
-                       ('scale' , 30. , True , 0    , None , None) ,
+                       ('a1'    , 0.  , True , None , None , None),
+                       ('a2'    , 0.  , True , None , None , None),
+                       ('a'     , 2.  , True , 1.   , None , None),
+                       ('loc'   , 50. , False , 20   , 60  , None),
+                       ('scale' , 30. , True , 0    , None , None),
                       )
 
     bg_model  = Model(bg_pdf, bg_params)
@@ -101,28 +124,17 @@ if __name__ == '__main__':
 
     ### Define bg+sig model and carry out fit ###
     sig_params = Parameters()
-    if model == 'Gaussian':
-        sig_params.add_many(
-                            ('A'      , 0.01 , True , 0.0  , 1.   , None) ,
-                            ('mu1'    , 30.  , True , 20.  , 40.  , None) ,
-                            ('sigma1' , 1.   , True , 0.45 , 2.5  , None) ,
-                            ('mu2'    , 150. , True , 120. , 180. , None) ,
-                            ('sigma2' , 5.   , True , 2.   , 15.  , None) ,
-                           )
-        #for n,p in bg_params.iteritems():
-        #    p.vary = False
-        sig_params += bg_params.copy()
-        sig_model  = Model(sig_pdf, sig_params)
-
-   # elif model == 'Voigt':
-   #     sig_params.add_many(
-   #                         ('A'     , 0.01   , True , 0.0   , 1.    , None),
-   #                         ('mu'    , -0.43  , True , -0.8  , 0.8   , None),
-   #                         ('gamma' , 0.033  , True , 0.01  , 0.1   , None),
-   #                        )
-   #     sig_params += bg_params.copy()
-   #     sig_model  = Model(ft.sig_pdf_alt, sig_params)
-
+    sig_params.add_many(
+                        ('A'     , 0.01 , True , 0.0  , 1.   , None),
+                        ('mu1'   , 30.  , True , 20.  , 40.  , None),
+                        ('sigma' , 1.   , True , 0.45 , 2.5  , None),
+                        ('mu2'   , 150. , True , 120. , 180. , None),
+                        ('gamma' , 5.   , True , 2.   , 20.  , None),
+                       )
+    #for n,p in bg_params.iteritems():
+    #    p.vary = False
+    sig_params += bg_params.copy()
+    sig_model  = Model(sig_pdf, sig_params)
     sig_fitter = NLLFitter(sig_model)
     sig_result = sig_fitter.fit(data, calculate_corr=True)
 
@@ -171,11 +183,10 @@ if __name__ == '__main__':
     plt.xlim(12, 70)
     plt.ylim(50, 350)
 
-    plt.savefig('plots/fits/test.png')
-    plt.savefig('plots/fits/test.pdf')
+    plt.savefig('{0}/mumub_mumu_{1}.{2}'.format(output_path, selection[1], ext))
     plt.close()
 
-	#fig = plt.figure()
+    #fig = plt.figure()
     #ax = fig.add_subplot(111, projection='3d')
     #ax.plot_surface(a1, a2, fx.transpose(), rstride=4, cstride=4, alpha=0.2, cmap='coolwarm')
     #ax.contour(a1, a2, fx.transpose(), zdir='z', offset=0, cmap='coolwarm')
