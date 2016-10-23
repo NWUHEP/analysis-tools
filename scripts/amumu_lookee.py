@@ -42,8 +42,8 @@ if __name__ == '__main__':
         ndim    = int(sys.argv[3])
     else:
         channel = '1b1f'
-        nsims   = 10
-        ndim    = 2
+        nsims   = 100
+        ndim    = 1
 
     #####################
     ### Configuration ###
@@ -117,14 +117,14 @@ if __name__ == '__main__':
     sigma_max = sig_params['sigma'].value
     if ndim == 1:
         nscans = [30, 1]
-        bnds   = [(-16., 66.), (sigma_max, sigma_max)]
+        bnds   = [(16., 66.), (sigma_max, sigma_max)]
         scan_params = ScanParameters(names  = ['mu', 'sigma'],
                                      bounds = bnds,
                                      nscans = nscans
                                     )
     elif ndim == 2:
         nscans = [30, 20]
-        bnds   = [(-16., 66.), (0.45, 2.5)]
+        bnds   = [(16., 66.), (0.45, 2.)]
         scan_params = ScanParameters(names = ['mu', 'sigma'],
                                      bounds = bnds,
                                      nscans = nscans 
@@ -134,9 +134,15 @@ if __name__ == '__main__':
     phiscan   = []
     qmaxscan  = []
     u_0       = np.linspace(0.01, 30., 300)
-    mu        = np.linspace(-16, 66, nscans[0]) 
-    sigma     = np.linspace(0.45, 2.5, nscans[1])
-    for i, sim in tqdm(enumerate(sims), desc='Scanning simulation', unit_scale=True, ncols=75, total=len(sims)):
+    mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
+                            xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
+    sigma     = np.linspace((xlimits[1]-xlimits[0])/2*0.02, (xlimits[1]-xlimits[0])/2*0.15, nscans[1])
+    for i, sim in tqdm(enumerate(sims), 
+                       desc       = 'Scanning simulation',
+                       unit_scale = True,
+                       ncols      = 75,
+                       total      = len(sims)
+                      ):
 
         # fit background model
         bg_result = bg_fitter.fit(sim)
@@ -193,6 +199,7 @@ if __name__ == '__main__':
         kvals      = [1]
         scales     = [0.5]
         nvals      = lee.get_GV_coefficients(u_0, phiscan, param_init, param_bnds, kvals, scales)
+        nvals      = np.reshape(nvals, (1, ndim))
 
         ### Calculate statistics ###
         p_local  = 0.5*chi2.sf(qmax, 1)

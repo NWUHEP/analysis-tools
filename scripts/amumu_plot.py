@@ -118,7 +118,7 @@ if __name__ == '__main__':
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
                                   stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
-                                  overlay_labels = ['bprime_xb', 'fcnc'],
+                                  overlay_labels = ['bprime_xb'],# 'fcnc'],
                                   top_overlay    = True,
                                   output_path    = output_path,
                                   file_ext       = 'png'

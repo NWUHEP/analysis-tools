@@ -26,10 +26,10 @@ def bg_pdf(x, a):
     '''
     Legendre polynomial times a gamma distribution background pdf
     '''
-    z   = ft.scale_data(x[0], xmin=12, xmax=70)
-    fx  = legval(z, [0.5, a[0], a[1]])*2/(70 - 12)
-    fx *= gamma.pdf(x[1], a=a[2], loc=a[3], scale=a[4])
-    return fx
+    bg_fx = lambda z: legval(ft.scale_data(z, xmin=12, xmax=70), [0.5, a[0], a[1]])*2/(70 - 12)
+    bg_fy = lambda z: gamma.pdf(z, a=a[2], loc=a[3], scale=a[4])
+    bg = bg_fx(x[0])*bg_fy(x[1])
+    return bg
 
 def sig_pdf(x, a, normalize=True):
     '''
@@ -37,29 +37,65 @@ def sig_pdf(x, a, normalize=True):
     '''
     bg  = bg_pdf(x, a[5:])
 
-    #mvn = multivariate_normal([a[1], a[3]], [[a[2]**2, 0.], [0., a[4]**2]])
-    #sig = mvn.pdf(zip(x[0], x[1])) 
-
     sig_fx = lambda z: ft.voigt(z, [a[1], a[2], 0.45])
     sig_fy = lambda z: norm.pdf(z, a[3], a[4])
-    #sig_y = ft.voigt(x[1], [a[3], a[4], 4.]) 
     sig = sig_fx(x[0])*sig_fy(x[1])
 
     if normalize:
-        # this would be needed if the two signal kernels are somehow
-        # correlated.  It is extremely slow so to use it in a fit would
-        # probably require a more efficient implementation
-        #integrand = lambda z2, z1: sig_fx(z1)*sig_fy(z2)
-        #sig_norm = integrate.dblquad(integrand, 12, 70, lambda lb:50, lambda ub:350)[0]
-
         sig_norm = 1
         sig_norm *= integrate.quad(sig_fx, 12, 70)[0]
-        sig_norm *= integrate.quad(sig_fy, 50, 350)[0]
+        #sig_norm *= integrate.quad(sig_fy, 50, 500)[0]
     else:
         sig_norm = 1.
 
-    fx = (1 - a[0])*bg + a[0]*sig/sig_norm
-    return fx
+    return (1 - a[0])*bg + a[0]*sig/sig_norm
+
+def fit_plot_profile(data, x, y_bg1, y_bg2, y_sig, 
+                     bins, xlim, suffix, 
+                     path='plots'
+                    ):
+
+    binning = (xlim[1] - xlim[0])/bins
+
+    # Get histogram of data points
+    hist, bins = np.histogram(data, bins=bins, range=xlim)
+    bins    = (bins[1:] + bins[:-1])/2.
+    binerrs = np.sqrt(hist) 
+    hist, bins, binerrs = hist[hist>0], bins[hist>0], binerrs[hist>0]
+    
+    plt.close()
+
+    fig, ax = plt.subplots()
+    ax.plot(x , y_sig , 'b-'  , linewidth=2.5)
+    ax.plot(x , y_bg1 , 'b--' , linewidth=2.5)
+    ax.plot(x , y_bg2 , 'r-.' , linewidth=2.5)
+    ax.errorbar(bins, hist, 
+                yerr       = binerrs,
+                fmt        = 'ko',
+                capsize    = 0,
+                elinewidth = 2,
+                markersize = 9
+               )
+    ax.legend(['BG+Sig.', 'BG', 'BG only', 'Data']) 
+
+    if suffix == 'mumu':
+        ax.set_xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+    elif suffix == 'mumub':
+        ax.set_xlabel(r'$\sf m_{\mu\mu b}$ [GeV]')
+
+    ax.set_ylim([0., 1.6*np.max(hist)])
+    ax.set_ylabel('Entries / {0} GeV'.format(int(binning)))
+    ax.set_xlim(xlim)
+    ax.grid()
+
+    ### Add lumi text ###
+    ax.text(0.06, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
+    ax.text(0.17, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
+    ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
+
+
+    fig.savefig(path)
+    plt.close()
 
 if __name__ == '__main__':
 
@@ -68,15 +104,16 @@ if __name__ == '__main__':
 
     ### Configuration
     pt.set_new_tdr()
+    use_official = False
+    use_data     = False
     ntuple_dir  = 'data/flatuples/mumu_2012'
     selection   = ('mumu', 'combined')
     period      = 2012
     model       = 'Gaussian'
     output_path = 'plots/fits/{0}_{1}'.format(selection[0], period)
-    ext         = 'png'
+    ext         = 'pdf'
 
-    datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
-    features    = ['dilepton_mass', 'dilepton_b_mass', 'dilepton_pt_over_m']
+    features    = ['dilepton_mass', 'dilepton_b_mass']#, 'dilepton_pt_over_m']
     
     ### Define the selction criteria
     cuts        = '(\
@@ -85,7 +122,6 @@ if __name__ == '__main__':
                     and lepton1_q != lepton2_q\
                     and n_bjets == 1\
                     and 12 < dilepton_mass < 70\
-                    and 50 < dilepton_b_mass < 350\
                    )'
 
     if selection[1] == '1b1f':
@@ -94,28 +130,54 @@ if __name__ == '__main__':
         cuts += ' and n_fwdjets == 0 and n_jets == 1 \
                   and four_body_delta_phi > 2.5 and met_mag < 40'
     elif selection[1] == 'combined':
-        cuts += ' and ((n_fwdjets > 0 and n_jets == 0) or \
-                  (n_fwdjets == 0 and n_jets == 1 and four_body_delta_phi > 2.5 and met_mag < 40))'
+        cuts += ' and ((n_fwdjets > 0 and n_jets == 0) \
+                  or (n_fwdjets == 0 and n_jets == 1 \
+                  and four_body_delta_phi > 2.5 and met_mag < 40))'
     pt.make_directory(output_path, clear=False)
     ### Get dataframes with features for each of the datasets ###
-    data_manager = pt.DataManager(input_dir     = ntuple_dir,
-                                  dataset_names = datasets,
-                                  period        = 2012,
-                                  selection     = selection[0],
-                                  cuts          = cuts
-                                 )
-    df_data = data_manager.get_dataframe('data')
-    data = df_data[features]
-    data = data.values.transpose()
+    if use_official:
+        if selection[1] == 'combined':
+            df_1b1f = pd.read_csv('data/fit/events_1b1f_olga.txt')
+            df_1b1c = pd.read_csv('data/fit/events_1b1c_olga.txt')
+            df_data = df_1b1f.append(df_1b1c)
+        else:
+            df_data = pd.read_csv('data/fit/events_{0}_olga.txt'.format(selection[1]))
+        data = df_data[features]
+        data = data.values.transpose()
+    elif use_data:
+        datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
+        data_manager = pt.DataManager(input_dir     = ntuple_dir,
+                                      dataset_names = datasets,
+                                      period        = 2012,
+                                      selection     = selection[0],
+                                      cuts          = cuts
+                                     )
+        df_data = data_manager.get_dataframe('data')
+        data = df_data[features]
+        data = data.values.transpose()
+    else:
+        datasets     = ['ttbar_lep', 'ttbar_lep', 'zjets_m-50', 'zjets_m-10to50', 'bprime_xb']
+        data_manager = pt.DataManager(input_dir     = ntuple_dir,
+                                      dataset_names = datasets,
+                                      period        = 2012,
+                                      selection     = selection[0],
+                                      cuts          = cuts
+                                     )
+        df_ttbar  = data_manager.get_dataframe('ttbar')[features][:720]
+        df_bprime = data_manager.get_dataframe('bprime_xb')[features][:40]
+        df_bprime['dilepton_mass'] = ft.generator(lambda x: ft.voigt(x, [29, 1.9, 0.45]), (24,33), 200)[:40]
+
+        data = df_ttbar.append(df_bprime).values
+        data = data.transpose()
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()
     bg_params.add_many(
                        ('a1'    , 0.  , True , None , None , None),
                        ('a2'    , 0.  , True , None , None , None),
-                       ('a'     , 2.  , True , 1.   , None , None),
-                       ('loc'   , 50. , False , 20   , 60  , None),
-                       ('scale' , 30. , True , 0    , None , None),
+                       ('k'     , 2.  , True , 1.   , None , None),
+                       ('x0'    , 50. , False , 20   , 60  , None),
+                       ('theta' , 30. , True , 0    , None , None),
                       )
 
     bg_model  = Model(bg_pdf, bg_params)
@@ -127,9 +189,9 @@ if __name__ == '__main__':
     sig_params.add_many(
                         ('A'     , 0.01 , True , 0.0  , 1.   , None),
                         ('mu1'   , 30.  , True , 20.  , 40.  , None),
-                        ('sigma' , 1.   , True , 0.45 , 2.5  , None),
+                        ('gamma' , 1.   , True , 0.45 , 3.   , None),
                         ('mu2'   , 150. , True , 120. , 180. , None),
-                        ('gamma' , 5.   , True , 2.   , 20.  , None),
+                        ('sigma' , 5.   , True , 1.   , 25.  , None),
                        )
     #for n,p in bg_params.iteritems():
     #    p.vary = False
@@ -137,62 +199,6 @@ if __name__ == '__main__':
     sig_model  = Model(sig_pdf, sig_params)
     sig_fitter = NLLFitter(sig_model)
     sig_result = sig_fitter.fit(data, calculate_corr=True)
-
-    #h, b, p = plt.hist(data[0], bins=29, range=(12, 70), histtype='step',  normed=True)
-    #x1 = np.linspace(12, 70, 10000)
-    #y1 = bg_pdf([x1,x2], bg_result.x)
-    #y2 = sig_pdf([x], sig_result.x)
-    #plt.plot(x1, y1, 'r-')
-    #plt.plot(x2, y1, 'b--')
-    #plt.xlim((12, 70))
-    #plt.ylim((0, 1.3*np.max(h)))
-
-    ### Plots!!! ###
-    z1, z2 = np.linspace(12, 70, 1000), np.linspace(50, 350, 1000)
-    x  = np.array(list(product(*[z1, z2]))).transpose()
-    fx = bg_pdf(x, bg_result.x)
-    fx = fx.reshape(1000, 1000).transpose()
-    plt.pcolormesh(z1, z2, fx, 
-                   alpha = 0.75,
-                   cmap  = 'viridis',
-                   vmin  = 0.,
-                   rasterized=True
-                  )
-    #cbar = plt.colorbar()
-    #cbar.set_label(r'probability')
-
-    plt.scatter(data[0], data[1], 
-                s=30*(1+data[2]/3), 
-                cmap = 'viridis',
-                #c=50*(1+data[2]/3), 
-                c='k',
-                alpha=0.7
-               )
-
-    fx = sig_pdf(x, sig_result.x)
-    fx = fx.reshape(1000, 1000).transpose()
-    plt.contour(z1, z2, fx, 
-                levels     = np.linspace(0, 0.0006, 15),
-                alpha      = 0.7,
-                colors     = 'w',
-                #cmap       = 'hot',
-                linewidths = 3.,
-               )
-    plt.xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
-    plt.ylabel(r'$\sf m_{\mu\mu b}$ [GeV]')
-    plt.xlim(12, 70)
-    plt.ylim(50, 350)
-
-    plt.savefig('{0}/mumub_mumu_{1}.{2}'.format(output_path, selection[1], ext))
-    plt.close()
-
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111, projection='3d')
-    #ax.plot_surface(a1, a2, fx.transpose(), rstride=4, cstride=4, alpha=0.2, cmap='coolwarm')
-    #ax.contour(a1, a2, fx.transpose(), zdir='z', offset=0, cmap='coolwarm')
-    #ax.contour(a1, a2, fx.transpose(), zdir='y', offset=350, cmap='coolwarm')
-    #ax.contour(a1, a2, fx.transpose(), zdir='x', offset=30, cmap='coolwarm')
-    #plt.show()
 
     ### Calculate the likelihood ration between the background and signal model
     ### given the data and optimized parameters
@@ -218,5 +224,159 @@ if __name__ == '__main__':
     print ''
     '''
 
+    ### Makes an overlay of the data, bg, and sig+bg models in 2D ###
+    x1, x2 = np.linspace(12, 70, 1000), np.linspace(50, 350, 1000)
+    x = np.meshgrid(x1, x2)
+    fx = bg_pdf(x, bg_result.x)
+    plt.pcolormesh(x1, x2, fx, 
+                   alpha = 0.75,
+                   cmap  = 'viridis',
+                   vmin  = 0.,
+                   rasterized=True
+                  )
+    #cbar = plt.colorbar()
+    #cbar.set_label(r'probability')
+    data_probabilities = sig_pdf(data, sig_result.x),
+    data_scale = data_probabilities/np.max(data_probabilities)
+    plt.scatter(data[0], data[1], 
+                cmap  = 'plasma',
+                #c     = data_scale,
+                s     = 60, #200*data_scale,
+                c    = 'k',
+                alpha = 0.7
+               )
+
+    fx = sig_pdf(x, sig_result.x)
+    plt.contour(x1, x2, fx, 
+                levels     = np.linspace(0, 0.0006, 15),
+                alpha      = 0.6,
+                colors     = 'w',
+                #cmap       = 'hot',
+                linewidths = 3.,
+               )
+    plt.xlabel(r'$\sf m_{\mu\mu}$ [GeV]')
+    plt.ylabel(r'$\sf m_{\mu\mu b}$ [GeV]')
+    plt.xlim(12, 70)
+    plt.ylim(50, 350)
+
+    plt.savefig('{0}/mumub_mumu_{1}_2D.{2}'.format(output_path, selection[1], ext))
+    plt.close()
+
+    ### 3D surface plot of bg+signal fit ###
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(x[0], x[1], fx, rstride=20, cstride=20, alpha=0.9, cmap='Blues')
+    ax.contour(x[0], x[1], fx, zdir='z', offset=0, cmap='viridis')
+    #ax.contour(x[0], x[1], fx, zdir='y', offset=159, cmap='coolwarm')
+    #ax.contour(x[0], x[1], fx, zdir='x', offset=70, cmap='coolwarm')
+    ax.set_xlabel(r'$\sf M_{\mu\mu}$')
+    ax.set_ylabel(r'$\sf M_{\mu\mu b}$')
+
+    plt.savefig('{0}/mumub_mumu_{1}_3D.{2}'.format(output_path, selection[1], ext))
+    plt.close()
+
+    ### Conditional distributions and projections ###
+    mu1            = sig_params['mu1'].value
+    mu2            = sig_params['mu2'].value
+    gam            = sig_params['gamma'].value
+    sig            = sig_params['sigma'].value
+    mask_mumu_sig  = (data[0] < mu1-gam) | (data[0] > mu1+gam)
+    mask_mumub_sig = (data[1] < mu2-2*sig) | (data[1] > mu2+2*sig)
+
+    ### mumub signal in mumu
+    f_sig = lambda xint, z: sig_pdf([z, xint], sig_result.x)
+    f_sbg = lambda xint, z: bg_pdf([z, xint], sig_result.x[5:])
+    f_bg  = lambda xint, z: bg_pdf([z, xint], bg_result.x)
+    x     = np.linspace(12, 70, 116)
+
+    y_sig1 = np.array([integrate.quad(f_sig, 0, mu2-2*sig, args = (xx))[0] for xx in x])
+    y_sbg1 = np.array([integrate.quad(f_sbg, 0, mu2-2*sig, args = (xx))[0] for xx in x])
+    y_bg1  = np.array([integrate.quad(f_bg, 0, mu2-2*sig, args = (xx))[0] for xx in x])
+
+    y_sig2 = np.array([integrate.quad(f_sig, mu2-2*sig, mu2+2*sig, args = (xx))[0] for xx in x])
+    y_sbg2 = np.array([integrate.quad(f_sbg, mu2-2*sig, mu2+2*sig, args = (xx))[0] for xx in x])
+    y_bg2  = np.array([integrate.quad(f_bg, mu2-2*sig, mu2+2*sig, args = (xx))[0] for xx in x])
+
+    y_sig3 = np.array([integrate.quad(f_sig, mu2+2*sig, 1000, args = (xx))[0] for xx in x])
+    y_sbg3 = np.array([integrate.quad(f_sbg, mu2+2*sig, 1000, args = (xx))[0] for xx in x])
+    y_bg3  = np.array([integrate.quad(f_bg, mu2+2*sig, 1000, args = (xx))[0] for xx in x])
+    
+    data_masked = data[0][mask_mumub_sig==False]
+    scale = 2*data_masked.size/(0.5*y_bg2.sum())
+    y_bg = scale*y_bg2
+
+    scale = 2*data_masked.size/(0.5*y_sig2.sum())
+    y_sbg = scale*(1 - sig_result.x[0])*y_sbg2
+    y_sig = scale*y_sig2
+
+    fit_plot_profile(data_masked, x, y_sbg, y_bg, y_sig, 
+                     bins=29, 
+                     xlim=(12, 70), 
+                     suffix='mumu',
+                     path=output_path+'/mumu_fit_profile_signal.pdf'
+                    )
+
+    data_masked = data[0][mask_mumub_sig]
+    scale = 2*data_masked.size/(0.5*np.sum(y_bg1 + y_bg3))
+    y_bg = scale*(y_bg1 + y_bg3)
+
+    scale = 2*data_masked.size/(0.5*np.sum(y_sig1 + y_sig3))
+    y_sbg = scale*(1 - sig_result.x[0])*(y_sbg1 + y_sbg3)
+    y_sig = scale*(y_sig1+y_sig3)
+
+    fit_plot_profile(data_masked, x, y_sbg, y_bg, y_sig, 
+                     bins=29, 
+                     xlim=(12, 70), 
+                     suffix='mumu',
+                     path=output_path+'/mumu_fit_profile_sideband.pdf'
+                    )
+
+    ### mumu signal in mumub
+    f_sig = lambda xint, z: sig_pdf([xint, z], sig_result.x)
+    f_sbg = lambda xint, z: bg_pdf([xint, z], sig_result.x[5:])
+    f_bg  = lambda xint, z: bg_pdf([xint, z], bg_result.x)
+    x     = np.linspace(0, 400, 400)
+
+    y_sig1 = np.array([integrate.quad(f_sig, 12, mu1-gam, args = (xx))[0] for xx in x])
+    y_sbg1 = np.array([integrate.quad(f_sbg, 12, mu1-gam, args = (xx))[0] for xx in x])
+    y_bg1  = np.array([integrate.quad(f_bg, 12, mu1-gam, args = (xx))[0] for xx in x])
+
+    y_sig2 = np.array([integrate.quad(f_sig, mu1-gam, mu1+gam, args = (xx))[0] for xx in x])
+    y_sbg2 = np.array([integrate.quad(f_sbg, mu1-gam, mu1+gam, args = (xx))[0] for xx in x])
+    y_bg2  = np.array([integrate.quad(f_bg, mu1-gam, mu1+gam, args = (xx))[0] for xx in x])
+
+    y_sig3 = np.array([integrate.quad(f_sig, mu1+gam, 70, args = (xx))[0] for xx in x])
+    y_sbg3 = np.array([integrate.quad(f_sbg, mu1+gam, 70, args = (xx))[0] for xx in x])
+    y_bg3  = np.array([integrate.quad(f_bg, mu1+gam, 70, args = (xx))[0] for xx in x])
+    
+    data_masked = data[1][mask_mumu_sig==False]
+    scale = 10*data_masked.size/y_bg2.sum()
+    y_bg = scale*y_bg2
+
+    scale = 10*data_masked.size/y_sig2.sum()
+    y_sbg = scale*(1 - sig_result.x[0])*y_sbg2
+    y_sig = scale*y_sig2
+
+    fit_plot_profile(data_masked, x, y_sbg, y_bg, y_sig, 
+                     bins=40, 
+                     xlim=(0, 400), 
+                     suffix='mumub',
+                     path=output_path+'/mumub_fit_profile_signal.pdf'
+                    )
+
+    data_masked = data[1][mask_mumu_sig]
+    scale = 10*data_masked.size/np.sum(y_bg1 + y_bg3)
+    y_bg = scale*(y_bg1 + y_bg3)
+
+    scale = 10*data_masked.size/np.sum(y_sig1 + y_sig3)
+    y_sbg = scale*(1 - sig_result.x[0])*(y_sbg1 + y_sbg3)
+    y_sig = scale*(y_sig1+y_sig3)
+
+    fit_plot_profile(data_masked, x, y_sbg, y_bg, y_sig, 
+                     bins=40, 
+                     xlim=(0, 400), 
+                     suffix='mumub',
+                     path=output_path+'/mumub_fit_profile_sideband.pdf'
+                    )
     print ''
-    print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
+    print 'runtime: {0:.2f} s'.format((timer() - start))

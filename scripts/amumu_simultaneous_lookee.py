@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.stats import norm, chi2
+from tqdm import tqdm
 
 from nllfitter import Parameters, ScanParameters, Model, CombinedModel, NLLFitter
 import nllfitter.fit_tools as ft
@@ -22,14 +23,14 @@ if __name__ == '__main__':
         nsims   = int(sys.argv[1])
         ndim    = int(sys.argv[2])
     else:
-        nsims   = 100
+        nsims   = 20
         ndim    = 1
 
     ### Config 
     minalgo    = 'SLSQP'
     xlimits    = (12., 70.)
     channels   = ['1b1f', '1b1c']
-    make_plots = True
+    make_plots = False
     is_batch   = False
 
     ########################
@@ -38,8 +39,8 @@ if __name__ == '__main__':
 
     datasets  = []
     for channel in channels:
-        data, n_total  = ft.get_data('data/events_pf_{0}.csv'.format(channel), 
-                                  'dimuon_mass', xlimits)
+        data, n_total  = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass')
+        data = data[data < 70]
         datasets.append(data)
 
     ### Fit single models to initialize parameters ###
@@ -49,18 +50,18 @@ if __name__ == '__main__':
                        ('a1', 0., True, None, None, None),
                        ('a2', 0., True, None, None, None)
                       )
-    bg1_model = Model(ft.bg_pdf, bg1_params)
-    bg_fitter = NLLFitter(bg1_model, verbose=False)
-    bg_result = bg_fitter.fit(datasets[0])
+    bg1_model  = Model(ft.bg_pdf, bg1_params)
+    bg1_fitter = NLLFitter(bg1_model, verbose=False)
+    bg1_result = bg1_fitter.fit(datasets[0])
 
     bg2_params = Parameters()
     bg2_params.add_many(
                        ('b1', 0., True, None, None, None),
                        ('b2', 0., True, None, None, None)
                       )
-    bg2_model = Model(ft.bg_pdf, bg2_params)
-    bg_fitter = NLLFitter(bg2_model, verbose=False)
-    bg_result = bg_fitter.fit(datasets[1])
+    bg2_model  = Model(ft.bg_pdf, bg2_params)
+    bg2_fitter = NLLFitter(bg2_model, verbose=False)
+    bg2_result = bg2_fitter.fit(datasets[1])
 
     ### Carry out combined background fit ###
     bg_model = CombinedModel([bg1_model, bg2_model])
@@ -71,24 +72,24 @@ if __name__ == '__main__':
     sig1_params = Parameters()
     sig1_params.add_many(
                         ('A1'    , 0.01 , True , 0.   , 1.   , None),
-                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
-                        ('sigma' , 0.01 , True , 0.02 , 1.   , None)
+                        ('mu'    , 30.  , True , 20.  , 50.  , None),
+                        ('sigma' , 1.0  , True , 0.45 , 2.   , None)
                        )
     sig1_params += bg1_params.copy()
-    sig1_model = Model(ft.sig_pdf, sig1_params)
-    sig_fitter = NLLFitter(sig1_model, verbose=False)
-    sig_result = sig_fitter.fit(datasets[0])
+    sig1_model  = Model(ft.sig_pdf, sig1_params)
+    sig1_fitter = NLLFitter(sig1_model, verbose=False)
+    sig1_result = sig1_fitter.fit(datasets[0])
 
     sig2_params = Parameters()
     sig2_params.add_many(
                         ('A2'    , 0.01 , True , 0.   , 1.   , None),
-                        ('mu'    , -0.5 , True , -0.8 , 0.8  , None),
-                        ('sigma' , 0.01 , True , 0.02 , 1.   , None)
+                        ('mu'    , 30.  , True , 20.  , 50.  , None),
+                        ('sigma' , 1.0  , True , 0.45 , 2.   , None)
                        )
     sig2_params += bg2_params.copy()
-    sig2_model = Model(ft.sig_pdf, sig2_params)
-    sig_fitter = NLLFitter(sig2_model, verbose=False)
-    sig_result = sig_fitter.fit(datasets[1])
+    sig2_model  = Model(ft.sig_pdf, sig2_params)
+    sig2_fitter = NLLFitter(sig2_model, verbose=False)
+    sig2_result = sig2_fitter.fit(datasets[1])
 
     ### Carry out combined signal+background fit ###
     sig_model  = CombinedModel([sig1_model, sig2_model])
@@ -100,69 +101,89 @@ if __name__ == '__main__':
     qmax = 2*(bg_model.calc_nll(datasets) - sig_model.calc_nll(datasets))
 
     ### Generate toy MC ###
-    print 'Generating {0} pseudodatasets for likelihood scans...'.format(nsims)
     sims = []
     for model, dataset in zip(bg_model.models, datasets):
-        simdata = ft.generator(model.pdf, dataset.size, ntoys=nsims)
+        simdata = ft.generator(model.pdf, xlimits, dataset.size, ntoys=nsims)
         sims.append(simdata)
     sims = zip(sims[0], sims[1])
+
+    ### Define scan values here ### 
+    sig_params   = sig_model.get_parameters()
+    mu_max       = sig_params['mu'].value
+    sigma_max    = sig_params['sigma'].value
+    mu_limits    = (16, 66)
+
+    if ndim == 1:
+        nscans       = (50, 1)
+        sigma_limits = 2*(sigma_max,)
+    elif ndim == 2:
+        nscans       = (30, 20)
+        sigma_limits = (0.45, 2.)
+
+    bnds         = [mu_limits, sigma_limits]
+    scan_params  = ScanParameters(names  = ['mu', 'sigma'],
+                                  bounds = bnds,
+                                  nscans = nscans
+                                 )
 
     #######################################################
     ### Scan over search dimensions/nuisance parameters ###
     #######################################################
-
-    ### Define scan values here ### 
-    print 'Preparing scan parameters...'
-
-    sig_params = sig_model.get_parameters()
-    mu_max    = sig_params['mu'].value
-    sigma_max = sig_params['sigma'].value
-    if ndim == 1:
-        nscans = (50, 1)
-        bnds   = [(-0.8, 0.8), (sigma_max, sigma_max)]
-        scan_params = ScanParameters(names  = ['mu', 'sigma'],
-                                     bounds = bnds,
-                                     nscans = nscans
-                                    )
-    elif ndim == 2:
-        nscans = (30, 20)
-        bnds   = [(-0.8, 0.8), (0.02, 0.07)]
-        scan_params = ScanParameters(names = ['mu', 'sigma'],
-                                     bounds = bnds,
-                                     nscans = nscans 
-                                    )
-
     paramscan = []
-    phiscan   = []
-    dofs      = []
     qmaxscan  = []
+    dofs      = []
+    phiscan   = [[], [], []]
     u_0       = np.linspace(0.01, 30., 300)
-    mu        = np.linspace(xlimits[0]+0.1*(xlimits[1] - xlimits[0]), 
-                            xlimits[1]-0.1*(xlimits[1] - xlimits[0]), nscans[0]) 
-    sigma     = np.linspace((xlimits[1]-xlimits[0])/2*0.02, (xlimits[1]-xlimits[0])/2*0.15, nscans[1])
-    for i, sim in enumerate(sims):
-        if i%10 == 0: 
-            print 'Carrying out scan {0}...'.format(i+1)
-
+    for i, sim in tqdm(enumerate(sims), 
+                       desc       = 'Scanning simulation',
+                       unit_scale = True,
+                       ncols      = 75,
+                       total      = len(sims)
+                      ):
         sim = list(sim) # fitter doesn't like tuples for some reason... 
+
         # fit background model
-        bg_result = bg_fitter.fit(sim)
+        bg1_result = bg1_fitter.fit(sim[0])
+        bg2_result = bg2_fitter.fit(sim[1])
+        bg_result  = bg_fitter.fit(sim)
         if bg_result.status == 0:
-            nll_bg = bg_model.calc_nll(sim)
+            nll_bg1 = bg1_model.calc_nll(sim[0], bg1_result.x)
+            nll_bg2 = bg2_model.calc_nll(sim[1], bg2_result.x)
+            nll_bg  = bg_model.calc_nll(sim, bg_result.x)
         else:
             continue
 
+        # scan over signal parameters (1b1f)
+        nllscan, _, _ = sig1_fitter.scan(scan_params, sim[0]) 
+        qscan = -2*(nllscan - nll_bg1)
+
+        ### Calculate E.C. of the random field
+        if qscan.size != np.prod(scan_params.nscans): 
+            continue
+
+        qscan = np.array(qscan).reshape(nscans)
+        phiscan[0].append(np.array([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0]))
+
+        # scan over signal parameters (1b1c)
+        nllscan, _, _ = sig2_fitter.scan(scan_params, sim[1]) 
+        qscan = -2*(nllscan - nll_bg2)
+
+        ### Calculate E.C. of the random field
+        if qscan.size != np.prod(scan_params.nscans): 
+            continue
+
+        qscan = np.array(qscan).reshape(nscans)
+        phiscan[1].append(np.array([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0]))
         # scan over signal parameters
         nllscan, params, dof = sig_fitter.scan(scan_params, sim, amps=[0, 5]) 
         qscan = -2*(nllscan - nll_bg)
 
         ### Calculate E.C. of the random field
         if qscan.size != np.prod(scan_params.nscans): 
-            print 'The scan must have failed :('
             continue
 
         qscan = np.array(qscan).reshape(nscans)
-        phiscan.append(np.array([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0]))
+        phiscan[2].append(np.array([lee.calculate_euler_characteristic((qscan > u) + 0.) for u in u_0]))
         paramscan.append(params)
         qmaxscan.append(np.max(qscan))
         dofs.append(dof)
@@ -198,21 +219,30 @@ if __name__ == '__main__':
         ### Calculate GV coefficients ###
         #################################
 
+        nvals1  = lee.get_GV_coefficients(u_0, phiscan[0], 
+                                          p_init = ndim*[1.,],
+                                          p_bnds = ndim*[(0., np.inf), ],
+                                          kvals  = [1], 
+                                          scales = [0.5]
+                                         )
+        nvals2  = lee.get_GV_coefficients(u_0, phiscan[1], 
+                                          p_init = ndim*[1.,],
+                                          p_bnds = ndim*[(0., np.inf), ],
+                                          kvals  = [1], 
+                                          scales = [0.5]
+                                         )
 
-
-        if ndim == 1:
-            param_init = [24.47, 30.41, 1.]
-            param_bnds = [(24.47, 24.47), (30.09,30.09), (0., np.inf)]
-            scales = [0.25, 0.25, 0.25]
-            kvals  = [1, 1, 2]
-        elif ndim == 2:
-            param_init = [26.97, 47.97, 28.27, 44.96, 1., 1.]
-            param_bnds = [(26.97, 26.97), (47.97, 47.97), (28.27, 28.27), (44.96, 44.96), (0., np.inf), (0., np.inf)]
-            scales = [0.25, 0.25, 0.25]
-            kvals  = [1, 1, 2]
-        else:
-            exit()
-        nvals  = lee.get_GV_coefficients(u_0, phiscan, param_init, param_bnds, kvals, scales)
+        prebounds = [(n, n) for n in np.concatenate((nvals1, nvals2))] + ndim*[(0., np.inf),]
+        preinit   = np.concatenate((nvals1, nvals2, ndim*[1.,]))
+        kvals     = [1, 1, 2]
+        scales    = [0.25, 0.25, 0.25]
+        nvals     = lee.get_GV_coefficients(u_0, phiscan[2],
+                                            p_init = preinit,
+                                            p_bnds = prebounds, 
+                                            kvals  = kvals,
+                                            scales = scales
+                                           )
+        nvals = np.reshape(nvals, (3, ndim))
 
         ### Calculate statistics ###
         p_local  = 0.5*chi2.sf(qmax, 1) + 0.25*chi2.sf(qmax, 2) # according to Chernoff 
@@ -220,8 +250,8 @@ if __name__ == '__main__':
         p_global = lee.get_p_global(qmax, kvals, nvals, scales)
         z_global = -norm.ppf(p_global)
 
-        for i, n in enumerate(nvals.flatten()): 
-            print 'N{0} = {1:.2f}'.format(i, n)
+        for ch, n in zip(['1b1f', '1b1c', '1b1f+1b1c'], nvals): 
+            print 'N_{0} = {1}'.format(ch, n)
 
         print 'local p_value       = {0:.3e}'.format(p_local)
         print 'local significance  = {0:.2f}'.format(z_local)
@@ -229,7 +259,7 @@ if __name__ == '__main__':
         print 'global significance = {0:.2f}'.format(z_global)
         print 'trial factor        = {0:.2f}'.format(p_global/p_local)
 
-        lee.gv_validation_plot(u_0, phiscan, qmaxscan, 
+        lee.gv_validation_plot(u_0, phiscan[-1], qmaxscan, 
                                nvals, kvals, scales, 
                                channel='simultaneous_{0}D'.format(ndim))
 

@@ -136,7 +136,8 @@ def get_GV_coefficients(u, phiscan, p_init, p_bnds, kvals, scales):
                       args   = (exp_phi, var_phi, u, ndim, kvals, scales),
                       bounds = p_bnds
                       )
-    return np.reshape(result.x, (len(kvals), ndim))
+    return result.x
+    #return np.reshape(result.x, (len(kvals), ndim))
 
 def get_p_global(qmax, kvals, nvals, scales): 
     '''
@@ -197,8 +198,8 @@ def gv_validation_plot(u, phiscan, qmax, nvals, kvals, scales, channel):
     ax.fill_between(hbins, pval-perr, pval+perr, color='m', alpha=0.25, interpolate=True)
 
     ### Plot the E[phi(u)] from the data and the predicted excursions ###
-    ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.)
-    ax.plot(u, exp_phi_total, 'b--', linewidth=2.)
+    ax.plot(u[emask], exp_phi[emask], 'k-', linewidth=2.5)
+    ax.plot(u, exp_phi_total, 'b--', linewidth=2.5)
 
     ### Stylize ###
     legend_text = [r'$\sf SF(q(\theta))$', 
@@ -209,7 +210,7 @@ def gv_validation_plot(u, phiscan, qmax, nvals, kvals, scales, channel):
     ax.legend(legend_text)
     ax.set_yscale('log')
     ax.set_ylim(1e-5, 5*np.max(phiscan))
-    ax.set_ylabel(r'$\sf \mathbf{P}[q_{max} > u]$')
+    ax.set_ylabel(r'$\sf \mathbb{P}[q_{max} > u]$')
     ax.set_xlim(0, 30)
     ax.set_xlabel(r'u')
     #ax.set_title(channel.replace('_', ' '))
@@ -218,8 +219,8 @@ def gv_validation_plot(u, phiscan, qmax, nvals, kvals, scales, channel):
     if channel == None:
         plt.show()
     else:
-        fig.savefig('plots/GV_validate_{0}.png'.format(channel))
-        fig.savefig('plots/GV_validate_{0}.pdf'.format(channel))
+        fig.savefig('plots/fits/GV_validate_{0}.png'.format(channel))
+        fig.savefig('plots/fits/GV_validate_{0}.pdf'.format(channel))
         plt.close()
 
 

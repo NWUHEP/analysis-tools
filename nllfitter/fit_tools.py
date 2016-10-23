@@ -143,7 +143,7 @@ def lnprob(x, pdf, bounds):
     else:
         return np.log(pdf(x))
 
-def generator(pdf, bounds, samples_per_toy=100, ntoys=1):
+def generator(pdf, bounds, ntoys):
     '''
     Rejection sampling with broadcasting gives approximately the requested
     number of toys.  This works okay for simple pdfs.
@@ -151,34 +151,31 @@ def generator(pdf, bounds, samples_per_toy=100, ntoys=1):
     Parameters:
     ===========
     pdf             : the pdf that will be sampled to produce the synthetic data
-    samples_per_toy : number of datapoint per toy dataset
     ntoys           : number of synthetic datasets to be produced
     bounds          : specify (lower, upper) bounds for the toy data
     '''
     
     # Generate random numbers and map into domain defined by bounds.  Generate
     # twice the number of requested events in expectation of ~50% efficiency.
-    # This will not be the case for more complicated pdfs presumably
-    rnums = rng.rand(2, 2*ntoys*samples_per_toy) 
+    # This will not be the case for more peaked pdfs
+    rnums = rng.rand(2, int(3*ntoys)) 
     x = rnums[0]
     x = (bounds[1] - bounds[0])*x + bounds[0]
+    y = pdf(x)
 
     # Carry out rejection sampling
-    keep = pdf(x) > rnums[1]/(bounds[1] - bounds[0])
-    x    = x[keep]
-    
-    # Remove excess events and shape to samples_per_toy.
-    x = x[:-(x.size%samples_per_toy)]
-    x = x.reshape(int(x.size/samples_per_toy), samples_per_toy)
+    rnums[1] = rnums[1]*(y.max()/rnums[1].max())
+    mask = y > rnums[1]
+    x    = x[mask]
 
     # if the exact number of toy datasets are not generated either trim or
     # produce more.
-    ndata = x.shape[0]
-    if ndata < ntoys:
-        xplus = generator(pdf, bounds, samples_per_toy, (ntoys-ndata))
-        x = np.concatenate((x, xplus))
-    elif ndata > ntoys:
-        x = x[:int(ntoys),]
+    eff = x.size/(ntoys)
+    if x.size < ntoys:
+        x_new = generator(pdf, bounds, ntoys-x.size)
+        x = np.concatenate((x, x_new))
+    else:
+        x = x[:int(ntoys)]
 
     return x
 
