@@ -1,2 +1,3 @@
-# amumu
-Useful tools for bump hunting
+# Analysis tools for bump hunting
+
+Description coming soooooon
