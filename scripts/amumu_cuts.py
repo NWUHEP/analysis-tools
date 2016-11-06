@@ -36,14 +36,13 @@ if __name__ == '__main__':
     cuts = [
             '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
               and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
-              and lepton1_q != lepton2_q and 12 < dilepton_mass < 70)',
+              and lepton1_q != lepton2_q \
+              and 12 < dilepton_mass < 70)',
             '(n_jets > 0 or n_bjets > 0)',
             'n_bjets > 0',
-            'n_bjets == 1',
-
            ]
     if cat == '1b1f':
-        cuts.extend(['n_jets == 0', 'n_fwdjets > 0'])
+        cuts.extend(['n_bjets == 1', 'n_jets == 0', 'n_fwdjets > 0'])
     elif cat == '1b1c':
         cuts.extend(['(n_jets == 1 and n_fwdjets == 0)', 'met_mag < 40', 'four_body_delta_phi > 2.5'])
     else:
@@ -60,8 +59,9 @@ if __name__ == '__main__':
                  ) 
         print 'cut {0}: {1}'.format(i, df.shape[0])
 
-    if period == '2016':
-        evt_columns = ['run_number', 'event_number']
+    if False and period == '2016':
+        evt_index = ['run_number', 'event_number']
+        df.set_index(evt_index)
         df0 = pd.read_csv('data/amumu_sync/Anton/cut_{0}.txt'.format(cat), header=None, sep=' ')
         df0.columns = evt_columns
         df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]

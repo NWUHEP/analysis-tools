@@ -17,25 +17,33 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    ntuple_dir  = 'data/flatuples/mumu_2012'
-    selection   = ('mumu', 'combined')
-    period      = 2012
-    lumi        = 19.8e3 if period == 2012 else 1.4*12e3
+    selection   = ('mumu', 'combined_enhance')
+    period      = 2016
+    ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
+    lumi        = 19.8e3 if period == 2012 else 12e3
     plot_data   = True
 
     if period == 2016:
+        bg_labels     = ['t', 'ttbar', 'zjets']
+        signal_labels = []
         datasets = [
-                    'muon_2016B', 'muon_2016C', 'muon_2016D', 'muon_2016E', 'muon_2016F', 
+                    'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
                     'ttjets', 
                     't_t', 't_tw', 'tbar_t', 'tbar_tw', 
                     'zjets_m-50', 'zjets_m-10to50',
                    ]
     elif period == 2012:
+        bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
+        signal_labels = []#'bprime_xb' 'fcnc'],
         datasets = [
                     'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
                     #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
                     'ttbar_lep', 'ttbar_semilep',
                     'zjets_m-50', 'zjets_m-10to50',
+                    'z1jets_m-50', 'z1jets_m-10to50',
+                    'z2jets_m-50', 'z2jets_m-10to50',
+                    'z3jets_m-50', 'z3jets_m-10to50',
+                    'z4jets_m-50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                     'bprime_xb', 'fcnc'
@@ -63,6 +71,7 @@ if __name__ == '__main__':
                  'dilepton_j_delta_r', 'dilepton_j_delta_eta', 'dilepton_j_delta_phi',
                  'four_body_mass',
                  'four_body_delta_r', 'four_body_delta_eta', 'four_body_delta_phi', 
+                 #'n_partons'
                ]
 
     ### Cuts ###
@@ -84,7 +93,7 @@ if __name__ == '__main__':
                            ((n_fwdjets > 0 and n_jets == 0) or \
                            (n_fwdjets == 0 and n_jets == 1 and \
                            four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2'
+            'enhance'   : 'dilepton_pt_over_m > 2 and 100 < dilepton_b_mass < 210'
             }
 
     cuts['combined_sideband'] = cuts['combined'] + \
@@ -100,10 +109,6 @@ if __name__ == '__main__':
         if selection[1] not in ['same-sign', 'test']:
             cut += ' and ' + cuts['preselection']
 
-    ### Blind 2016 signal region ###
-    if period == 2016 and selection[1] in ['1b1f', '1b1c', 'combined']:
-        cut += ' and (dilepton_mass > 32 or dilepton_mass < 26)'
-
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                   dataset_names = datasets,
@@ -117,8 +122,8 @@ if __name__ == '__main__':
     output_path  = 'plots/overlays/{0}_{1}'.format('_'.join(selection), period)
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
-                                  stack_labels   = ['t', 'diboson', 'ttbar', 'zjets'],
-                                  overlay_labels = ['bprime_xb'],# 'fcnc'],
+                                  stack_labels   = bg_labels,
+                                  overlay_labels = signal_labels,
                                   top_overlay    = True,
                                   output_path    = output_path,
                                   file_ext       = 'png'

@@ -68,9 +68,7 @@ if __name__ == '__main__':
     cuts        = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                    and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
                    and lepton1_q != lepton2_q and n_bjets == 1 \
-                   and 12 < dilepton_mass < 70 \
-                   and dilepton_pt_over_m > 2.'
-
+                   and 12 < dilepton_mass < 70' 
 
     if channel == '1b1f':
         cuts += ' and n_fwdjets > 0 and n_jets == 0'

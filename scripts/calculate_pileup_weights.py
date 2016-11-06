@@ -31,7 +31,6 @@ if __name__ == '__main__':
     data_sum = pileup_hist.Integral()
     for ibin in range(500):
         bin_content = pileup_hist.GetBinContent(ibin+1)/data_sum
-        data_sum += bin_content
         jbin = int(np.floor(ibin/10))
         if mc_data[jbin] > 0.:
             scale_factors.append(10*bin_content/mc_data[jbin])

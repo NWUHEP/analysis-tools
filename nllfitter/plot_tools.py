@@ -96,23 +96,27 @@ class DataManager():
         while initializing the class instance.
         '''
         dataframes = {}
-        for dataset in tqdm(self._dataset_names, desc='Loading dataframes', unit_scale=True, ncols=75, total=len(self._dataset_names)):
+        for dataset in tqdm(self._dataset_names, 
+                            desc       = 'Loading dataframes',
+                            unit_scale = True,
+                            ncols      = 75,
+                            total      = len(self._dataset_names)
+                           ):
+
             df         = pd.read_pickle('{0}/ntuple_{1}.pkl'.format(self._input_dir, dataset))
             init_count = self._event_counts[dataset][0]
             lut_entry  = self._lut_datasets.loc[dataset]
             label      = lut_entry.label
 
-            ### create a colum with label name for training ###
-            df[label] = np.ones(df.shape[0])
-
-            ### apply selection cuts ###
+            #### apply selection cuts ###
             if self._cuts != '':
                 df = df.query(self._cuts)
             
-            ### update weights with lumi scale factors ###
+            #### update weights with lumi scale factors ###
             if label != 'data':
                 scale = self._scale*lut_entry.cross_section*lut_entry.branching_fraction/init_count
-                df.weight = df.weight.multiply(scale)
+                df.loc[:,'weight'] = df['weight'].multiply(scale)
+
 
             ### combined datasets if required ###
             if label not in dataframes.keys():
@@ -120,7 +124,7 @@ class DataManager():
             else:
                 dataframes[label] = dataframes[label].append(df)
 
-        self._dataframes =  dataframes
+        self._dataframes = dataframes
 
     def get_dataframe(self, dataset_name, condition=''):
         df = self._dataframes[dataset_name]
@@ -132,14 +136,57 @@ class DataManager():
     def get_dataframes(self, dataset_names, condition=''):
         dataframes = {}
         for dataset in dataset_names:
-            df = self._dataframes[dataset_name]
+            df = self._dataframes[dataset]
             if condition == '':
-                dataframes[datset] = df
+                dataframes[dataset] = df
             else:
-                dataframes[datset] = df.query(condition)
+                dataframes[dataset] = df.query(condition)
+        return dataframes
 
     def get_dataset_names(self):
         return self._dataset_names
+
+    def print_yields(self, dataset_names, conditions=[''], fmt='latex'):
+        '''
+        Prints sum of the weights for the provided datasets
+
+        Parameters 
+        ==========
+        dataset_names: list of datasets to print
+        conditions: list of conditions to apply
+        fmt: formatting of the table (default: latex)
+        '''
+
+        # print header
+        table_string = ''
+        for dataset in dataset_names:
+            table_string += '| {0} '.format(self._lut_datasets.loc[dataset].text)
+        table_string += '| background | \n'
+
+        dataframes = self.get_dataframes(dataset_names)
+        for condition in conditions:
+            table_string += '| {0} '.format(condition)
+            bg_total = [0., 0.]
+            for dataset in dataset_names:
+                df    = dataframes[dataset]
+                if condition != '' and condition != 'preselection':
+                    df = df.query(condition) 
+
+                n     = df.weight.sum()
+                n_err = np.sqrt(np.sum(df.weight**2))
+
+                if dataset == 'data':
+                    table_string += ' | {0} '.format(int(n), n_err)
+                else:
+                    table_string += ' | {0:.1f} $\pm$ {1:.1f}'.format(n, n_err)
+                    bg_total[0] += n
+                    bg_total[1] += n_err**2
+
+                dataframes[dataset] = df # update dataframes so cuts are applied sequentially
+            table_string += ' | {0:.1f} $\pm$ {1:.1f} | \n'.format(bg_total[0], np.sqrt(bg_total[1]))
+
+        return table_string
+
 
 class PlotManager():
     def __init__(self, data_manager, features, stack_labels, overlay_labels, 
@@ -194,11 +241,14 @@ class PlotManager():
             lut_entry = dm._lut_features.loc[feature]
 
             ### initialize figure ###
-            fig, axes      = plt.subplots(1, 1)
+            if do_ratio:
+                fig, axes      = plt.subplots(2, 1)
+            else:
+                fig, axes      = plt.subplots(1, 1)
             #legend_handles = []
 
             ### Get stack data and apply mask if necessary ###
-            stack_max = 0
+            y_min, y_max = 1e9, 0.
             if len(self._stack_labels) > 0:
                 stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, lut_entry.condition)
                 stack, bins, p = axes.hist(stack_data, 
@@ -231,11 +281,13 @@ class PlotManager():
                               elinewidth = 10,
                               alpha      = 0.15
                              )
-                stack_max = np.max(stack_sum)
+                if stack_sum.min() < y_min and stack_sum.min() > 0.:
+                    y_min = stack_sum.min() 
+                if stack_sum.max() > y_max:
+                    y_max = stack_sum.max() 
                 #legend_handles.append(eb[0])
 
             ### Get overlay data and apply mask if necessary ###
-            overlay_max = 0
             if len(self._overlay_labels) > 0:
                 overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, self._overlay_labels, lut_entry.condition)
                 hists, bins, p = axes.hist(overlay_data,
@@ -247,17 +299,20 @@ class PlotManager():
                                            linewidth = 2.,
                                            #linestyle = '--',
                                            normed    = normed,
-                                           bottom    = 0 if stack_max == 0 or not self._top_overlay else stack[-1],
+                                           bottom    = 0 if y_max == 0 or not self._top_overlay else stack[-1],
                                            weights   = overlay_weights
                                           )
 
-                hists = np.array(hists)
-                overlay_max = np.max(hists.flatten())
+                hists = np.array(hists).flatten()
+                if hists.min() < y_min and hists.min() > 0.:
+                    y_min = hists.min()
+                if hists.max() > y_max:
+                    y_max = hists.max() 
                 #legend_handles.append(p)
 
             ### If there's data to overlay: apply feature condition and get
             ### datapoints plus errors
-            data_max = 0
+            data_limit = [0., 0.]
             if plot_data:
                 data, _ = get_data_and_weights(dataframes, feature, ['data'], lut_entry.condition)
                 y, x, yerr = hist_to_errorbar(data, 
@@ -270,7 +325,10 @@ class PlotManager():
                               capsize    = 0,
                               elinewidth = 2
                              )
-                data_max = np.max(y)
+                if y.min() < y_min and y.min() > 0.:
+                    y_min = y.min()
+                if y.max() > y_max:
+                    y_max = y.max() 
                 #legend_handles.append(eb[0])
 
             ### make the legend ###
@@ -292,14 +350,21 @@ class PlotManager():
 
             ### Save output plot ###
             ### linear scale ###
-            y_max = np.max((stack_max, overlay_max, data_max))
             axes.set_ylim((0., 1.8*y_max))
-            fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, lut_entry.category, feature, self._file_ext))
+            fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
+                                                        lut_entry.category, 
+                                                        feature, 
+                                                        self._file_ext
+                                                      ))
 
             ### log scale ###
             axes.set_yscale('log')
-            axes.set_ylim((0.05, 15.*y_max))
-            fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, lut_entry.category, feature, self._file_ext))
+            axes.set_ylim(y_min/10., 15.*y_max)
+            fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
+                                                     lut_entry.category, 
+                                                     feature, 
+                                                     self._file_ext
+                                                    ))
 
             fig.clear()
             plt.close()
