@@ -17,36 +17,37 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    selection   = ('mumu', 'combined_enhance')
-    period      = 2016
+    selection   = ('mumu', 'combined')
+    period      = 2012
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
     lumi        = 19.8e3 if period == 2012 else 12e3
     plot_data   = True
 
     if period == 2016:
         bg_labels     = ['t', 'ttbar', 'zjets']
-        signal_labels = []
+        signal_labels = ['bprime_xb']
         datasets = [
                     'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
                     'ttjets', 
                     't_t', 't_tw', 'tbar_t', 'tbar_tw', 
                     'zjets_m-50', 'zjets_m-10to50',
+                    'bprime_xb'
                    ]
     elif period == 2012:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
-        signal_labels = []#'bprime_xb' 'fcnc'],
+        #signal_labels = ['bprime_xb', 'fcnc', 'bprime_xbxb_semilep']
+        signal_labels = ['fcnc']
         datasets = [
                     'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
                     #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
                     'ttbar_lep', 'ttbar_semilep',
-                    'zjets_m-50', 'zjets_m-10to50',
-                    'z1jets_m-50', 'z1jets_m-10to50',
-                    'z2jets_m-50', 'z2jets_m-10to50',
-                    'z3jets_m-50', 'z3jets_m-10to50',
-                    'z4jets_m-50', 'z4jets_m-10to50',
+                    'zjets_m-50',  'z1jets_m-50', 'z2jets_m-50', 
+                    'z3jets_m-50', 'z4jets_m-50', 
+                    'zjets_m-10to50', 'z1jets_m-10to50', 'z2jets_m-10to50', 
+                    'z3jets_m-10to50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    'bprime_xb', 'fcnc'
+                    'bprime_xb', 'bprime_xbxb_semilep', 'fcnc'
                    ]
 
     features = [
@@ -62,6 +63,7 @@ if __name__ == '__main__':
                  'n_jets', 'n_fwdjets', 'n_bjets',
                  'bjet_pt', 'bjet_eta', 'bjet_phi', 'bjet_d0',
                  'jet_pt', 'jet_eta', 'jet_phi', 'jet_d0', 
+                 'jet_delta_eta', 'jet_delta_phi', 'jet_delta_r',
                  'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
                  'dijet_pt_over_m',
 
@@ -87,13 +89,14 @@ if __name__ == '__main__':
             'same-sign' : 'lepton1_q == lepton2_q',
             '2b'        : 'n_bjets == 2', 
             '1b1f'      : 'n_fwdjets > 0 and n_bjets == 1 and n_jets == 0',
-            '1b1c'      : 'n_fwdjets == 0 and n_bjets == 1 and n_jets == 1 \
+            '1b1c'      : 'n_fwdjets == 0 and n_bjets >= 1 \
+                           and n_bjets + n_jets == 2 \
                            and four_body_delta_phi > 2.5 and met_mag < 40',
-            'combined'  : 'n_bjets == 1 and \
-                           ((n_fwdjets > 0 and n_jets == 0) or \
-                           (n_fwdjets == 0 and n_jets == 1 and \
-                           four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2 and 100 < dilepton_b_mass < 210'
+            'combined'  : '((n_bjets >= 1 and n_fwdjets > 0 and n_jets == 0) \
+                           or \
+                           (n_bjets >= 1 and n_fwdjets == 0 and n_jets + n_bjets == 2 \
+                           and four_body_delta_phi > 2.5 and met_mag < 40))',
+            'enhance'   : 'dilepton_pt_over_m > 2 and met_mag < 40 and four_body_delta_phi > 2.5' 
             }
 
     cuts['combined_sideband'] = cuts['combined'] + \
@@ -101,6 +104,8 @@ if __name__ == '__main__':
     cuts['combined_signal']   = cuts['combined'] + \
                                 'and (dilepton_mass > 36 or dilepton_mass < 24)'
     cuts['combined_enhance']  = cuts['combined'] + ' and ' + cuts['enhance']
+    cuts['1b1f_enhance']      = cuts['1b1f'] + ' and ' + cuts['enhance']
+    cuts['1b1c_enhance']      = cuts['1b1c'] + ' and ' + cuts['enhance']
 
     if selection[1] not in cuts.keys():
         cut = ''

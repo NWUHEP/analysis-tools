@@ -44,7 +44,16 @@ if __name__ == '__main__':
     if cat == '1b1f':
         cuts.extend(['n_bjets == 1', 'n_jets == 0', 'n_fwdjets > 0'])
     elif cat == '1b1c':
-        cuts.extend(['(n_jets == 1 and n_fwdjets == 0)', 'met_mag < 40', 'four_body_delta_phi > 2.5'])
+        cuts.extend(['(n_bjets + n_jets == 2 and n_fwdjets == 0)', 
+                     'met_mag < 40', 
+                     'four_body_delta_phi > 2.5'
+                    ])
+    elif cat == 'combined':
+        cuts.extend(['((n_bjets == 1 and n_jets == 0 and n_fwdjets > 0) \
+                     or (n_jets == 1 and n_fwdjets == 0 \
+                     and met_mag < 40 and four_body_delta_phi > 2.5))',
+                     'dilepton_pt_over_m > 1.5 and 125 < dilepton_b_mass < 190'
+                    ])
     else:
         print 'what are you doing, man!?'
 
@@ -59,6 +68,7 @@ if __name__ == '__main__':
                  ) 
         print 'cut {0}: {1}'.format(i, df.shape[0])
 
+    '''
     if False and period == '2016':
         evt_index = ['run_number', 'event_number']
         df.set_index(evt_index)
@@ -76,3 +86,4 @@ if __name__ == '__main__':
         print ''
         print 'Events in sync dataset, but not in my datset:'
         print df0[mask0]
+        '''

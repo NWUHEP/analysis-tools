@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import seaborn as sns
-from scipy.special import erf
+import scipy.special as sci
 from scipy.stats import chi2, norm, gamma, multivariate_normal
 from scipy import integrate
 from lmfit import Parameter, Parameters
@@ -21,6 +21,15 @@ import nllfitter.plot_tools as pt
 
 # global options
 np.set_printoptions(precision=3.)
+
+#def gamma_alt(x, a):
+#    '''
+#    Gamma function with Michael's parameterization
+#    '''
+#    omega = a[0] + a[1]*(x - 40)
+#    beta  = a[2]
+#    u     = x - a[3]
+
 
 def bg_pdf(x, a):
     '''
@@ -105,7 +114,7 @@ if __name__ == '__main__':
     ### Configuration
     pt.set_new_tdr()
     use_official = False
-    use_data     = False
+    use_data     = True
     ntuple_dir  = 'data/flatuples/mumu_2012'
     selection   = ('mumu', 'combined')
     period      = 2012
@@ -120,8 +129,9 @@ if __name__ == '__main__':
                     lepton1_pt > 25 and abs(lepton1_eta) < 2.1\
                     and lepton2_pt > 25 and abs(lepton2_eta) < 2.1\
                     and lepton1_q != lepton2_q\
-                    and n_bjets == 1\
+                    and n_bjets >= 1\
                     and 12 < dilepton_mass < 70\
+                    and dilepton_b_mass > 50 \
                    )'
 
     if selection[1] == '1b1f':
@@ -145,16 +155,24 @@ if __name__ == '__main__':
         data = df_data[features]
         data = data.values.transpose()
     elif use_data:
-        datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
-        data_manager = pt.DataManager(input_dir     = ntuple_dir,
-                                      dataset_names = datasets,
-                                      period        = 2012,
-                                      selection     = selection[0],
-                                      cuts          = cuts
-                                     )
-        df_data = data_manager.get_dataframe('data')
-        data = df_data[features]
-        data = data.values.transpose()
+        dm_2012 = pt.DataManager(input_dir     = ntuple_dir,
+                                 dataset_names = ['muon_2012A', 'muon_2012B', 
+                                                  'muon_2012C', 'muon_2012D'],
+                                 period        = 2012,
+                                 selection     = selection[0],
+                                 cuts          = cuts
+                                )
+        dm_2016 = pt.DataManager(input_dir     = 'data/flatuples/mumu_2016',
+                                 dataset_names = ['muon_2016B', 'muon_2016C', 'muon_2016D'],
+                                 period        = 2016,
+                                 selection     = selection[0],
+                                 cuts          = cuts
+                                )
+
+        data_2012 = dm_2012.get_dataframe('data')[features]
+        data_2016 = dm_2016.get_dataframe('data')[features]
+
+        data = data_2012.append(data_2016).values.transpose()
     else:
         datasets     = ['ttbar_lep', 'ttbar_lep', 'zjets_m-50', 'zjets_m-10to50', 'bprime_xb']
         data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -176,7 +194,7 @@ if __name__ == '__main__':
                        ('a1'    , 0.  , True , None , None , None),
                        ('a2'    , 0.  , True , None , None , None),
                        ('k'     , 2.  , True , 1.   , None , None),
-                       ('x0'    , 50. , False , 20   , 60  , None),
+                       ('x0'    , 50. , True , 20   , 60  , None),
                        ('theta' , 30. , True , 0    , None , None),
                       )
 
@@ -208,6 +226,7 @@ if __name__ == '__main__':
     print 'q       = {0:.3f}'.format(q_max)
     print 'p_local = {0:.3e}'.format(p_value)
     print 'z_local = {0}'.format(z_score)
+
 
     '''
     ### Calculate the number of events in around the peak

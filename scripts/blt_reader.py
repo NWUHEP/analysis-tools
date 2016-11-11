@@ -76,7 +76,7 @@ if __name__ == '__main__':
                         'z4jets_m-50', 'z4jets_m-10to50',
                         't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                         'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                        'bprime_xb', 'fcnc'
+                        'bprime_xbxb_semilep', 'bprime_xb', 'fcnc'
                        ]
 
     features = [
@@ -96,6 +96,7 @@ if __name__ == '__main__':
                'bjet_d0', 'bjet_tag', 'bjet_flavor',
                'jet_pt', 'jet_eta', 'jet_phi', 'jet_e', 
                'jet_d0', 'jet_tag',  'jet_flavor',
+               'jet_delta_eta', 'jet_delta_phi', 'jet_delta_r',
                'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
                'dijet_pt_over_m',
 
@@ -240,15 +241,19 @@ if __name__ == '__main__':
             ntuple['jet_tag'].append(tree.jetTag)
             ntuple['jet_flavor'].append(tree.jetFlavor)
 
-            # MET
-            ntuple['met_mag'].append(met)
-            ntuple['met_phi'].append(met_phi)
+            ntuple['jet_delta_eta'].append(abs(bjet.Eta() - jet.Eta()))
+            ntuple['jet_delta_phi'].append(abs(bjet.DeltaPhi(jet)))
+            ntuple['jet_delta_r'].append(bjet.DeltaR(jet))
 
             ntuple['dijet_mass'].append(dijet.M())
             ntuple['dijet_pt'].append(dijet.Pt())
             ntuple['dijet_eta'].append(dijet.Eta())
             ntuple['dijet_phi'].append(dijet.Phi())
             ntuple['dijet_pt_over_m'].append(dijet.Pt()/dijet.M() if dijet.M() > 0 else -1)
+
+            # MET
+            ntuple['met_mag'].append(met)
+            ntuple['met_phi'].append(met_phi)
 
             # lepton + b jet variables
             ntuple['lepton1_b_mass'].append(lepton1_b.M())

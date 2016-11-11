@@ -2,6 +2,7 @@
 
 import os, sys
 from timeit import default_timer as timer
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -45,7 +46,10 @@ def hist_to_errorbar(data, nbins, xlim, normed=False):
     x = (bins[1:] + bins[:-1])/2.
     yerr = np.sqrt(y) 
 
-    return y, x, yerr
+    return x, y, yerr
+
+def ratio_errors(num, den):
+    return np.sqrt(num + num**2/den)/den
 
 def get_data_and_weights(dataframes, feature, labels, condition):
     data    = []
@@ -61,13 +65,19 @@ def get_data_and_weights(dataframes, feature, labels, condition):
     return data, weights
 
 class DataManager():
-    def __init__(self, input_dir, dataset_names, selection, period, scale=1, cuts=''):
+    def __init__(self, input_dir, dataset_names, selection, 
+                 period  = 2012,
+                 scale   = 1,
+                 cuts    = '',
+                 combine = True
+                ):
         self._input_dir     = input_dir
         self._dataset_names = dataset_names
         self._selection     = selection
         self._period        = period
         self._scale         = scale
         self._cuts          = cuts
+        self._combine       = combine
         self._load_luts()
         self._load_dataframes()
 
@@ -119,11 +129,13 @@ class DataManager():
 
 
             ### combined datasets if required ###
-            if label not in dataframes.keys():
-                dataframes[label] = df
+            if self._combine:
+                if label not in dataframes.keys():
+                    dataframes[label] = df
+                else:
+                    dataframes[label] = dataframes[label].append(df)
             else:
-                dataframes[label] = dataframes[label].append(df)
-
+                dataframes[dataset] = df
         self._dataframes = dataframes
 
     def get_dataframe(self, dataset_name, condition=''):
@@ -146,46 +158,70 @@ class DataManager():
     def get_dataset_names(self):
         return self._dataset_names
 
-    def print_yields(self, dataset_names, conditions=[''], fmt='latex'):
+    def print_yields(self, dataset_names, 
+                     exclude    = [],
+                     conditions = [''],
+                     mc_scale   = True,
+                     do_string  = True,
+                     fmt        = 'markdown'
+                    ):
         '''
         Prints sum of the weights for the provided datasets
 
         Parameters 
         ==========
-        dataset_names: list of datasets to print
-        conditions: list of conditions to apply
-        fmt: formatting of the table (default: latex)
+        dataset_names : list of datasets to print
+        exclude       : list of datasets to exclude from sum background calculation
+        conditions    : list of conditions to apply
+        mc_scale      : scale MC according to weights and scale
+        do_string     : format of output cells: if True then string else float
+        fmt           : formatting of the table (default:markdown)
         '''
 
         # print header
-        table_string = ''
-        for dataset in dataset_names:
-            table_string += '| {0} '.format(self._lut_datasets.loc[dataset].text)
-        table_string += '| background | \n'
-
+        table = OrderedDict()
         dataframes = self.get_dataframes(dataset_names)
         for condition in conditions:
-            table_string += '| {0} '.format(condition)
+            table[condition] = []
             bg_total = [0., 0.]
             for dataset in dataset_names:
-                df    = dataframes[dataset]
+                df = dataframes[dataset]
                 if condition != '' and condition != 'preselection':
                     df = df.query(condition) 
 
-                n     = df.weight.sum()
-                n_err = np.sqrt(np.sum(df.weight**2))
-
-                if dataset == 'data':
-                    table_string += ' | {0} '.format(int(n), n_err)
+                if mc_scale:
+                    n     = df.weight.sum()
+                    n_err = np.sqrt(np.sum(df.weight**2))
                 else:
-                    table_string += ' | {0:.1f} $\pm$ {1:.1f}'.format(n, n_err)
+                    n     = df.shape[0]
+                    n_err = np.sqrt(n)
+
+                # calculate sum of bg events
+                if dataset not in exclude and dataset != 'data':
                     bg_total[0] += n
                     bg_total[1] += n_err**2
 
-                dataframes[dataset] = df # update dataframes so cuts are applied sequentially
-            table_string += ' | {0:.1f} $\pm$ {1:.1f} | \n'.format(bg_total[0], np.sqrt(bg_total[1]))
+                if do_string:
+                    if dataset == 'data':
+                        table[condition].append('${0}$'.format(int(n)))
+                    else:
+                        table[condition].append('${0:.1f} \pm {1:.1f}$'.format(n, n_err))
+                else:
+                    table[condition].append(n)
+                     
 
-        return table_string
+                dataframes[dataset] = df # update dataframes so cuts are applied sequentially
+            if do_string:
+                table[condition].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
+            else:
+                table[condition].append(bg_total[0])
+
+        if do_string:
+            labels = [self._lut_datasets.loc[d].text for d in dataset_names]
+        else:
+            labels = dataset_names
+        table = pd.DataFrame(table, index=labels+['background'])
+        return table
 
 
 class PlotManager():
@@ -315,7 +351,7 @@ class PlotManager():
             data_limit = [0., 0.]
             if plot_data:
                 data, _ = get_data_and_weights(dataframes, feature, ['data'], lut_entry.condition)
-                y, x, yerr = hist_to_errorbar(data, 
+                x, y, yerr = hist_to_errorbar(data, 
                                               nbins = lut_entry.n_bins,
                                               xlim  = (lut_entry.xmin, lut_entry.xmax)
                                              )
