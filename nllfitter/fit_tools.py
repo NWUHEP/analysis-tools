@@ -279,8 +279,8 @@ def fit_plot_1D(data, xlim, sig_model, bg_model, suffix, path='plots'):
     else:
         ax.set_xlabel('x')
 
-    ax.set_ylim([0., 1.65*np.max(h[0])])
     ax.set_ylabel('Entries / 2 GeV')
+    ax.set_ylim([0., 1.65*np.max(h[0])])
     ax.set_xlim(xlim)
     ax.grid()
 

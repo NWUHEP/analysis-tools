@@ -52,6 +52,7 @@ if __name__ == '__main__':
     ### Configuration
     pt.set_new_tdr()
     do_sync     = False
+    do_mc       = True
     doToys      = False
     doKS        = False
     nsims       = 1000
@@ -64,12 +65,12 @@ if __name__ == '__main__':
     elif period == 2016:
         datasets    = ['muon_2016B', 'muon_2016C', 'muon_2016D']#, 'muon_2016E', 'muon_2016F']
 
-    features    = ['dilepton_mass']
     cuts        = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                    and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
                    and lepton1_q != lepton2_q \
                    and 12 < dilepton_mass < 70' #\
-                   #and dilepton_pt_over_m > 2.'
+                   #and dilepton_pt_over_m > 2
+                   #and n_bjets > 0 \
 
     if channel == '1b1f':
         cuts += ' and n_bjets == 1 and n_fwdjets > 0 and n_jets == 0'
@@ -92,6 +93,12 @@ if __name__ == '__main__':
             data, _ = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass')
         data    = data[data <= 70]
         n_total = data.size
+    elif do_mc:
+        df_data = pd.read_csv('data/fit/dimuon_mc_mix_preselection.csv', sep=' ')
+        df_data = df_data.query(cuts)
+        data    = df_data['dilepton_mass'].values
+        n_total = data.size
+
     else:
         data_manager = pt.DataManager(input_dir     = ntuple_dir,
                                       dataset_names = datasets,
@@ -100,30 +107,9 @@ if __name__ == '__main__':
                                       cuts          = cuts
                                      )
         df_data = data_manager.get_dataframe('data')
-        data = df_data[features].values.transpose()[0]
+        df_data.to_csv('data/fit/amumu_2012_{0}.csv'.format(channel), index=False)
+        data = df_data['dilepton_mass'].values
         n_total = data.size
-
-        #dm_2012 = pt.DataManager(input_dir     = 'data/flatuples/mumu_2012',
-        #                         dataset_names = ['muon_2012A', 'muon_2012B', 
-        #                                          'muon_2012C', 'muon_2012D'],
-        #                         period        = 2012,
-        #                         selection     = category,
-        #                         cuts          = cuts
-        #                        )
-        #dm_2016 = pt.DataManager(input_dir     = 'data/flatuples/mumu_2016',
-        #                         dataset_names = ['muon_2016B', 'muon_2016C', 'muon_2016D'],
-        #                         period        = 2016,
-        #                         selection     = category,
-        #                         cuts          = cuts
-        #                        )
-
-        #data_2012 = dm_2012.get_dataframe('data')['dilepton_mass']
-        #data_2016 = dm_2016.get_dataframe('data')['dilepton_mass']
-
-        ##data = data_2012.values.transpose() 
-        ##data = data_2016.values.transpose() 
-        #data = data_2012.append(data_2016).values.transpose()
-        #n_total = data.size
 
     ### Define bg model and carry out fit ###
     bg_params = Parameters()

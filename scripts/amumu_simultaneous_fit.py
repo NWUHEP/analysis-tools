@@ -75,20 +75,25 @@ if __name__ == '__main__':
 
     ### get data and convert variables to be on the range [-1, 1]
     set_new_tdr()
+    do_sync  = False
     xlimits  = (12., 70.)
     period   = 2012
     channels = ['1b1f', '1b1c']
 
     ### For post fit tests
     doToys   = False
-    model    = 'Gaussian'
+    model    = 'Voigt'
     nsims    = 50000
 
     datasets  = []
     for channel in channels:
-        data, n_total  = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass')
-        data = data[data < 70]
-        datasets.append(data)
+        if do_sync:
+            data, n_total  = ft.get_data('data/fit/events_pf_{0}.csv'.format(channel), 'dimuon_mass')
+            data = data[data < 70]
+            datasets.append(data)
+        else:
+            df = pd.read_csv('data/fit/amumu_2012_{0}.csv'.format(channel))
+            datasets.append(df.dilepton_mass.values)
 
     ### Fit single models to initialize parameters ###
     ### Define bg model and carry out fit ###

@@ -36,7 +36,7 @@ if __name__ == '__main__':
     elif period == 2012:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
         #signal_labels = ['bprime_xb', 'fcnc', 'bprime_xbxb_semilep']
-        signal_labels = ['fcnc']
+        signal_labels = ['bprime_t-channel']
         datasets = [
                     'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
                     #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
                     'z3jets_m-10to50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    'bprime_xb', 'bprime_xbxb_semilep', 'fcnc'
+                    'bprime_t-channel', #'bprime_bb_semilep', 'fcnc_s-channel'
                    ]
 
     features = [

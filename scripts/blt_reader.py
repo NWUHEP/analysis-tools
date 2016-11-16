@@ -76,7 +76,8 @@ if __name__ == '__main__':
                         'z4jets_m-50', 'z4jets_m-10to50',
                         't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                         'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                        'bprime_xbxb_semilep', 'bprime_xb', 'fcnc'
+                        'bprime_bb_semilep', 'bprime_t-channel', 
+                        'fcnc_s-channel', 'fcnc_tt_semilep'
                        ]
 
     features = [
@@ -288,6 +289,12 @@ if __name__ == '__main__':
             ntuple['four_body_delta_phi'].append(abs(dijet.DeltaPhi(dilepton)))
             ntuple['four_body_delta_r'].append(dijet.DeltaR(dilepton))
 
+            mumub = dilepton + bjet
+            ntuple['mumub_j_delta_eta'].append(abs(mumub.Eta() - jet.Eta()))
+            ntuple['mumub_j_delta_phi'].append(abs(mumub.DeltaPhi(jet)))
+            ntuple['mumub_j_delta_r'].append(mumub.DeltaR(jet))
+
+
             # Mendelstam variables
             #ntuple['t_xj'].append((dilepton - jet).M()**2)
             #ntuple['t_xb'].append((dilepton - bjet).M()**2)
@@ -313,6 +320,9 @@ if __name__ == '__main__':
         df.to_pickle('{0}/ntuple_{1}.pkl'.format(output_path, dataset))
 
     fname = '{0}/event_counts.csv'.format(output_path)
-    if not os.path.isfile(fname):
-        df = pd.DataFrame(event_count)
-        df.to_csv(fname)
+    df = pd.DataFrame(event_count)
+    df.to_csv(fname)
+
+    #if not os.path.isfile(fname):
+    #    df = pd.DataFrame(event_count)
+    #    df.to_csv(fname)
