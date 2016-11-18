@@ -28,20 +28,22 @@ def calculate_cos_theta(ref_p4, boost_p4, target_p4):
 
     Paramters:
     ==========
-    ref_p4: TLorentzVector of reference particle
-    boost_p4: TLorentzVector of particle defining the rest frame
-    target_p4: TLorentzVector of particle whose cos(theta) value we would like to calculate
+    ref_p4    : TLorentzVector of reference particle
+    boost_p4  : TLorentzVector of particle defining the rest frame
+    target_p4 : TLorentzVector of particle whose cos(theta) value we would like to calculate
     '''
                                                                                   
     boost = -1*boost_p4.BoostVector() 
-    B_clone.Boost(boost)  
-    ref = ref_p4.Vect()                                        
+    ref_p4.Boost(boost)  
+    ref_v3 = ref_p4.Vect()                                        
+
     beam_axis = r.TLorentzVector(0, 0, 1, 1)
     beam_axis.Boost(boost)                                                        
-                                                                                  
-    axis_z = (-1*B_threevect).Unit() 
-    axis_y = beamAxis.Vect().Cross(B_threevect).Unit()               
+    axis_z = (-1*ref_v3).Unit() 
+    axis_y = beam_axis.Vect().Cross(ref_v3).Unit()               
     axis_x = axis_y.Cross(axis_z).Unit()                       
+
+    rotation = r.TRotation()
     rotation = rotation.RotateAxes(axis_x, axis_y, axis_z).Inverse()    
                                                                                   
     target_p4.Boost(boost)                                                  
@@ -54,15 +56,17 @@ if __name__ == '__main__':
 
     ### Configuration ###
     selection    = 'mumu'
-    period       = 2012
+    period       = 2016
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
 
     if period == 2016:
         dataset_list = [
                         'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
-                        'ttjets', 't_t', 't_tw', 'tbar_t', 'tbar_tw', 
+                        'ttbar_lep', 'ttbar_semilep',
                         'zjets_m-50', 'zjets_m-10to50',
+                        't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                        'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                         ]
     elif period == 2012:
         dataset_list = [
@@ -74,7 +78,7 @@ if __name__ == '__main__':
                         'z2jets_m-50', 'z2jets_m-10to50',
                         'z3jets_m-50', 'z3jets_m-10to50',
                         'z4jets_m-50', 'z4jets_m-10to50',
-                        't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                        't_s', 't_t', 't_tw', 'tbar_tw', 
                         'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                         'bprime_bb_semilep', 'bprime_t-channel', 
                         'fcnc_s-channel', 'fcnc_tt_semilep'
@@ -88,6 +92,7 @@ if __name__ == '__main__':
                'lepton1_iso', 'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
                'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  
                'lepton2_iso', 'lepton2_q', 'lepton2_flavor', 'lepton2_trigger',
+               'lepton2_cos_theta',
                'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
                'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
                'dilepton_pt_over_m',
@@ -112,6 +117,8 @@ if __name__ == '__main__':
                'dilepton_b_delta_eta', 'dilepton_b_delta_phi', 'dilepton_b_delta_r',
                'four_body_mass',
                'four_body_delta_phi', 'four_body_delta_eta', 'four_body_delta_r',
+
+               'mumub_j_delta_r', 'mumub_j_delta_eta', 'mumub_j_delta_phi',
 
                #'t_xj', 't_xb', 't_bj',
 
@@ -214,6 +221,12 @@ if __name__ == '__main__':
             ntuple['lepton2_flavor'].append(tree.leptonTwoFlavor)
             ntuple['lepton2_trigger'].append(tree.leptonTwoTrigger)
 
+            if tree.nBJets > 0:
+                cos_theta = calculate_cos_theta(dilepton_b, dilepton, lep2)
+                ntuple['lepton2_cos_theta'].append(cos_theta)
+            else:
+                ntuple['lepton2_cos_theta'].append(0.)
+
             ### dilepton 
             ntuple['lepton_delta_eta'].append(abs(lep1.Eta() - lep2.Eta()))
             ntuple['lepton_delta_phi'].append(abs(lep1.DeltaPhi(lep2)))
@@ -289,11 +302,9 @@ if __name__ == '__main__':
             ntuple['four_body_delta_phi'].append(abs(dijet.DeltaPhi(dilepton)))
             ntuple['four_body_delta_r'].append(dijet.DeltaR(dilepton))
 
-            mumub = dilepton + bjet
-            ntuple['mumub_j_delta_eta'].append(abs(mumub.Eta() - jet.Eta()))
-            ntuple['mumub_j_delta_phi'].append(abs(mumub.DeltaPhi(jet)))
-            ntuple['mumub_j_delta_r'].append(mumub.DeltaR(jet))
-
+            ntuple['mumub_j_delta_eta'].append(abs(dilepton_b.Eta() - jet.Eta()))
+            ntuple['mumub_j_delta_phi'].append(abs(dilepton_b.DeltaPhi(jet)))
+            ntuple['mumub_j_delta_r'].append(dilepton_b.DeltaR(jet))
 
             # Mendelstam variables
             #ntuple['t_xj'].append((dilepton - jet).M()**2)

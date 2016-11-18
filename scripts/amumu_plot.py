@@ -55,6 +55,7 @@ if __name__ == '__main__':
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
+                 'lepton2_cos_theta',
                  'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
                  'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
                  'dilepton_pt_over_m',
