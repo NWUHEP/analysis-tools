@@ -51,12 +51,28 @@ def calculate_cos_theta(ref_p4, boost_p4, target_p4):
                                                                                   
     return target_p4.CosTheta() 
 
+def fill_lepton_vars(ntuple, tree, lep1, lep2):
+    ntuple['lepton1_pt'].append(lep1.Pt())
+    ntuple['lepton1_eta'].append(lep1.Eta())
+    ntuple['lepton1_phi'].append(lep1.Phi())
+    ntuple['lepton1_q'].append(tree.leptonOneQ)
+    ntuple['lepton1_iso'].append(tree.leptonOneIso)
+    ntuple['lepton1_flavor'].append(tree.leptonOneFlavor)
+    ntuple['lepton1_trigger'].append(tree.leptonOneTrigger)
+
+    ntuple['lepton2_pt'].append(lep2.Pt())
+    ntuple['lepton2_eta'].append(lep2.Eta())
+    ntuple['lepton2_phi'].append(lep2.Phi())
+    ntuple['lepton2_q'].append(tree.leptonTwoQ)
+    ntuple['lepton2_iso'].append(tree.leptonTwoIso)
+    ntuple['lepton2_flavor'].append(tree.leptonTwoFlavor)
+    ntuple['lepton2_trigger'].append(tree.leptonTwoTrigger)
 
 if __name__ == '__main__':
 
     ### Configuration ###
     selection    = 'mumu'
-    period       = 2016
+    period       = 2012
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
 
@@ -78,7 +94,7 @@ if __name__ == '__main__':
                         'z2jets_m-50', 'z2jets_m-10to50',
                         'z3jets_m-50', 'z3jets_m-10to50',
                         'z4jets_m-50', 'z4jets_m-10to50',
-                        't_s', 't_t', 't_tw', 'tbar_tw', 
+                        't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                         'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                         'bprime_bb_semilep', 'bprime_t-channel', 
                         'fcnc_s-channel', 'fcnc_tt_semilep'
@@ -92,7 +108,7 @@ if __name__ == '__main__':
                'lepton1_iso', 'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
                'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  
                'lepton2_iso', 'lepton2_q', 'lepton2_flavor', 'lepton2_trigger',
-               'lepton2_cos_theta',
+               'lepton_plus_cos_theta', 'lepton_minus_cos_theta',
                'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
                'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
                'dilepton_pt_over_m',
@@ -174,13 +190,6 @@ if __name__ == '__main__':
             dilepton_j        = dilepton + jet
             fourbody          = dilepton + dijet
 
-            ### Blind the 2016 data in the signal region (24 < M_mumu < 32)
-            #if period == 2016 \
-            #    and selection == 'mumu' \
-            #    and abs(dilepton.M() - 28) < 4 \
-            #    and dataset.split('_')[0] == 'muon':
-            #    continue
-
             # event info
             ntuple['run_number'].append(tree.runNumber)
             ntuple['event_number'].append(tree.evtNumber)
@@ -222,10 +231,21 @@ if __name__ == '__main__':
             ntuple['lepton2_trigger'].append(tree.leptonTwoTrigger)
 
             if tree.nBJets > 0:
-                cos_theta = calculate_cos_theta(dilepton_b, dilepton, lep2)
-                ntuple['lepton2_cos_theta'].append(cos_theta)
+                if tree.leptonOneQ == -1:
+                    cos_theta = calculate_cos_theta(dilepton_b, dilepton, lep1)
+                    ntuple['lepton_minus_cos_theta'].append(cos_theta)
+
+                    cos_theta = calculate_cos_theta(dilepton_b, dilepton, lep2)
+                    ntuple['lepton_plus_cos_theta'].append(cos_theta)
+                else:
+                    cos_theta = calculate_cos_theta(dilepton_b, dilepton, lep2)
+                    ntuple['lepton_minus_cos_theta'].append(cos_theta)
+
+                    cos_theta = calculate_cos_theta(dilepton_b, dilepton, lep1)
+                    ntuple['lepton_plus_cos_theta'].append(cos_theta)
             else:
-                ntuple['lepton2_cos_theta'].append(0.)
+                ntuple['lepton_plus_cos_theta'].append(0.)
+                ntuple['lepton_minus_cos_theta'].append(0.)
 
             ### dilepton 
             ntuple['lepton_delta_eta'].append(abs(lep1.Eta() - lep2.Eta()))

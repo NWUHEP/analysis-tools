@@ -24,14 +24,15 @@ if __name__ == '__main__':
     plot_data   = True
 
     if period == 2016:
-        bg_labels     = ['t', 'ttbar', 'zjets']
-        signal_labels = ['bprime_xb']
+        bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
+        signal_labels = []#'bprime_xb']
         datasets = [
                     'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
-                    'ttjets', 
-                    't_t', 't_tw', 'tbar_t', 'tbar_tw', 
+                    'ttbar_lep', 'ttbar_semilep', 
                     'zjets_m-50', 'zjets_m-10to50',
-                    'bprime_xb'
+                    't_s', 't_t', 't_tw', 'tbar_tw', 
+                    'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                    #'bprime_xb'
                    ]
     elif period == 2012:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
@@ -55,7 +56,7 @@ if __name__ == '__main__':
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
-                 'lepton2_cos_theta',
+                 'lepton_plus_cos_theta', 'lepton_minus_cos_theta',
                  'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
                  'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
                  'dilepton_pt_over_m',
@@ -74,7 +75,6 @@ if __name__ == '__main__':
                  'dilepton_j_delta_r', 'dilepton_j_delta_eta', 'dilepton_j_delta_phi',
                  'four_body_mass',
                  'four_body_delta_r', 'four_body_delta_eta', 'four_body_delta_phi', 
-                 #'n_partons'
                ]
 
     ### Cuts ###
