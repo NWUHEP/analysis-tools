@@ -52,7 +52,7 @@ if __name__ == '__main__':
                    ]
 
     features = [
-                 'n_pu',
+                 'n_pu', 'n_muons', 'n_electrons',
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
