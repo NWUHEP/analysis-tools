@@ -17,7 +17,7 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    selection   = ('mumu', 'none')
+    selection   = ('mumu', 'preselection')
     period      = 2016
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
     lumi        = 19.8e3 if period == 2012 else 12e3
@@ -30,6 +30,10 @@ if __name__ == '__main__':
                     'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
                     'ttbar_lep', 'ttbar_semilep', 
                     'zjets_m-50', 'zjets_m-10to50',
+                    #'z1jets_m-50', 'z1jets_m-10to50',
+                    #'z2jets_m-50', 'z2jets_m-10to50',
+                    #'z3jets_m-50', 'z3jets_m-10to50',
+                    #'z4jets_m-50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                     #'bprime_xb'
@@ -42,21 +46,22 @@ if __name__ == '__main__':
                     'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
                     #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
                     'ttbar_lep', 'ttbar_semilep',
-                    'zjets_m-50',  'z1jets_m-50', 'z2jets_m-50', 
-                    'z3jets_m-50', 'z4jets_m-50', 
-                    'zjets_m-10to50', 'z1jets_m-10to50', 'z2jets_m-10to50', 
-                    'z3jets_m-10to50', 'z4jets_m-10to50',
+                    'zjets_m-50', 'zjets_m-10to50',
+                    'z1jets_m-50', 'z1jets_m-10to50',
+                    'z2jets_m-50', 'z2jets_m-10to50',
+                    'z3jets_m-50', 'z3jets_m-10to50',
+                    'z4jets_m-50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                     'bprime_t-channel', #'bprime_bb_semilep', 'fcnc_s-channel'
                    ]
 
     features = [
-                 'n_pu', #'n_muons', 'n_electrons',
+                 #'n_pu', 'n_muons', 'n_electrons',
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
-                 'lepton_plus_cos_theta', 'lepton_minus_cos_theta',
+                 #'lepton_plus_cos_theta', 'lepton_minus_cos_theta',
                  'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
                  'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
                  'dilepton_pt_over_m',

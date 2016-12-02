@@ -61,6 +61,7 @@ def fill_event_vars(tree):
     out_dict['trigger_status'] = tree.triggerStatus
 
     out_dict['n_pu']           = tree.nPU
+    out_dict['n_pv']           = tree.nPV
     out_dict['n_muons']        = tree.nMuons
     out_dict['n_electrons']    = tree.nElectrons
     out_dict['n_jets']         = tree.nJets
@@ -252,15 +253,15 @@ if __name__ == '__main__':
 
     if period == 2016:
         dataset_list = [
-                        #'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
-                        #'ttbar_lep', 'ttbar_semilep',
-                        #'zjets_m-50', 'zjets_m-10to50',
-                        #'z1jets_m-50', 'z1jets_m-10to50',
-                        #'z2jets_m-50', 'z2jets_m-10to50',
-                        #'z3jets_m-50', 'z3jets_m-10to50',
-                        #'z4jets_m-50', #'z4jets_m-10to50',
-                        't_s', #'t_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
-                        'ww', 'wz_2l2q', #'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                        'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
+                        'ttbar_lep', 'ttbar_semilep',
+                        'zjets_m-50', 'zjets_m-10to50',
+                        'z1jets_m-50', 'z1jets_m-10to50',
+                        'z2jets_m-50', 'z2jets_m-10to50',
+                        'z3jets_m-50', 'z3jets_m-10to50',
+                        'z4jets_m-50', #'z4jets_m-10to50',
+                        't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                        'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                         ]
     elif period == 2012:
         dataset_list = [

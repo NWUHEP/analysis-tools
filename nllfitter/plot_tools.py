@@ -278,9 +278,9 @@ class PlotManager():
 
             ### initialize figure ###
             if do_ratio:
-                fig, axes      = plt.subplots(2, 1)
+                fig, axes = plt.subplots(2, 1)
             else:
-                fig, axes      = plt.subplots(1, 1)
+                fig, axes = plt.subplots(1, 1)
             #legend_handles = []
 
             ### Get stack data and apply mask if necessary ###
@@ -301,11 +301,11 @@ class PlotManager():
 
                 ### Need to histogram the stack with the square of the weights to get the errors ### 
                 stack_noscale = np.histogram(np.concatenate(stack_data), 
-                                             bins  = lut_entry.n_bins,
-                                             range = (lut_entry.xmin, lut_entry.xmax),
+                                             bins    = lut_entry.n_bins,
+                                             range   = (lut_entry.xmin, lut_entry.xmax),
                                              weights = np.concatenate(stack_weights)**2
                                             )[0] 
-                stack_sum = stack[-1]
+                stack_sum = stack[-1] if len(stack_data) > 1 else stack
                 stack_x   = (bins[1:] + bins[:-1])/2.
                 stack_err = np.sqrt(stack_noscale)
                 no_blanks = stack_sum > 0
@@ -355,16 +355,17 @@ class PlotManager():
                                               nbins = lut_entry.n_bins,
                                               xlim  = (lut_entry.xmin, lut_entry.xmax)
                                              )
-                y, x, yerr = y[y>0], x[y>0], yerr[y>0]
+                x, y, yerr = x[y>0], y[y>0], yerr[y>0]
                 eb = axes.errorbar(x, y, yerr=yerr, 
                               fmt        = 'ko',
                               capsize    = 0,
                               elinewidth = 2
                              )
-                if y.min() < y_min and y.min() > 0.:
-                    y_min = y.min()
-                if y.max() > y_max:
-                    y_max = y.max() 
+                if y.size > 0:
+                    if y.min() < y_min and y.min() > 0.:
+                        y_min = y.min()
+                    if y.max() > y_max:
+                        y_max = y.max() 
                 #legend_handles.append(eb[0])
 
             ### make the legend ###
