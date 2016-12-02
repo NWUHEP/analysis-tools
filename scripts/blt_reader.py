@@ -198,6 +198,17 @@ def fill_jet_lepton_vars(tree):
     out_dict['mumub_j_delta_phi']    = abs(dilepton_b.DeltaPhi(jet))
     out_dict['mumub_j_delta_r']      = dilepton_b.DeltaR(jet)
 
+	if tree.nBJets > 0:
+		if tree.leptonOneQ == -1:
+			out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_b, dilepton, lep1)
+			out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_b, dilepton, lep2)
+		else:
+			out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_b, dilepton, lep2)
+			out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_b, dilepton, lep1)
+	else:
+		out_dict['lepton_plus_cos_theta']  = 0.
+		out_dict['lepton_minus_cos_theta'] = 0.
+
     return out_dict
 
 def fill_ntuple(tree, name):

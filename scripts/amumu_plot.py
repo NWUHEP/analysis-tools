@@ -17,8 +17,8 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    selection   = ('mumu', 'combined')
-    period      = 2012
+    selection   = ('mumu', 'none')
+    period      = 2016
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
     lumi        = 19.8e3 if period == 2012 else 12e3
     plot_data   = True
@@ -52,7 +52,7 @@ if __name__ == '__main__':
                    ]
 
     features = [
-                 'n_pu', 'n_muons', 'n_electrons',
+                 'n_pu', #'n_muons', 'n_electrons',
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
@@ -135,15 +135,11 @@ if __name__ == '__main__':
                                   file_ext       = 'png'
                                  )
 
-    if True:
-        #plot_manager.make_overlays(features, plot_data=False, normed=True)
-        plot_manager.make_overlays(features)
-    else:
-        regions = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
-        plot_manager.make_sideband_overlays('data', regions, features)
+    pt.make_directory(output_path, clear=True)
+    plot_manager.make_overlays(features, plot_data)
 
-    ### Dalitz plots ###
-
+	#regions = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
+	#plot_manager.make_sideband_overlays('data', regions, features)
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
