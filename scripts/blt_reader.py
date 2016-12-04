@@ -71,13 +71,10 @@ def fill_event_vars(tree):
     out_dict['met_mag']        = tree.met
     out_dict['met_phi']        = tree.metPhi
 
-    if period == 2012:
-        if dataset in ['zjets_m-50', 'zjets_m-10to50'] \
-            and tree.nPartons > 0 \
-            and tree.nPartons < 5:
-            out_dict['weight'] = 0.
-        else:
-            out_dict['weight'] = tree.eventWeight
+    if dataset in ['zjets_m-50', 'zjets_m-10to50'] \
+        and tree.nPartons > 0 \
+        and tree.nPartons < 5:
+        out_dict['weight'] = 0.
     else:
         out_dict['weight'] = tree.eventWeight
 
@@ -199,16 +196,16 @@ def fill_jet_lepton_vars(tree):
     out_dict['mumub_j_delta_phi']    = abs(dilepton_b.DeltaPhi(jet))
     out_dict['mumub_j_delta_r']      = dilepton_b.DeltaR(jet)
 
-	if tree.nBJets > 0:
-		if tree.leptonOneQ == -1:
-			out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_b, dilepton, lep1)
-			out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_b, dilepton, lep2)
-		else:
-			out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_b, dilepton, lep2)
-			out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_b, dilepton, lep1)
-	else:
-		out_dict['lepton_plus_cos_theta']  = 0.
-		out_dict['lepton_minus_cos_theta'] = 0.
+    if tree.nBJets > 0:
+        if tree.leptonOneQ == -1:
+            out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_b, dilepton, lep1)
+            out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_b, dilepton, lep2)
+        else:
+            out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_b, dilepton, lep2)
+            out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_b, dilepton, lep1)
+    else:
+        out_dict['lepton_plus_cos_theta']  = 0.
+        out_dict['lepton_minus_cos_theta'] = 0.
 
     return out_dict
 
@@ -261,7 +258,7 @@ if __name__ == '__main__':
                         'z2jets_m-50', 'z2jets_m-10to50',
                         'z3jets_m-50', 'z3jets_m-10to50',
                         'z4jets_m-50', #'z4jets_m-10to50',
-                        't_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
+                        't_s', 't_t', 't_tw', 'tbar_tw', #'tbar_s', 'tbar_t'
                         'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                         ]
     elif period == 2012:
