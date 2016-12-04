@@ -17,7 +17,7 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    selection   = ('mumu', 'preselection')
+    selection   = ('mumu', 'combined')
     period      = 2016
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
     lumi        = 19.8e3 if period == 2012 else 12e3
@@ -29,11 +29,11 @@ if __name__ == '__main__':
         datasets = [
                     'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
                     'ttbar_lep', 'ttbar_semilep', 
-                    'zjets_m-50', 'zjets_m-10to50',
-                    #'z1jets_m-50', 'z1jets_m-10to50',
-                    #'z2jets_m-50', 'z2jets_m-10to50',
-                    #'z3jets_m-50', 'z3jets_m-10to50',
-                    #'z4jets_m-50', 'z4jets_m-10to50',
+                    #'zjets_m-50', 'zjets_m-10to50',
+                    'z1jets_m-50', 'z1jets_m-10to50',
+                    'z2jets_m-50', 'z2jets_m-10to50',
+                    'z3jets_m-50', 'z3jets_m-10to50',
+                    'z4jets_m-50', #'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                     #'bprime_xb'
@@ -57,11 +57,11 @@ if __name__ == '__main__':
                    ]
 
     features = [
-                 #'n_pu', 'n_muons', 'n_electrons',
+                 'n_pv', 'n_muons', 'n_electrons',
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
-                 #'lepton_plus_cos_theta', 'lepton_minus_cos_theta',
+                 'lepton_plus_cos_theta', 'lepton_minus_cos_theta',
                  'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
                  'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
                  'dilepton_pt_over_m',
@@ -102,7 +102,7 @@ if __name__ == '__main__':
                            or \
                            (n_bjets >= 1 and n_fwdjets == 0 and n_jets + n_bjets == 2 \
                            and four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2 and met_mag < 40 and four_body_delta_phi > 2.5' 
+            'enhance'   : 'dilepton_pt_over_m > 2' 
             }
 
     cuts['combined_sideband'] = cuts['combined'] + \
@@ -119,6 +119,8 @@ if __name__ == '__main__':
         cut = cuts[selection[1]]
         if selection[1] not in ['same-sign', 'test']:
             cut += ' and ' + cuts['preselection']
+
+    #cut += ' and (dilepton_mass < 26 or dilepton_mass > 32)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
