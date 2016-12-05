@@ -52,7 +52,7 @@ if __name__ == '__main__':
     ### Configuration
     pt.set_new_tdr()
     do_sync     = False
-    do_mc       = True
+    do_mc       = False
     doToys      = False
     doKS        = False
     nsims       = 1000
@@ -63,13 +63,17 @@ if __name__ == '__main__':
     if period == 2012:
         datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D']
     elif period == 2016:
-        datasets    = ['muon_2016B', 'muon_2016C', 'muon_2016D']#, 'muon_2016E', 'muon_2016F']
+        datasets    = [
+                       'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                       #'muon_2016E', 'muon_2016F', 'muon_2016G', 
+                       #'muon_2016H'
+                      ]
 
     cuts        = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                    and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
                    and lepton1_q != lepton2_q \
-                   and 12 < dilepton_mass < 70' #\
-                   #and dilepton_pt_over_m > 2
+                   and 12 < dilepton_mass < 70'# \
+                   #and dilepton_pt_over_m > 2'
                    #and n_bjets > 0 \
 
     if channel == '1b1f':
@@ -107,7 +111,7 @@ if __name__ == '__main__':
                                       cuts          = cuts
                                      )
         df_data = data_manager.get_dataframe('data')
-        df_data.to_csv('data/fit/amumu_2012_{0}.csv'.format(channel), index=False)
+        df_data.to_csv('data/fit/amumu_{0}_{1}.csv'.format(period, channel), index=False)
         data = df_data['dilepton_mass'].values
         n_total = data.size
 
@@ -135,7 +139,7 @@ if __name__ == '__main__':
         sig_params.add_many(
                             ('A'     , 0.01 , True , 0.0 , 1.  , None) ,
                             ('mu'    , 29.  , True , 20. , 50. , None) ,
-                            ('gamma' , 1.9  , True , 0.1 , 3.  , None)
+                            ('gamma' , 1.9  , True , 0.1 , 2.  , None)
                            )
         sig_params += bg_params.copy()
         sig_model  = Model(ft.sig_pdf_alt, sig_params)

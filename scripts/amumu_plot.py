@@ -25,18 +25,19 @@ if __name__ == '__main__':
 
     if period == 2016:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
-        signal_labels = []#'bprime_xb']
+        signal_labels = ['bprime_xb']
         datasets = [
-                    'muon_2016B', 'muon_2016C', 'muon_2016D', #'muon_2016E', 'muon_2016F', 
+                    'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                    #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H', 
                     'ttbar_lep', 'ttbar_semilep', 
-                    #'zjets_m-50', 'zjets_m-10to50',
+                    'zjets_m-50', 'zjets_m-10to50',
                     'z1jets_m-50', 'z1jets_m-10to50',
                     'z2jets_m-50', 'z2jets_m-10to50',
                     'z3jets_m-50', 'z3jets_m-10to50',
-                    'z4jets_m-50', #'z4jets_m-10to50',
+                    'z4jets_m-50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    #'bprime_xb'
+                    'bprime_xb',
                    ]
     elif period == 2012:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
@@ -102,7 +103,7 @@ if __name__ == '__main__':
                            or \
                            (n_bjets >= 1 and n_fwdjets == 0 and n_jets + n_bjets == 2 \
                            and four_body_delta_phi > 2.5 and met_mag < 40))',
-            'enhance'   : 'dilepton_pt_over_m > 2' 
+            'enhance'   : '(dilepton_pt_over_m > 2)'# and 140 < dilepton_b_mass < 190)' 
             }
 
     cuts['combined_sideband'] = cuts['combined'] + \
@@ -120,7 +121,7 @@ if __name__ == '__main__':
         if selection[1] not in ['same-sign', 'test']:
             cut += ' and ' + cuts['preselection']
 
-    #cut += ' and (dilepton_mass < 26 or dilepton_mass > 32)'
+    cut += ' and (dilepton_mass < 26 or dilepton_mass > 32)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
