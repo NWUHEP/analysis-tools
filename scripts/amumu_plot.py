@@ -17,18 +17,19 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    selection   = ('mumu', 'combined')
+    selection   = ('mumu', 'preselection')
     period      = 2016
     ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
-    lumi        = 19.8e3 if period == 2012 else 12e3
+    lumi        = 19.8e3 if period == 2012 else 36.4e3
     plot_data   = True
 
     if period == 2016:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
-        signal_labels = ['bprime_xb']
+        #bg_labels     = []
+        signal_labels = []#'bprime_xb']
         datasets = [
                     'muon_2016B', 'muon_2016C', 'muon_2016D', 
-                    #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H', 
+                    'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H', 
                     'ttbar_lep', 'ttbar_semilep', 
                     'zjets_m-50', 'zjets_m-10to50',
                     'z1jets_m-50', 'z1jets_m-10to50',
@@ -37,7 +38,7 @@ if __name__ == '__main__':
                     'z4jets_m-50', 'z4jets_m-10to50',
                     't_s', 't_t', 't_tw', 'tbar_tw', 
                     'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    'bprime_xb',
+                    #'bprime_xb',
                    ]
     elif period == 2012:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
@@ -58,7 +59,8 @@ if __name__ == '__main__':
                    ]
 
     features = [
-                 'n_pv', 'n_muons', 'n_electrons',
+                 #'n_pv', 
+                 'n_muons', 'n_electrons',
 
                  'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso', 
                  'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_iso', 
@@ -121,7 +123,8 @@ if __name__ == '__main__':
         if selection[1] not in ['same-sign', 'test']:
             cut += ' and ' + cuts['preselection']
 
-    cut += ' and (dilepton_mass < 26 or dilepton_mass > 32)'
+    if selection[0] == 'mumu' and period == 2016:
+        cut += ' and (dilepton_mass < 26 or dilepton_mass > 32)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -144,7 +147,7 @@ if __name__ == '__main__':
                                  )
 
     pt.make_directory(output_path, clear=True)
-    plot_manager.make_overlays(features, plot_data)
+    plot_manager.make_overlays(features, plot_data, do_ratio=True)
 
 	#regions = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
 	#plot_manager.make_sideband_overlays('data', regions, features)

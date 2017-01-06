@@ -26,11 +26,16 @@ if __name__ == '__main__':
         else:
             scale_factors.append(0.)
 
+    h_pileup_data.DrawNormalized()
+    h_pileup_mc.DrawNormalized()
+
     out_file = r.TFile('data/pileup_sf_2016_BCD.root', 'RECREATE')
     sf_graph = r.TGraph(500, np.linspace(0, 50, 500), np.array(scale_factors))
-    sf_graph.SetName('pileup')
-    sf_graph.SetTitle('pileup')
+    sf_graph.SetName('pileup_sf')
+    sf_graph.SetTitle('pileup_sf')
     out_file.Add(sf_graph)
+    out_file.Add(h_pileup_mc)
+    out_file.Add(h_pileup_data)
     out_file.Write()
     out_file.Close()
 

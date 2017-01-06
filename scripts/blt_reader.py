@@ -62,7 +62,7 @@ def fill_event_vars(tree):
     out_dict['trigger_status'] = tree.triggerStatus
 
     out_dict['n_pu']           = tree.nPU
-    out_dict['n_pv']           = tree.nPV
+    #out_dict['n_pv']           = tree.nPV
     out_dict['n_muons']        = tree.nMuons
     out_dict['n_electrons']    = tree.nElectrons
     out_dict['n_jets']         = tree.nJets
@@ -127,6 +127,7 @@ def fill_jet_vars(tree):
     out_dict['bjet_e']          = bjet.E()
     out_dict['bjet_d0']         = tree.bjetD0
     out_dict['bjet_tag']        = tree.bjetTag
+    #out_dict['bjet_puid']       = tree.bjetPUID
     out_dict['bjet_flavor']     = tree.bjetFlavor
 
     out_dict['jet_pt']          = jet.Pt()
@@ -135,6 +136,7 @@ def fill_jet_vars(tree):
     out_dict['jet_e']           = jet.E()
     out_dict['jet_d0']          = tree.jetD0
     out_dict['jet_tag']         = tree.jetTag
+    #out_dict['jet_puid']        = tree.jetPUID
     out_dict['jet_flavor']      = tree.jetFlavor
 
     out_dict['jet_delta_eta']   = abs(bjet.Eta() - jet.Eta())
@@ -252,7 +254,7 @@ if __name__ == '__main__':
 
     if period == 2016:
         dataset_list = [
-                        'bprime_xb',
+                        #'bprime_xb',
                         'ttbar_lep', 'ttbar_semilep',
                         'zjets_m-50', 'zjets_m-10to50',
                         'z1jets_m-50', 'z1jets_m-10to50',

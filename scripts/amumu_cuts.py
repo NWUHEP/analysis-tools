@@ -23,6 +23,7 @@ if __name__ == '__main__':
     output_path = 'data/amumu_sync/{0}'.format(period)
     if period == '2012':
         datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
+        #datasets    = ['muon_2012A'] 
     elif period == '2016':
         datasets    = ['muon_2016B', 'muon_2016C', 'muon_2016D'] 
 
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     for i in range(len(cuts)):
         df = data_manager.get_dataframe('data', ' and '.join(cuts[:i+1]))
         df.to_csv('{0}/cut{1}_{2}.csv'.format(output_path, i, cat), 
-                  columns = ['event_number', 'run_number'],
+                  columns = ['event_number', 'run_number', 'lumi', 'bjet_tag'],
                   index=False
                  ) 
         print 'cut {0}: {1}'.format(i, df.shape[0])

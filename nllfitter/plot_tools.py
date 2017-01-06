@@ -33,13 +33,16 @@ def set_new_tdr():
     plt.rcParams['legend.fontsize']   = 20
     plt.rcParams['legend.numpoints']  = 1
 
-def add_lumi_text(ax, period):
+def add_lumi_text(ax, lumi, period):
     ax.text(0.06, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
     ax.text(0.17, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
     if period == 2012:
         ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
     elif period == 2016:
-        ax.text(0.68, 1.01, r'$\sf{12\,fb^{-1}}\,(\sqrt{\it{s}}=13\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
+        ax.text(0.68, 1.01, 
+                r'$\sf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\it{{s}}}}=13\,\sf{{TeV}})$'.format(lumi/1000.), 
+                fontsize=20, 
+                transform=ax.transAxes)
 
 def hist_to_errorbar(data, nbins, xlim, normed=False):
     y, bins = np.histogram(data, bins=nbins, range=xlim)
@@ -123,7 +126,7 @@ class DataManager():
                 df = df.query(self._cuts)
             
             #### update weights with lumi scale factors ###
-            if label != 'data':
+            if label.split('_')[0] != 'data':
                 scale = self._scale*lut_entry.cross_section*lut_entry.branching_fraction/init_count
                 df.loc[:,'weight'] = df['weight'].multiply(scale)
 
@@ -278,16 +281,19 @@ class PlotManager():
 
             ### initialize figure ###
             if do_ratio:
-                fig, axes = plt.subplots(2, 1)
+                fig, axes = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios':[2,1]})
+                fig.subplots_adjust(hspace=0)
+                ax = axes[0]
+
             else:
-                fig, axes = plt.subplots(1, 1)
+                fig, ax = plt.subplots(1, 1)
             #legend_handles = []
 
             ### Get stack data and apply mask if necessary ###
             y_min, y_max = 1e9, 0.
             if len(self._stack_labels) > 0:
                 stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, lut_entry.condition)
-                stack, bins, p = axes.hist(stack_data, 
+                stack, bins, p = ax.hist(stack_data, 
                                            bins      = lut_entry.n_bins,
                                            range     = (lut_entry.xmin, lut_entry.xmax),
                                            color     = self._stack_colors,
@@ -308,9 +314,13 @@ class PlotManager():
                 stack_sum = stack[-1] if len(stack_data) > 1 else stack
                 stack_x   = (bins[1:] + bins[:-1])/2.
                 stack_err = np.sqrt(stack_noscale)
+
+                if do_ratio:
+                    denominator = (stack_x, stack_sum, stack_err)
+
                 no_blanks = stack_sum > 0
                 stack_sum, stack_x, stack_err = stack_sum[no_blanks], stack_x[no_blanks], stack_err[no_blanks]
-                eb = axes.errorbar(stack_x, stack_sum, yerr=stack_err, 
+                eb = ax.errorbar(stack_x, stack_sum, yerr=stack_err, 
                               fmt        = 'none',
                               ecolor     = 'k',
                               capsize    = 0,
@@ -326,7 +336,7 @@ class PlotManager():
             ### Get overlay data and apply mask if necessary ###
             if len(self._overlay_labels) > 0:
                 overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, self._overlay_labels, lut_entry.condition)
-                hists, bins, p = axes.hist(overlay_data,
+                hists, bins, p = ax.hist(overlay_data,
                                            bins      = lut_entry.n_bins,
                                            range     = (lut_entry.xmin, lut_entry.xmax),
                                            color     = self._overlay_colors,
@@ -355,8 +365,11 @@ class PlotManager():
                                               nbins = lut_entry.n_bins,
                                               xlim  = (lut_entry.xmin, lut_entry.xmax)
                                              )
+                if do_ratio:
+                    numerator = (x, y, yerr)
+
                 x, y, yerr = x[y>0], y[y>0], yerr[y>0]
-                eb = axes.errorbar(x, y, yerr=yerr, 
+                eb = ax.errorbar(x, y, yerr=yerr, 
                               fmt        = 'ko',
                               capsize    = 0,
                               elinewidth = 2
@@ -369,17 +382,34 @@ class PlotManager():
                 #legend_handles.append(eb[0])
 
             ### make the legend ###
-            axes.legend(legend_text)
+            ax.legend(legend_text)
 
             ### labels and x limits ###
-            axes.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
-            axes.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
-            axes.set_xlim((lut_entry.xmin, lut_entry.xmax))
-            axes.grid()
+            if do_ratio:
+                axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
+                axes[1].set_ylabel(r'Data/MC')
+                axes[1].set_ylim((0.5, 1.99))
+                axes[1].grid()
+
+                ### calculate ratios 
+                ratio = numerator[1]/denominator[1]
+                error = ratio*np.sqrt(numerator[2]**2/numerator[1]**2 + denominator[2]**2/denominator[1]**2)
+                axes[1].errorbar(numerator[0], ratio, yerr=error,
+                                 fmt = 'ko',
+                                 capsize = 0,
+                                 elinewidth = 2
+                                )
+                axes[1].plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
+            else:
+                ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
+
+            ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
+            ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
+            ax.grid()
 
             ### Add lumi text ###
             if do_cms_text:
-                add_lumi_text(axes, dm._period)
+                add_lumi_text(ax, dm._scale, dm._period)
 
             ### Make output directory if it does not exist ###
             make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
@@ -387,7 +417,7 @@ class PlotManager():
 
             ### Save output plot ###
             ### linear scale ###
-            axes.set_ylim((0., 1.8*y_max))
+            ax.set_ylim((0., 1.8*y_max))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 
                                                         feature, 
@@ -395,8 +425,8 @@ class PlotManager():
                                                       ))
 
             ### log scale ###
-            axes.set_yscale('log')
-            axes.set_ylim(y_min/10., 15.*y_max)
+            ax.set_yscale('log')
+            ax.set_ylim(y_min/10., 15.*y_max)
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 

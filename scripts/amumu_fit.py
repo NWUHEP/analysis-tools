@@ -57,7 +57,7 @@ if __name__ == '__main__':
     doKS        = False
     nsims       = 1000
     model       = 'Voigt'
-    ntuple_dir  = 'data/flatuples/{0}_{1}'.format(category, period)
+    ntuple_dir  = 'data/flatuples/{0}_test_{1}'.format(category, period)
     output_path = 'plots/fits/{0}_{1}'.format(category, period)
 
     if period == 2012:
