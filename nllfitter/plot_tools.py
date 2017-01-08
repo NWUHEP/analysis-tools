@@ -129,7 +129,8 @@ class DataManager():
             if label.split('_')[0] != 'data':
                 scale = self._scale*lut_entry.cross_section*lut_entry.branching_fraction/init_count
                 df.loc[:,'weight'] = df['weight'].multiply(scale)
-
+            else:
+                df.loc[:,'weight'] = df['weight'].multiply(lut_entry.cross_section)
 
             ### combined datasets if required ###
             if self._combine:
