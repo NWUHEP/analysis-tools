@@ -247,7 +247,7 @@ def pickle_ntuple(ntuple_data):
 if __name__ == '__main__':
 
     ### Configuration ###
-    selection    = 'mumu'
+    selection    = 'mumu_sync'
     period       = 2016
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
@@ -255,17 +255,17 @@ if __name__ == '__main__':
     if period == 2016:
         dataset_list = [
                         #'bprime_xb',
-                        'ttbar_lep', 'ttbar_semilep',
-                        'zjets_m-50', 'zjets_m-10to50',
-                        'z1jets_m-50', 'z1jets_m-10to50',
-                        'z2jets_m-50', 'z2jets_m-10to50',
-                        'z3jets_m-50', 'z3jets_m-10to50',
-                        'z4jets_m-50', 'z4jets_m-10to50',
-                        't_s', 't_t', 't_tw', 'tbar_tw', #'tbar_s', 'tbar_t'
-                        'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                        #'ttbar_lep', 'ttbar_semilep',
+                        #'zjets_m-50', 'zjets_m-10to50',
+                        #'z1jets_m-50', 'z1jets_m-10to50',
+                        #'z2jets_m-50', 'z2jets_m-10to50',
+                        #'z3jets_m-50', 'z3jets_m-10to50',
+                        #'z4jets_m-50', 'z4jets_m-10to50',
+                        #'t_s', 't_t', 't_tw', 'tbar_tw', #'tbar_s', 'tbar_t'
+                        #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
 
                         'muon_2016B', 'muon_2016C', 'muon_2016D', 
-                        'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
+                        #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
                         ]
     elif period == 2012:
         dataset_list = [

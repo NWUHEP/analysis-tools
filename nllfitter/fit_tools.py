@@ -14,7 +14,6 @@ from scipy import integrate
 from scipy.optimize import minimize
 from scipy.special import wofz
 
-import emcee as mc
 import numdifftools as nd
 import lmfit
 
