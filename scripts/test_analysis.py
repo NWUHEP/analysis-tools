@@ -52,51 +52,53 @@ if __name__ == '__main__':
 
     ### Configuration
     pt.set_new_tdr()
-    ntuple_dir  = 'data/flatuples/mumu_2012'
-    selection   = ('mumu', 'combined')
-    period      = 2012
+    ntuple_dir  = 'data/flatuples/mumu_2016'
+    selection   = ('mumu', 'preselection')
+    period      = 2016
     output_path = 'plots/fits/{0}_{1}'.format('_'.join(selection), period)
 
     datasets    = [
                    #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
                    #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
-                   'ttbar_lep', 'ttbar_semilep',
+                   'ttbar_lep', #'ttbar_semilep',
                    'zjets_m-50', 'zjets_m-10to50',
                    #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
                    #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                    #'bprime_xb'
                   ]
-    features = [
-                #'run_number', 'event_number', 'lumi', 'weight',
-                'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 
-                #'lepton1_iso', 'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
-                'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  
-                #'lepton2_iso', 'lepton2_q', 'lepton2_flavor', 'lepton2_trigger',
-                'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
-                'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
-                'dilepton_pt_over_m',
+    features_cont = [
+                     'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso',
+                     'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  'lepton2_iso',
+                     'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
+                     'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
+                     'dilepton_pt_over_m',
 
-                'met_mag', 'met_phi',
-                #'n_jets', 'n_fwdjets', 'n_bjets',
-                #'bjet_pt', 'bjet_eta', 'bjet_phi', #'bjet_d0',
-                #'jet_pt', 'jet_eta', 'jet_phi', #'jet_d0', 
-                #'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
-                #'dijet_pt_over_m',
+                     'met_mag', 'met_phi',
+                     #'bjet_pt', 'bjet_eta', 'bjet_phi', #'bjet_d0',
+                     #'jet_pt', 'jet_eta', 'jet_phi', #'jet_d0', 
+                     #'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
+                     #'dijet_pt_over_m',
 
-                #'lepton1_b_mass', 'lepton1_b_pt', 
-                #'lepton1_b_delta_eta', 'lepton1_b_delta_phi', 'lepton1_b_delta_r',
-                #'lepton2_b_mass', 'lepton2_b_pt', 
-                #'lepton2_b_delta_eta', 'lepton2_b_delta_phi', 'lepton2_b_delta_r',
+                     #'lepton1_b_mass', 'lepton1_b_pt', 
+                     #'lepton1_b_delta_eta', 'lepton1_b_delta_phi', 'lepton1_b_delta_r',
+                     #'lepton2_b_mass', 'lepton2_b_pt', 
+                     #'lepton2_b_delta_eta', 'lepton2_b_delta_phi', 'lepton2_b_delta_r',
 
-                #'dilepton_j_mass', 'dilepton_j_pt', 
-                #'dilepton_j_delta_eta', 'dilepton_j_delta_phi', 'dilepton_j_delta_r',
-                #'dilepton_b_mass', 'dilepton_b_pt', 
-                #'dilepton_b_delta_eta', 'dilepton_b_delta_phi', 'dilepton_b_delta_r',
-                #'four_body_mass',
-                #'four_body_delta_phi', 'four_body_delta_eta', 'four_body_delta_r',
+                     #'dilepton_j_mass', 'dilepton_j_pt', 
+                     #'dilepton_j_delta_eta', 'dilepton_j_delta_phi', 'dilepton_j_delta_r',
+                     #'dilepton_b_mass', 'dilepton_b_pt', 
+                     #'dilepton_b_delta_eta', 'dilepton_b_delta_phi', 'dilepton_b_delta_r',
+                     #'four_body_mass',
+                     #'four_body_delta_phi', 'four_body_delta_eta', 'four_body_delta_r',
 
-                #'t_xj', 't_xb', 't_bj'
-               ]
+                     #'t_xj', 't_xb', 't_bj'
+                    ]
+
+    features_disc = [
+                     'n_jets', 'n_fwdjets', 'n_bjets',
+                     #'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
+                     #'lepton2_q', 'lepton2_flavor', 'lepton2_trigger',
+                    ]
 
     cuts     = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                 and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
@@ -112,28 +114,37 @@ if __name__ == '__main__':
                                  )
 
     ### prepare data for training ###
-    targets   = ['ttbar', 'zjets']#, 'bprime_xb']
-    dataframe = pd.concat([data_manager.get_dataframe(t) for t in targets])
-    dataframe = dataframe[features+targets]
-    dataframe = dataframe.fillna(0)
-    dataframe = dataframe.reset_index(drop=True)
-    dataframe = dataframe.iloc[np.random.permutation(dataframe.shape[0])]
+    targets   = ['ttbar', 'zjets']
+    df = pd.concat([data_manager.get_dataframe(t) for t in targets])
+    df = df[features_cont + features_disc + ['label']]
+    df = df.fillna(0)
+    df = df.reset_index(drop=True)
+    df = df.iloc[np.random.permutation(df.shape[0])]
 
     ### scale continuous variables to lie between 0 and 1 ###
     lut = data_manager._lut_features
-    for feature in features:
+    for feature in features_cont:
+        if feature not in lut.index:
+            print 'Could not find feature {0} in lut.'.format(feature)
+
         xmin = lut.loc[feature].xmin
         xmax = lut.loc[feature].xmax
         dataframe[feature] = dataframe[feature].apply(lambda x: (x - xmin)/(xmax - xmin))
 
     ### vectorize categorical variables ###
+    target_dummies = pd.get_dummies(df.label)
+    df.drop('label', 1)
+    df = pd.concat([df, target_dummies])
+    
+
+    '''
     ### split data into training and test data ###
     n_data  = dataframe.shape[0]
     isplit  = int(2*n_data/3)
     train_x = dataframe[features].values[:isplit]
-    train_y = dataframe[targets].values[:isplit]
+    train_y = dataframe['label'].values[:isplit]
     test_x  = dataframe[features].values[isplit:]
-    test_y  = dataframe[targets].values[isplit:]
+    test_y  = dataframe['label'].values[isplit:]
     
     #df_data = data_manager.get_dataframe('data')
     #df_1b1f = df_data.query(cut_1b1f)
@@ -164,6 +175,7 @@ if __name__ == '__main__':
         acc.append(sess.run(accuracy, feed_dict={x:test_x, y_:test_y}))
 
     acc = np.array(acc)
+    '''
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))

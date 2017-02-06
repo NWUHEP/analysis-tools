@@ -16,17 +16,20 @@ if __name__ == '__main__':
         cat     = sys.argv[2]
         period  = sys.argv[3]
     else:
-        indir   = 'data/flatuples/mumu_2012'
+        indir   = 'data/flatuples/mumu_2016'
         cat     = '1b1f'
-        period  = '2012'
+        period  = '2016'
 
     do_sync = True
-    output_path = 'data/amumu_sync/{0}'.format(period)
+    output_path = 'data/sync/{0}'.format(period)
     if period == '2012':
         datasets    = ['muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D'] 
-        #datasets    = ['muon_2012A'] 
     elif period == '2016':
-        datasets    = ['muon_2016B', 'muon_2016C', 'muon_2016D'] 
+        datasets    = [
+                       'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                       #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
+                      ] 
+        #datasets    = ['muon_2016C'] 
 
     data_manager = pt.DataManager(input_dir     = indir,
                                   dataset_names = datasets,
@@ -35,7 +38,7 @@ if __name__ == '__main__':
                                  )
 
     # conditions for querying non-zero jet/b jet events
-    cuts = [
+    cuts = [  
             '(lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
               and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
               and lepton1_q != lepton2_q \
@@ -60,13 +63,14 @@ if __name__ == '__main__':
     else:
         print 'what are you doing, man!?'
 
-    #cuts.append('25 < dilepton_mass < 32')
+    #cuts.append('26 < dilepton_mass < 32')
 
     pt.make_directory(output_path, clear=False) 
     for i in range(len(cuts)):
         df = data_manager.get_dataframe('data', ' and '.join(cuts[:i+1]))
+        df = df[['run_number', 'lumi', 'event_number', 'dilepton_mass']]
         df.to_csv('{0}/events_cut{1}_{2}.csv'.format(output_path, i, cat), 
-                  columns = ['event_number', 'run_number', 'lumi', 'bjet_tag'],
+                  #columns = ['event_number', 'run_number', 'lumi', 'dilepton_mass'],
                   index=False
                  ) 
         print 'cut {0}: {1}'.format(i, df.shape[0])
@@ -74,13 +78,8 @@ if __name__ == '__main__':
     if do_sync and period == '2016':
         evt_index = ['run_number', 'event_number']
         df.set_index(evt_index)
-        if cat=='1b1f':
-            cut_level = 6
-        elif cat=='1b1c':
-            cut_level = 9
-        df0 = pd.read_csv('data/amumu_sync/Olga/events0{0}_0_SM_RunBCD_pf_NORMjetmumatch20_met_1.txt'.format(cut_level), header=None, sep=' ')
-        df0.columns = ['run_number', 'event_number', 'lumi', 'mass', 'drop']
-        df0 = df0.drop('drop', axis=1)
+        df0 = pd.read_csv('data/sync/Olga/events_rereco_{0}.txt'.format(cat), header=None, sep=' ')
+        df0.columns = ['run_number', 'event_number', 'lumi', 'dilepton_mass']
         df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]
         df0.set_index(evt_index)
 
@@ -89,8 +88,10 @@ if __name__ == '__main__':
         mask  = en.apply(lambda x: x not in en0.values)
         mask0 = en0.apply(lambda x: x not in en.values)
 
-        print 'Events in my dataset, but not in sync dataset:'
-        print df[mask][['run_number', 'event_number']]
         print ''
-        print 'Events in sync dataset, but not in my datset:'
-        print df0[mask0][['run_number', 'event_number']]
+        print '{0} events in my dataset, but not in sync dataset:'.format(df[mask].shape[0])
+        print df[mask][['run_number', 'lumi', 'event_number']].to_string(index=False)
+        print ''
+        print '{0} events in sync dataset, but not in my dataset:'.format(df0[mask0].shape[0])
+        print df0[mask0][['run_number', 'lumi', 'event_number']].to_string(index=False)
+

@@ -17,28 +17,40 @@ if __name__ == '__main__':
     start = timer()
 
     ### Configuration
-    selection   = ('mumu', '1b1f')
+    selection   = ('mumu', '1b1c')
     period      = 2016
-    ntuple_dir  = 'data/flatuples/{0}_{1}'.format(selection[0], period)
+    ntuple_dir  = 'data/flatuples/{0}_rereco_{1}'.format(selection[0], period)
     lumi        = 19.8e3 if period == 2012 else 36.4e3
     plot_data   = True
 
     if period == 2016:
-        bg_labels     = []#'t', 'diboson', 'ttbar', 'zjets']
+        bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
         #bg_labels     = []
-        signal_labels = ['data_new']#'bprime_xb']
+        signal_labels = []
+        #signal_labels = ['data_prompt']
         datasets = [
                     'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                    #'muon_prompt_2016B', 'muon_prompt_2016C', 'muon_prompt_2016D', 
                     'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H', 
+
+                    'ttbar_lep',
+                    'zjets_m-50',  'zjets_m-10to50',
+                    'z1jets_m-50', 'z1jets_m-10to50',
+                    'z2jets_m-50', 'z2jets_m-10to50',
+                    'z3jets_m-50', 'z3jets_m-10to50',
+                    'z4jets_m-50', 
+                    't_t', 'tbar_t', 't_tw', 'tbar_tw', 
+                    'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 
+
                     #'ttbar_lep', 'ttbar_semilep', 
-                    #'zjets_m-50', 'zjets_m-10to50',
+                    #'zjets_m-50',  'zjets_m-10to50',
                     #'z1jets_m-50', 'z1jets_m-10to50',
                     #'z2jets_m-50', 'z2jets_m-10to50',
                     #'z3jets_m-50', 'z3jets_m-10to50',
                     #'z4jets_m-50', 'z4jets_m-10to50',
                     #'t_s', 't_t', 't_tw', 'tbar_tw', 
                     #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-                    #'bprime_xb',
+                    #'bprime_t-channel',
                    ]
     elif period == 2012:
         bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
@@ -141,13 +153,13 @@ if __name__ == '__main__':
                                   features       = features,
                                   stack_labels   = bg_labels,
                                   overlay_labels = signal_labels,
-                                  top_overlay    = True,
+                                  top_overlay    = False,
                                   output_path    = output_path,
                                   file_ext       = 'png'
                                  )
 
     pt.make_directory(output_path, clear=True)
-    plot_manager.make_overlays(features, plot_data, do_ratio=False)
+    plot_manager.make_overlays(features, plot_data, do_ratio=False, overlay_style='errorbar')
 
 	#regions = ['26 < dilepton_mass < 32', 'dilepton_mass < 26 or dilepton_mass > 32']
 	#plot_manager.make_sideband_overlays('data', regions, features)

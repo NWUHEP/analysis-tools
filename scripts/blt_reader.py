@@ -62,7 +62,7 @@ def fill_event_vars(tree):
     out_dict['trigger_status'] = tree.triggerStatus
 
     out_dict['n_pu']           = tree.nPU
-    #out_dict['n_pv']           = tree.nPV
+    out_dict['n_pv']           = tree.nPV
     out_dict['n_muons']        = tree.nMuons
     out_dict['n_electrons']    = tree.nElectrons
     out_dict['n_jets']         = tree.nJets
@@ -212,12 +212,34 @@ def fill_jet_lepton_vars(tree):
 
     return out_dict
 
+def fill_genjet_vars(out_dict):
+
+    out_dict = {}
+    # generator level information (all 0 for data)
+    gen_bjet = tree.genBJetP4
+    out_dict['n_partons']            = (tree.nPartons)
+    out_dict['gen_bjet_pt']          = (gen_bjet.Pt())
+    out_dict['gen_bjet_eta']         = (gen_bjet.Eta())
+    out_dict['gen_bjet_phi']         = (gen_bjet.Phi())
+    out_dict['gen_bjet_e']           = (gen_bjet.E())
+    out_dict['gen_bjet_tag']         = (tree.genBJetTag)
+    #out_dict['gen_dilepton_b_mass'] = ((dilepton + gen_bjet).M())
+    
+    #out_dict['gen_jet_pt']=(gen_jet.Pt())
+    #out_dict['gen_jet_eta']=(gen_jet.Eta())
+    #out_dict['gen_jet_phi']=(gen_jet.Phi())
+    #out_dict['gen_jet_e']=(gen_bjet.E())
+    #out_dict['gen_jet_tag']=(tree.genJetTag)
+    #out_dict['gen_dilepton_j_mass']=((dilepton + gen_jet).M())
+
+    return out_dict
+
 @profile
 def fill_ntuple(tree, name):
     n = int(np.min([float(tree.GetEntriesFast()), 5e5]))
     for i in trange(n,
                     desc       = name,
-                    leave      = False,
+                    leave      = True,
                     unit_scale = True,
                     ncols      = 75,
                     total      = n
@@ -228,6 +250,7 @@ def fill_ntuple(tree, name):
         entry.update(fill_lepton_vars(tree))
         entry.update(fill_jet_vars(tree))
         entry.update(fill_jet_lepton_vars(tree))
+        entry.update(fill_genjet_vars(tree))
         n -= 1;
 
         yield entry
@@ -255,14 +278,14 @@ if __name__ == '__main__':
     if period == 2016:
         dataset_list = [
                         #'bprime_xb',
-                        #'ttbar_lep', 'ttbar_semilep',
+                        #'ttbar_lep', #'ttbar_semilep',
                         #'zjets_m-50', 'zjets_m-10to50',
                         #'z1jets_m-50', 'z1jets_m-10to50',
                         #'z2jets_m-50', 'z2jets_m-10to50',
                         #'z3jets_m-50', 'z3jets_m-10to50',
-                        #'z4jets_m-50', 'z4jets_m-10to50',
-                        #'t_s', 't_t', 't_tw', 'tbar_tw', #'tbar_s', 'tbar_t'
-                        #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                        #'z4jets_m-50', #'z4jets_m-10to50',
+                        #'t_t', 'tbar_t', 't_tw', 'tbar_tw', #'t_s', 'tbar_s'
+                        #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', #'zz_2l2nu',
 
                         'muon_2016B', 'muon_2016C', 'muon_2016D', 
                         #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',

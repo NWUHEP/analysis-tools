@@ -120,6 +120,7 @@ class DataManager():
             init_count = self._event_counts[dataset][0]
             lut_entry  = self._lut_datasets.loc[dataset]
             label      = lut_entry.label
+            df['label'] = df.shape[0]*[label,]
 
             #### apply selection cuts ###
             if self._cuts != '':
@@ -249,10 +250,12 @@ class PlotManager():
         self._overlay_colors = [lut.loc[l].color for l in self._overlay_labels]
 
     def make_overlays(self, features, 
-                      plot_data=True, 
-                      normed=False,
-                      do_cms_text=True, 
-                      do_ratio=False):
+                      plot_data     = True,
+                      normed        = False,
+                      do_cms_text   = True,
+                      overlay_style = 'line',
+                      do_ratio      = False
+                     ):
         dm = self._dm
         make_directory(self._output_path)
 
@@ -263,12 +266,14 @@ class PlotManager():
         ### initialize legend text ###
         legend_text = []
         legend_text.extend([lut_datasets.loc[label].text for label in self._stack_labels[::-1]])
-        legend_text.extend([lut_datasets.loc[label].text for label in self._overlay_labels[::-1]])
+        #legend_text.extend([lut_datasets.loc[label].text for label in self._overlay_labels[::-1]])
 
         if len(self._stack_labels) > 0:
             legend_text.append('BG error')
         if plot_data:
-            legend_text.append('Data')
+            #legend_text.append('Data')
+            legend_text.append('Data (prompt)')
+            legend_text.append('Data (rereco)')
 
         for feature in tqdm(features, desc='Plotting', unit_scale=True, ncols=75, total=len(features)):
             if feature not in self._features:
@@ -337,25 +342,40 @@ class PlotManager():
             ### Get overlay data and apply mask if necessary ###
             if len(self._overlay_labels) > 0:
                 overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, self._overlay_labels, lut_entry.condition)
-                hists, bins, p = ax.hist(overlay_data,
-                                           bins      = lut_entry.n_bins,
-                                           range     = (lut_entry.xmin, lut_entry.xmax),
-                                           color     = self._overlay_colors,
-                                           alpha     = 1.,
-                                           histtype  = 'step',
-                                           linewidth = 2.,
-                                           #linestyle = '--',
-                                           normed    = normed,
-                                           bottom    = 0 if y_max == 0 or not self._top_overlay else stack[-1],
-                                           weights   = overlay_weights
-                                          )
+                if overlay_style == 'line':
+                    hists, bins, p = ax.hist(overlay_data,
+                                               bins      = lut_entry.n_bins,
+                                               range     = (lut_entry.xmin, lut_entry.xmax),
+                                               color     = self._overlay_colors,
+                                               alpha     = 1.,
+                                               histtype  = 'step',
+                                               linewidth = 2.,
+                                               #linestyle = '--',
+                                               normed    = normed,
+                                               bottom    = 0 if y_max == 0 or not self._top_overlay else stack[-1],
+                                               weights   = overlay_weights
+                                              )
 
-                hists = np.array(hists).flatten()
-                if hists.min() < y_min and hists.min() > 0.:
-                    y_min = hists.min()
-                if hists.max() > y_max:
-                    y_max = hists.max() 
-                #legend_handles.append(p)
+                    hists = np.array(hists).flatten()
+                    if hists.min() < y_min and hists.min() > 0.:
+                        y_min = hists.min()
+                    if hists.max() > y_max:
+                        y_max = hists.max() 
+                    #legend_handles.append(p)
+                elif overlay_style == 'errorbar':
+                    x, y, yerr = hist_to_errorbar(overlay_data, 
+                                                  nbins = lut_entry.n_bins,
+                                                  xlim  = (lut_entry.xmin, lut_entry.xmax)
+                                                 )
+                    if do_ratio:
+                        numerator = (x, y, yerr)
+
+                    x, y, yerr = x[y>0], y[y>0], yerr[y>0]
+                    eb = ax.errorbar(x, y, yerr=yerr, 
+                                  fmt        = 'bo',
+                                  capsize    = 0,
+                                  elinewidth = 2
+                                 )
 
             ### If there's data to overlay: apply feature condition and get
             ### datapoints plus errors
