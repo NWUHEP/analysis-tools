@@ -67,13 +67,13 @@ if __name__ == '__main__':
                    #'bprime_xb'
                   ]
     features_cont = [
-                     'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_iso',
-                     'lepton2_pt', 'lepton2_eta', 'lepton2_phi',  'lepton2_iso',
-                     'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
-                     'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
-                     'dilepton_pt_over_m',
+                     'lepton1_pt', 'lepton1_eta', 'lepton1_phi', #'lepton1_iso',
+                     'lepton2_pt', 'lepton2_eta', 'lepton2_phi', #'lepton2_iso',
+                     #'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
+                     #'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
+                     #'dilepton_pt_over_m',
 
-                     'met_mag', 'met_phi',
+                     #'met_mag', 'met_phi',
                      #'bjet_pt', 'bjet_eta', 'bjet_phi', #'bjet_d0',
                      #'jet_pt', 'jet_eta', 'jet_phi', #'jet_d0', 
                      #'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
@@ -99,11 +99,12 @@ if __name__ == '__main__':
                      #'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
                      #'lepton2_q', 'lepton2_flavor', 'lepton2_trigger',
                     ]
+    features = features_disc + features_cont
 
     cuts     = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                 and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
-                and lepton1_q != lepton2_q and 12 < dilepton_mass < 70' 
-                #and n_bjets >= 1 and (n_jets > 0 or n_fwdjets > 0)'
+                and lepton1_q != lepton2_q and 12 < dilepton_mass < 70 \
+                and n_bjets >= 1 and (n_jets > 0 or n_fwdjets > 0)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     ### prepare data for training ###
     targets   = ['ttbar', 'zjets']
     df = pd.concat([data_manager.get_dataframe(t) for t in targets])
-    df = df[features_cont + features_disc + ['label']]
+    df = df[features+['label']]
     df = df.fillna(0)
     df = df.reset_index(drop=True)
     df = df.iloc[np.random.permutation(df.shape[0])]
@@ -129,22 +130,24 @@ if __name__ == '__main__':
 
         xmin = lut.loc[feature].xmin
         xmax = lut.loc[feature].xmax
-        dataframe[feature] = dataframe[feature].apply(lambda x: (x - xmin)/(xmax - xmin))
+        df[feature] = df[feature].apply(lambda x: (x - xmin)/(xmax - xmin))
 
-    ### vectorize categorical variables ###
+    ### vectorize categorical variables target labels ###
     target_dummies = pd.get_dummies(df.label)
-    df.drop('label', 1)
-    df = pd.concat([df, target_dummies])
+    df = df.drop('label', 1)
+    df = pd.concat([df, target_dummies], axis=1)
     
+    #feature_dummies = pd.get_dummies(df[features_disc])
+    #df = df.drop(features_disc, 1)
+    #df = pd.concat([df, feature_dummies], axis=1)
 
-    '''
     ### split data into training and test data ###
-    n_data  = dataframe.shape[0]
+    n_data  = df.shape[0]
     isplit  = int(2*n_data/3)
-    train_x = dataframe[features].values[:isplit]
-    train_y = dataframe['label'].values[:isplit]
-    test_x  = dataframe[features].values[isplit:]
-    test_y  = dataframe['label'].values[isplit:]
+    train_x = df[features_cont].values[:isplit]
+    train_y = df[targets].values[:isplit]
+    test_x  = df[features_cont].values[isplit:]
+    test_y  = df[targets].values[isplit:]
     
     #df_data = data_manager.get_dataframe('data')
     #df_1b1f = df_data.query(cut_1b1f)
@@ -152,8 +155,8 @@ if __name__ == '__main__':
     #df_combined = df_data.query(cut_combined)
 
     ### model setup ###
-    x  = tf.placeholder(tf.float32, [None, len(features)])
-    W  = tf.Variable(tf.zeros([len(features), len(targets)]))
+    x  = tf.placeholder(tf.float32, [None, len(features_cont)])
+    W  = tf.Variable(tf.zeros([len(features_cont), len(targets)]))
     b  = tf.Variable(tf.zeros([len(targets)]))
     y  = tf.nn.softmax(tf.matmul(x, W) + b)
     y_ = tf.placeholder(tf.float32, [None, len(targets)])
@@ -169,13 +172,14 @@ if __name__ == '__main__':
     sess.run(init)
 
     acc = []
-    n_epochs = 1000
+    n_epochs = 10
     for i in tqdm(range(n_epochs), desc='Training', ncols=75, total=n_epochs):
-        sess.run(train_step, feed_dict={x:train_x, y_:train_y})
+        init = int(train_x.shape[0]*i/n_epochs)
+        end  = int(train_x.shape[0]*(i+1)/n_epochs)
+        sess.run(train_step, feed_dict={x:train_x[init:end], y_:train_y[init:end]})
         acc.append(sess.run(accuracy, feed_dict={x:test_x, y_:test_y}))
 
     acc = np.array(acc)
-    '''
 
     print ''
     print 'runtime: {0:.2f} ms'.format(1e3*(timer() - start))
