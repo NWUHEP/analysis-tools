@@ -7,10 +7,10 @@ import ROOT as r
 
 if __name__ == '__main__':
 
-    data_file = r.TFile('data/pileup_2016_BCD.root')
+    data_file = r.TFile('data/data_pileup.root')
     h_pileup_data = data_file.Get('pileup')
 
-    mc_file = r.TFile('data/bltuples/output_PU_2016.root')
+    mc_file = r.TFile('data/bltuples/output_mumu_2016.root')
     h_pileup_mc = r.TH1F('h_pileup_mc', '', 500, 0., 50.)
     mc_tree = mc_file.Get('tree_zjets_m-50')
     mc_tree.Draw('nPU>>h_pileup_mc') 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     h_pileup_data.DrawNormalized()
     h_pileup_mc.DrawNormalized()
 
-    out_file = r.TFile('data/pileup_sf_2016_BCD.root', 'RECREATE')
+    out_file = r.TFile('data/pileup_sf_2016_full.root', 'RECREATE')
     sf_graph = r.TGraph(500, np.linspace(0, 50, 500), np.array(scale_factors))
     sf_graph.SetName('pileup_sf')
     sf_graph.SetTitle('pileup_sf')

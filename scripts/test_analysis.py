@@ -60,20 +60,27 @@ if __name__ == '__main__':
     datasets    = [
                    #'muon_2012A', 'muon_2012B', 'muon_2012C', 'muon_2012D', 
                    #'electron_2012A', 'electron_2012B', 'electron_2012C', 'electron_2012D', 
+
                    'ttbar_lep', #'ttbar_semilep',
                    'zjets_m-50', 'zjets_m-10to50',
+                   'z1jets_m-50', 'z1jets_m-10to50',
+                   'z2jets_m-50', 'z2jets_m-10to50',
+                   'z3jets_m-50', 'z3jets_m-10to50',
+                   'z4jets_m-50', 
+
                    #'t_s', 't_t', 't_tw', 'tbar_s', 'tbar_t', 'tbar_tw', 
-                   #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+                   'ww', #'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
                    #'bprime_xb'
                   ]
     features_cont = [
                      'lepton1_pt', 'lepton1_eta', 'lepton1_phi', #'lepton1_iso',
                      'lepton2_pt', 'lepton2_eta', 'lepton2_phi', #'lepton2_iso',
-                     #'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
-                     #'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
-                     #'dilepton_pt_over_m',
+                     'lepton_delta_eta', 'lepton_delta_phi', 'lepton_delta_r',
+                     'dilepton_mass', 'dilepton_pt', 'dilepton_eta', 'dilepton_phi', 
+                     'dilepton_pt_over_m',
 
-                     #'met_mag', 'met_phi',
+                     'met_mag', 'met_phi',
+                     'n_jets', 'n_fwdjets', 'n_bjets',
                      #'bjet_pt', 'bjet_eta', 'bjet_phi', #'bjet_d0',
                      #'jet_pt', 'jet_eta', 'jet_phi', #'jet_d0', 
                      #'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
@@ -95,7 +102,7 @@ if __name__ == '__main__':
                     ]
 
     features_disc = [
-                     'n_jets', 'n_fwdjets', 'n_bjets',
+                     #'n_jets', 'n_fwdjets', 'n_bjets',
                      #'lepton1_q', 'lepton1_flavor', 'lepton1_trigger',
                      #'lepton2_q', 'lepton2_flavor', 'lepton2_trigger',
                     ]
@@ -103,8 +110,8 @@ if __name__ == '__main__':
 
     cuts     = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                 and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
-                and lepton1_q != lepton2_q and 12 < dilepton_mass < 70 \
-                and n_bjets >= 1 and (n_jets > 0 or n_fwdjets > 0)'
+                and lepton1_q != lepton2_q and 12 < dilepton_mass < 70' #\
+                #and n_bjets >= 1 and (n_jets > 0 or n_fwdjets > 0)'
 
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = ntuple_dir,
@@ -115,7 +122,7 @@ if __name__ == '__main__':
                                  )
 
     ### prepare data for training ###
-    targets   = ['ttbar', 'zjets']
+    targets   = ['ttbar', 'zjets', 'diboson']
     df = pd.concat([data_manager.get_dataframe(t) for t in targets])
     df = df[features+['label']]
     df = df.fillna(0)
@@ -172,7 +179,7 @@ if __name__ == '__main__':
     sess.run(init)
 
     acc = []
-    n_epochs = 10
+    n_epochs = 1000
     for i in tqdm(range(n_epochs), desc='Training', ncols=75, total=n_epochs):
         init = int(train_x.shape[0]*i/n_epochs)
         end  = int(train_x.shape[0]*(i+1)/n_epochs)
