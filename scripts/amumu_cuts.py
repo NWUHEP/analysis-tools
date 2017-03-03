@@ -27,8 +27,8 @@ if __name__ == '__main__':
     elif period == '2016':
         datasets    = [
                        #'muon_2016C'
-                       'muon_2016B', 'muon_2016C', #'muon_2016D', 
-                       #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
+                       'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                       'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
                       ] 
         #datasets    = ['muon_2016C'] 
 
@@ -81,10 +81,10 @@ if __name__ == '__main__':
         df.set_index(evt_index)
         df0 = pd.read_csv('data/sync/Olga/events_{0}.txt'.format(cat), header=None, sep=',')
         df0.columns = ['run_number', 'event_number', 'lumi', 'dilepton_mass']
-        df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]
+        df0.event_number[df0.event_number < 0] = 2**32 + df0.loc[:,'event_number'][df0.event_number < 0]
         df0.set_index(evt_index)
 
-        df0 = df0.query('272007 <= run_number <= 276283') # only consider BCD
+        #df0 = df0.query('272007 <= run_number <= 276283') # only consider BCD
 
         en    = df.event_number
         en0   = df0.event_number
@@ -93,8 +93,11 @@ if __name__ == '__main__':
 
         print ''
         print '{0} events in my dataset, but not in sync dataset:'.format(df[mask].shape[0])
-        print df[mask][['run_number', 'lumi', 'event_number', 'dilepton_mass']].to_string(index=False)
+        print df[mask][['run_number', 'event_number']].to_string(index=False)
         print ''
         print '{0} events in sync dataset, but not in my dataset:'.format(df0[mask0].shape[0])
-        print df0[mask0][['run_number', 'lumi', 'event_number', 'dilepton_mass']].to_string(index=False)
+        print df0[mask0][['run_number', 'event_number']].to_string(index=False)
+
+        df0[mask0][['run_number', 'lumi', 'event_number', 'dilepton_mass']].to_csv('data/sync/diff_Olga_{0}.txt'.format(cat), index=False)
+        df[mask][['run_number', 'lumi', 'event_number', 'dilepton_mass']].to_csv('data/sync/diff_Nate_{0}.txt'.format(cat), index=False)
 
