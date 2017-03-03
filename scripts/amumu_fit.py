@@ -46,7 +46,7 @@ if __name__ == '__main__':
         period   = int(sys.argv[3])
     else:
         category = 'mumu'
-        channel  = '1b1f'
+        channel  = 'combined'
         period   = 2012
 
     ### Configuration
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     doKS        = False
     nsims       = 1000
     model       = 'Voigt'
-    ntuple_dir  = 'data/flatuples/{0}_test_{1}'.format(category, period)
+    ntuple_dir  = 'data/flatuples/{0}_sync_{1}'.format(category, period)
     output_path = 'plots/fits/{0}_{1}'.format(category, period)
 
     if period == 2012:
@@ -65,15 +65,15 @@ if __name__ == '__main__':
     elif period == 2016:
         datasets    = [
                        'muon_2016B', 'muon_2016C', 'muon_2016D', 
-                       #'muon_2016E', 'muon_2016F', 'muon_2016G', 
-                       #'muon_2016H'
+                       'muon_2016E', 'muon_2016F', 'muon_2016G', 
+                       'muon_2016H'
                       ]
 
     cuts        = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.1 \
                    and lepton2_pt > 25 and abs(lepton2_eta) < 2.1 \
                    and lepton1_q != lepton2_q \
-                   and 12 < dilepton_mass < 70'# \
-                   #and dilepton_pt_over_m > 2'
+                   and 12 < dilepton_mass < 70 \
+                   and dilepton_pt_over_m > 2'
                    #and n_bjets > 0 \
 
     if channel == '1b1f':
@@ -120,6 +120,7 @@ if __name__ == '__main__':
     bg_params.add_many(
                        ('a1', 0., True, None, None, None),
                        ('a2', 0., True, None, None, None)
+                       #('a3', 0., True, None, None, None)
                       )
     bg_model  = Model(ft.bg_pdf, bg_params)
     bg_fitter = NLLFitter(bg_model)
@@ -138,8 +139,8 @@ if __name__ == '__main__':
     elif model == 'Voigt':
         sig_params.add_many(
                             ('A'     , 0.01 , True , 0.0 , 1.  , None) ,
-                            ('mu'    , 29.  , True , 20. , 50. , None) ,
-                            ('gamma' , 1.9  , True , 0.1 , 2.  , None)
+                            ('mu'    , 29.  , True , 28. , 30. , None) ,
+                            ('gamma' , 1.9  , True , 0.1 , 4.  , None)
                            )
         sig_params += bg_params.copy()
         sig_model  = Model(ft.sig_pdf_alt, sig_params)

@@ -24,7 +24,7 @@ if __name__ == '__main__':
     plot_data   = True
 
     if period == 2016:
-        bg_labels     = ['t', 'diboson', 'ttbar', 'zjets_hm', 'zjets_lm']
+        bg_labels     = ['t', 'diboson', 'ttbar', 'zjets']
         #bg_labels     = []
         signal_labels = []
         #signal_labels = ['data_prompt']

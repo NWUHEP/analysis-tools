@@ -286,7 +286,7 @@ def fit_plot_1D(data, xlim, sig_model, bg_model, suffix, path='plots'):
     ### Add lumi text ###
     ax.text(0.06, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
     ax.text(0.17, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
-    ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
+    #ax.text(0.68, 1.01, r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', fontsize=20, transform=ax.transAxes)
 
 
     fig.savefig('{0}/mass_fit_{1[1]}_{1[2]}.pdf'.format(path, suffix))

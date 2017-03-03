@@ -28,7 +28,7 @@ if __name__ == '__main__':
         datasets    = [
                        #'muon_2016C'
                        'muon_2016B', 'muon_2016C', #'muon_2016D', 
-                       'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
+                       #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
                       ] 
         #datasets    = ['muon_2016C'] 
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]
         df0.set_index(evt_index)
 
-        #df0 = df0.query('272007 <= run_number <= 276283') # only consider BCD
+        df0 = df0.query('272007 <= run_number <= 276283') # only consider BCD
 
         en    = df.event_number
         en0   = df0.event_number
