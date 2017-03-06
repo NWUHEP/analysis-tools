@@ -27,8 +27,8 @@ if __name__ == '__main__':
     elif period == '2016':
         datasets    = [
                        #'muon_2016C'
-                       'muon_2016B', 'muon_2016C', #'muon_2016D', 
-                       #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
+                       'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                       'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'
                       ] 
         #datasets    = ['muon_2016C'] 
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         cuts.extend(['((n_bjets == 1 and n_jets == 0 and n_fwdjets > 0) \
                      or (n_jets == 1 and n_fwdjets == 0 \
                      and met_mag < 40 and four_body_delta_phi > 2.5))',
-                     'dilepton_pt_over_m > 1.5 and 125 < dilepton_b_mass < 190'
+                     'dilepton_pt_over_m > 2. and 125 < dilepton_b_mass < 190'
                     ])
     else:
         print 'what are you doing, man!?'
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         df0.event_number[df0.event_number < 0] = 2**32 + df0.event_number[df0.event_number < 0]
         df0.set_index(evt_index)
 
-        df0 = df0.query('272007 <= run_number <= 276283') # only consider BCD
+        #df0 = df0.query('272007 <= run_number <= 276283') # only consider BCD
 
         en    = df.event_number
         en0   = df0.event_number
