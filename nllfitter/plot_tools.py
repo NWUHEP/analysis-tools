@@ -54,11 +54,11 @@ def hist_to_errorbar(data, nbins, xlim, normed=False):
 def ratio_errors(num, den):
     return np.sqrt(num + num**2/den)/den
 
-def get_data_and_weights(dataframes, feature, labels, condition):
+def get_data_and_weights(dataframes, feature, labels, condition=None):
     data    = []
     weights = []
     for label in labels:
-        if condition == 'None':
+        if condition == None:
             df = dataframes[label]
         else:
             df = dataframes[label].query(condition)
