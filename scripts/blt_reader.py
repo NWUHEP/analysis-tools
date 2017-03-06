@@ -53,6 +53,12 @@ def calculate_cos_theta(ref_p4, boost_p4, target_p4):
                                                                                   
     return target_p4.CosTheta() 
 
+def met_kluge(met):
+    bins = np.array([0., 10., 20., 25., 30., 35., 40., 45., 50., 75., 100., 250., 500.])
+    corr = array([ 1.3136443 ,  0.99256342,  0.96630104,  0.95991949,  0.95442907, 0.95126375,  0.94873822,  0.94719745,  0.94869164,  0.96594097, 0.97696922,  0.98340774])
+
+    return met*corr[np.digitize(met, bins)[0]]
+
 def fill_event_vars(tree):
 
     out_dict = {}
@@ -265,6 +271,10 @@ def pickle_ntuple(ntuple_data):
     tree   = froot.Get('tree_{0}'.format(name))
     ntuple = fill_ntuple(tree, name)
     df     = pd.DataFrame(ntuple)
+
+    ### MET KLUGE ###
+    #df.apply()
+
     df.to_pickle('{0}/ntuple_{1}.pkl'.format(output_path, name))
 
 if __name__ == '__main__':
