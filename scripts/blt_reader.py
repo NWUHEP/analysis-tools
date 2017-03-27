@@ -8,7 +8,6 @@ import ROOT as r
 import json
 from collections import OrderedDict
 from multiprocessing import Pool
-from memory_profiler import profile
 
 from tqdm import tqdm, trange
 
@@ -53,11 +52,6 @@ def calculate_cos_theta(ref_p4, boost_p4, target_p4):
                                                                                   
     return target_p4.CosTheta() 
 
-def met_kluge(met):
-    bins = np.array([0., 10., 20., 25., 30., 35., 40., 45., 50., 75., 100., 250., 500.])
-    corr = array([ 1.3136443 ,  0.99256342,  0.96630104,  0.95991949,  0.95442907, 0.95126375,  0.94873822,  0.94719745,  0.94869164,  0.96594097, 0.97696922,  0.98340774])
-
-    return met*corr[np.digitize(met, bins)[0]]
 
 def fill_event_vars(tree):
 
@@ -240,9 +234,9 @@ def fill_genjet_vars(out_dict):
 
     return out_dict
 
-@profile
 def fill_ntuple(tree, name):
-    n = int(np.min([float(tree.GetEntriesFast()), 5e5]))
+    #n = int(np.min([float(tree.GetEntriesFast()), 5e5]))
+    n = int(tree.GetEntriesFast())
     for i in trange(n,
                     desc       = name,
                     leave      = True,
@@ -252,11 +246,11 @@ def fill_ntuple(tree, name):
         ):
         tree.GetEntry(i)
         entry = {}
-        entry.update(fill_event_vars(tree))
+        #entry.update(fill_event_vars(tree))
         entry.update(fill_lepton_vars(tree))
-        entry.update(fill_jet_vars(tree))
-        entry.update(fill_jet_lepton_vars(tree))
-        entry.update(fill_genjet_vars(tree))
+        #entry.update(fill_jet_vars(tree))
+        #entry.update(fill_jet_lepton_vars(tree))
+        #entry.update(fill_genjet_vars(tree))
         n -= 1;
 
         yield entry
@@ -271,32 +265,28 @@ def pickle_ntuple(ntuple_data):
     tree   = froot.Get('tree_{0}'.format(name))
     ntuple = fill_ntuple(tree, name)
     df     = pd.DataFrame(ntuple)
-
-    ### MET KLUGE ###
-    #df.apply()
-
     df.to_pickle('{0}/ntuple_{1}.pkl'.format(output_path, name))
 
 if __name__ == '__main__':
 
     ### Configuration ###
-    selection    = 'mumu_sync'
+    selection    = 'mumu_DY'
     period       = 2016
     infile       = 'data/bltuples/output_{0}_{1}.root'.format(selection, period)
     output_path  = 'data/flatuples/{0}_{1}'.format(selection, period)
 
     if period == 2016:
         dataset_list = [
-                        'muon_2016B', 'muon_2016C', 'muon_2016D', 
-                        'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
+                        #'muon_2016B', 'muon_2016C', 'muon_2016D', 
+                        #'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
 
                         #'bprime_xb',
                         #'ttbar_lep', #'ttbar_semilep',
-                        #'zjets_m-50', 'zjets_m-10to50',
-                        #'z1jets_m-50', 'z1jets_m-10to50',
-                        #'z2jets_m-50', 'z2jets_m-10to50',
-                        #'z3jets_m-50', 'z3jets_m-10to50',
-                        #'z4jets_m-50', 'z4jets_m-10to50',
+                        'zjets_m-50', 'zjets_m-10to50',
+                        'z1jets_m-50', 'z1jets_m-10to50',
+                        'z2jets_m-50', 'z2jets_m-10to50',
+                        'z3jets_m-50', 'z3jets_m-10to50',
+                        'z4jets_m-50', 'z4jets_m-10to50',
                         #'t_t', 'tbar_t', 't_tw', 'tbar_tw', #'t_s', 'tbar_s'
                         #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', #'zz_2l2nu',
 
