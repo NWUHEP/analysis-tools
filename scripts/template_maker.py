@@ -15,7 +15,8 @@ if __name__ == '__main__':
                 'electron_2016B', 'electron_2016C', 'electron_2016D',
                 'electron_2016E', 'electron_2016F', 'electron_2016G', 'electron_2016H',
 
-                'ttbar_inclusive', 't_tw', 'tbar_tw',
+                'ttbar_inclusive', 
+                't_tw', 'tbar_tw',
                 'w1jets', 'w2jets', 'w3jets', 'w4jets',
                 'zjets_m-50', 'zjets_m-10to50',
                 'z1jets_m-50', 'z1jets_m-10to50',
@@ -39,15 +40,15 @@ if __name__ == '__main__':
             cuts  += ' and lepton2_pt > 10 \
                       and lepton1_q != lepton2_q \
                       and dilepton1_mass > 12 \
-                      and (dilepton1_mass < 80 or dilepton1_mass > 102)'
+                      and (dilepton1_mass < 80 or dilepton1_mass > 100)'
         if selection == 'ee':
             features += ['lepton2_pt']
             cuts  += ' and lepton1_pt > 30 \
                       and lepton1_q != lepton2_q \
                       and dilepton1_mass > 12 \
-                      and (dilepton1_mass < 80 or dilepton1_mass > 102)'
+                      and (dilepton1_mass < 80 or dilepton1_mass > 100)'
         elif selection == 'emu':
-            features += ['lepton2_pt', 'trailing_lepton_pt', 'dilepton1_pt_asym']
+            features += ['trailing_lepton_pt', 'dilepton1_pt_asym']
             cuts  += ' and lepton1_q != lepton2_q \
                       and dilepton1_mass > 12'
         elif selection == 'etau':
@@ -67,12 +68,12 @@ if __name__ == '__main__':
             datasets.append('fakes')
 
         print(f'Running over selection {selection}...')
-        for i, bcut in enumerate(['n_bjets == 1', 'n_bjets >= 2']):
+        for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
             dm = pt.DataManager(input_dir     = ntuple_dir,
                                 dataset_names = datasets,
                                 selection     = selection,
                                 scale         = 35.9e3,
-                                cuts          = cuts + f'and {bcut}',
+                                cuts          = cuts + f' and {bcut}',
                                 features      = features + ['n_bjets', 'gen_cat', 'run_number', 'event_number']
                                 )
 
@@ -89,7 +90,7 @@ if __name__ == '__main__':
                 df_model[l] = dm.get_dataframe(l)
 
             # get the data
-            df_data   = dm.get_dataframe('data')
+            df_data   = dm.get_dataframe('ttbar')
 
             # bin the datasets to derive templates
             for feature in features:
@@ -99,7 +100,7 @@ if __name__ == '__main__':
                 x = df_data[feature].values
                 if do_bb_binning:
                     print('Calculating Bayesian block binning...')
-                    binning = bayesian_blocks(x[:25000], p0=0.1)
+                    binning = bayesian_blocks(x[:30000], p0=0.001)
 
                     if feature == 'dilepton1_pt_asym':
                         dxmin, dxmax = 0.01, 1

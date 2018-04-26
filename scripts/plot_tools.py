@@ -3,13 +3,17 @@
 '''
 
 import os
-import os.path
 from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
 from scipy.stats import beta
+
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
+plt.ioff()
+
 from tqdm import tqdm
 
 def make_directory(file_path, clear=True):
@@ -52,7 +56,7 @@ def hist_to_errorbar(data, nbins, xlim, normed=False):
     nbins: number of bins
     xlim: tuple specifying minimum and maximum values of x axis
     '''
-    y, bins = np.histogram(data, bins=nbins, range=xlim)
+    y, bins = np.histogram(data, bins=int(nbins), range=xlim)
     x = (bins[1:] + bins[:-1])/2.
     yerr = np.sqrt(y)
 
@@ -121,11 +125,11 @@ def get_data_and_weights(dataframes, feature, labels, condition):
 def set_new_tdr():
     plt.style.use('default')
     plt.rcParams['font.size']         = 18
-    plt.rcParams['font.family']       = 'serif'
-    plt.rcParams['font.serif']        = 'Ubuntu'
-    plt.rcParams['font.monospace']    = 'Ubuntu Mono'
-    plt.rcParams['mathtext.fontset']  = 'custom'
-    plt.rcParams['mathtext.sf']       = 'Ubuntu'
+    #plt.rcParams['font.family']       = 'serif'
+    #plt.rcParams['font.serif']        = 'Ubuntu'
+    #plt.rcParams['font.monospace']    = 'Ubuntu Mono'
+    #plt.rcParams['mathtext.fontset']  = 'custom'
+    #plt.rcParams['mathtext.sf']       = 'Ubuntu'
 
     plt.rcParams['axes.labelsize']    = 20
     plt.rcParams['xtick.labelsize']   = 18
@@ -177,15 +181,15 @@ class DataManager():
         '''
         self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir, self._selection))
         self._lut_datasets = pd.read_excel('data/plotting_lut.xlsx',
-                                           sheetname='datasets_{0}'.format(self._period),
+                                           sheet_name='datasets_{0}'.format(self._period),
                                            index_col='dataset_name'
                                           ).dropna(how='all')
         lut_features_default = pd.read_excel('data/plotting_lut.xlsx',
-                                             sheetname='variables',
+                                             sheet_name='variables',
                                              index_col='variable_name'
                                             ).dropna(how='all')
         lut_features_select = pd.read_excel('data/plotting_lut.xlsx',
-                                            sheetname='variables_{0}'.format(self._selection),
+                                            sheet_name='variables_{0}'.format(self._selection),
                                             index_col='variable_name'
                                            ).dropna(how='all')
         self._lut_features = pd.concat([lut_features_default, lut_features_select])
@@ -213,7 +217,7 @@ class DataManager():
 
             ### apply selection cuts ###
             if self._cuts != '':
-                df = df.query(self._cuts)
+                df = df.query(self._cuts).copy()
 
             ### only keep certain features ###
             if self._features is not None:
@@ -224,28 +228,12 @@ class DataManager():
             label             = lut_entry.label
             df.loc[:,'label'] = df.shape[0]*[label, ]
 
-            ### if dataset is very large truncate at 500k events (MC only)
-            #max_events = int(5e6)
-            #if label not in ['data', 'fakes'] and df.shape[0] > max_events:
-            #    print(f'{label} has more than {max_events} entries...')
-            #    init_count *= max_events/df.shape[0]
-            #    df = df[:max_events]
-
-            ### drop NaN weights (probably a bug further upstream so let the user know)
-            df = df[pd.notnull(df.weight)]
-
             ### update weights with lumi scale factors ###
             if label.split('_')[0] not in ['data', 'fakes']:
                 scale = self._scale
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
                 scale /= init_count
-
-                # temporary reweighting hack for electron selections
-                if self._selection in ['etau', 'emu', 'e4j']:
-                    scale *= 0.98
-                elif self._selection == 'ee':
-                    scale *= 0.98**2
 
                 df.loc[:, 'weight'] *= scale
 
@@ -323,8 +311,8 @@ class DataManager():
         table = OrderedDict()
         dataset_names = [dn for dn in dataset_names if dn in self._dataframes.keys()]
         dataframes = self.get_dataframes(dataset_names)
-        for i,condition in enumerate(conditions):
-            table[condition] = []
+        for i, condition in enumerate(conditions):
+            table[f'condition_{i+1}'] = []
             if not do_string:
                 table[f'error_{i+1}'] = []
 
@@ -348,19 +336,20 @@ class DataManager():
 
                 if do_string:
                     if dataset == 'data':
-                        table[condition].append('${0}$'.format(int(n)))
+                        table[f'condition_{i+1}'].append('${0}$'.format(int(n)))
                     else:
-                        table[condition].append('${0:.1f} \pm {1:.1f}$'.format(n, n_err))
+                        table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(n, n_err))
                 else:
-                    table[condition].append(n)
+                    table[f'condition_{i+1}'].append(n)
                     table[f'error_{i+1}'].append(n_err)
 
                 dataframes[dataset] = df  # update dataframes so cuts are applied sequentially
+
             if do_string:
-                table[condition].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
+                table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
             else:
-                table[condition].append(bg_total[0])
-                table[f'error_{i+1}'].append(n_err)
+                table[f'condition_{i+1}'].append(bg_total[0])
+                table[f'error_{i+1}'].append(np.sqrt(bg_total[1]))
 
         if do_string:
             labels = [self._lut_datasets.loc[d].text for d in dataset_names]
@@ -371,10 +360,11 @@ class DataManager():
 
 
 class PlotManager():
-    def __init__(self, data_manager, features, stack_labels, overlay_labels,
-                 top_overlay = False,
-                 output_path = 'plots',
-                 file_ext    = 'png'
+    def __init__(self, data_manager, features, stack_labels, 
+                 overlay_labels = [],
+                 top_overlay    = False,
+                 output_path    = 'plots',
+                 file_ext       = 'png'
                  ):
         self._dm             = data_manager
         self._features       = features
@@ -414,12 +404,15 @@ class PlotManager():
         if plot_data:
             legend_text.append('Data')
 
-        for feature in tqdm(features, desc='Plotting', unit_scale=True, ncols=75, total=len(features)):
+        for feature in tqdm(features, 
+                            desc='plotting...', 
+                            unit_scale=True, 
+                            ncols=75, 
+                            total=len(features)
+                            ):
             if feature not in self._features:
                 print('{0} not in features.')
                 continue
-            #else:
-            #    print feature
 
             ### Get style data for the feature ###
             lut_entry = dm._lut_features.loc[feature]
@@ -438,7 +431,7 @@ class PlotManager():
             if len(self._stack_labels) > 0:
                 stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, lut_entry.condition)
                 stack, bins, p = ax.hist(stack_data, 
-                                         bins      = lut_entry.n_bins,
+                                         bins      = int(lut_entry.n_bins),
                                          range     = (lut_entry.xmin, lut_entry.xmax),
                                          color     = self._stack_colors,
                                          alpha     = 1.,
@@ -450,7 +443,7 @@ class PlotManager():
 
                 ### Need to histogram the stack with the square of the weights to get the errors ### 
                 stack_noscale = np.histogram(np.concatenate(stack_data),
-                                             bins    = lut_entry.n_bins,
+                                             bins    = int(lut_entry.n_bins),
                                              range   = (lut_entry.xmin, lut_entry.xmax),
                                              weights = np.concatenate(stack_weights)**2
                                             )[0] 

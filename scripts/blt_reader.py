@@ -91,10 +91,12 @@ def fill_event_vars(tree):
                     event_weight        = tree.eventWeight
                    )
 
-    if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
-        out_dict['weight'] = 0.
-    else:
-        out_dict['weight'] = tree.eventWeight
+    #if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
+    #    out_dict['weight'] = 0.
+    #else:
+    #    out_dict['weight'] = tree.eventWeight
+
+    out_dict['weight'] = tree.eventWeight
 
     return out_dict
 
@@ -562,24 +564,16 @@ def pickle_ntuple(tree, dataset_name, output_path, selection):
     #df     = df.query('weight != 0')
     df.to_pickle('{0}/ntuple_{1}.pkl'.format(output_path, dataset_name))
 
-    print(f'{dataset_name} pickled successfully')
+    print(f'{selection}::{dataset_name} pickled successfully')
 
 if __name__ == '__main__':
 
     ### Configuration ###
-    if len(sys.argv) > 1:
-        selection     = sys.argv[1]
-    else:
-        selection     = 'mumu'
-
     selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     do_mc       = True
-    do_data     = False
+    do_data     = True
     period      = 2016
-    infile      = f'data/output_test.root'
-
-    #infile       = f'data/bltuples/output_btag_eff.root'
-    #output_path  = f'data/flatuples/{selection}_btag_{period}'
+    infile      = f'data/bltuples/output_single_lepton.root'
 
     dataset_list = []
     if period == 2016 and do_data:
@@ -594,9 +588,9 @@ if __name__ == '__main__':
         dataset_list.extend([
             #'ttbar_lep', 'ttbar_semilep',
             'ttbar_inclusive',
-            #'t_tw', 'tbar_tw', #'t_t', 'tbar_t',
-            #'w1jets', 'w2jets', 'w3jets', 'w4jets', 
-            #'zjets_m-50', 'zjets_m-10to50',
+            't_tw', 'tbar_tw', #'t_t', 'tbar_t',
+            'w1jets', 'w2jets', 'w3jets', 'w4jets', 
+            'zjets_m-50', 'zjets_m-10to50',
             #'z1jets_m-50', 'z1jets_m-10to50',
             #'z2jets_m-50', 'z2jets_m-10to50',
             #'z3jets_m-50', 'z3jets_m-10to50',
@@ -615,7 +609,7 @@ if __name__ == '__main__':
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/{selection}_test_{period}'
+        output_path = f'data/flatuples/single_lepton/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 
@@ -630,6 +624,7 @@ if __name__ == '__main__':
                 print(f'Could not find dataset {dataset} in root file...')
                 continue
 
+            #tree = froot.Get(f'{selection}/bltTree_{dataset}')
             tree = froot.Get(f'{selection}/bltTree_{dataset}')
             p = mp.Process(target=pickle_ntuple, args=(tree, dataset, output_path, selection))
             p.start()
@@ -644,7 +639,3 @@ if __name__ == '__main__':
 
     for f in files_list:
         f.Close()
-
-    # produce data driven bg
-
-

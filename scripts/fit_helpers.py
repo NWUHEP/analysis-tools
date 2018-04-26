@@ -33,7 +33,7 @@ class FitData(object):
         # parameters
         self._beta   = [0.108, 0.108, 0.108, 1 - 3*0.108]  # e, mu, tau, h
         self._tau_br = [0.1783, 0.1741, 0.6476]  # e, mu, h
-        self._initialize_nuisance_parameters(selections)
+        #self._initialize_nuisance_parameters(selections)
 
     def _initialize_template_data(self, location, target, selection):
         '''
@@ -71,7 +71,8 @@ class FitData(object):
         '''
         Retrieves nuisance parameters (needs development)
         '''
-        self._nuisance_params = pd.read_csv('data/nuisance_parameters.csv')
+        pass
+        #self._nuisance_params = pd.read_csv('data/nuisance_parameters.csv')
 
     def get_selection_data(self, selection):
         return self._selection_data[selection]
@@ -103,6 +104,11 @@ class FitData(object):
         xs_zjets   = params[6]
         xs_wjets   = params[7]
         norm_fakes = params[8]
+        eff_e      = params[9]
+        eff_mu     = params[10]
+        eff_tau    = params[11]
+
+        #print(params)
 
         # calculate per category, per bin costs
         cost = 0
@@ -130,6 +136,17 @@ class FitData(object):
                     f_fakes, var_fakes = s_data['fakes'][b]
                     f_model   += norm_fakes*f_fakes
                     var_model += var_fakes
+
+                if sel in 'mumu':
+                    f_model *= eff_mu**2
+                elif sel in 'ee':
+                    f_model *= eff_e**2
+                elif sel in 'emu':
+                    f_model *= eff_e*eff_mu
+                elif sel == 'etau':
+                    f_model *= eff_tau*eff_e
+                elif sel == 'mutau':
+                    f_model *= eff_tau*eff_mu
 
                 # calculate the cost
                 if cost_type == 'chi2':
@@ -173,6 +190,17 @@ class FitData(object):
         # fakes
         norm_fakes_var = 0.5**2
         cost += (norm_fakes - 1.)**2 / (2*norm_fakes_var)
+
+        # lepton effs
+        eff_e_var = 0.01**2
+        cost += (eff_e_var - 1.)**2 / (2*eff_e_var)
+
+        eff_mu_var = 0.01**2
+        cost += (eff_mu_var - 1.)**2 / (2*eff_mu_var)
+
+        eff_tau_var = 0.05**2
+        cost += (eff_tau_var - 1.)**2 / (2*eff_tau_var)
+        ########
 
         return cost
 
