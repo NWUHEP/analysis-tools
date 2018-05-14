@@ -108,8 +108,6 @@ class FitData(object):
         eff_mu     = params[10]
         eff_tau    = params[11]
 
-        #print(params)
-
         # calculate per category, per bin costs
         cost = 0
         for sel in self._selections:
@@ -124,6 +122,7 @@ class FitData(object):
 
                 # prepare mixture
                 f_model   = xs_top*f_sig
+                #f_model   = f_sig
                 var_model = var_sig
 
                 # get background components
@@ -131,11 +130,6 @@ class FitData(object):
                 f_wjets, var_wjets = s_data['wjets'][b]
                 f_model   += xs_zjets*f_zjets + xs_wjets*f_wjets
                 var_model += var_zjets + var_wjets
-
-                if sel == 'mu4j': # maybe come up with a more elegant implementation
-                    f_fakes, var_fakes = s_data['fakes'][b]
-                    f_model   += norm_fakes*f_fakes
-                    var_model += var_fakes
 
                 if sel in 'mumu':
                     f_model *= eff_mu**2
@@ -147,14 +141,30 @@ class FitData(object):
                     f_model *= eff_tau*eff_e
                 elif sel == 'mutau':
                     f_model *= eff_tau*eff_mu
+                elif sel == 'e4j':
+                    f_model *= eff_e
+                elif sel == 'mu4j':
+                    f_model *= eff_mu
 
+                if sel == 'mu4j': # maybe come up with a more elegant implementation
+                    f_fakes, var_fakes = s_data['fakes'][b]
+                    f_model   += norm_fakes*f_fakes
+                    var_model += var_fakes
+                else:
+                    f_model *= lumi
+
+                #print(f_data)
+                #print(f_model)
                 # calculate the cost
                 if cost_type == 'chi2':
-                    nll = (f_data - lumi*f_model)**2 / (var_data + var_model)
+                    mask = var_data + var_model > 0
+                    nll = (f_data - f_model)**2 / (var_data + var_model)
+                    nll = nll[mask]
                 elif cost_type == 'poisson':
                     mask = f_model > 0
-                    nll = -f_data[mask]*np.log(lumi*f_model[mask]) + lumi*f_model[mask]
+                    nll = -f_data[mask]*np.log(f_model[mask]) + f_model[mask]
                 cost += np.sum(nll)
+                #print(np.sum(nll))
 
                 #print(f'{sel}, {b}, {cost:.2f}, {beta}')
 
@@ -169,37 +179,38 @@ class FitData(object):
             # account for channel specific nuisance parameters here
 
         cost += (1 - np.sum(beta))**2/(2*0.0001**2)  # require that the branching fractions sum to 1
+        #print(cost)
 
         # Add prior terms for nuisance parameters correlated across channels (lumi, cross-sections)
         # luminosity
         lumi_var = 0.025**2
         cost += (lumi - 1.)**2 / (2*lumi_var)
 
-        # top
+        ## top
         xs_top_var = 0.05**2
         cost += (xs_top - 1.)**2 / (2*xs_top_var)
 
-        # zjets
+        ## zjets
         xs_zjets_var = 0.05**2
         cost += (xs_zjets - 1.)**2 / (2*xs_zjets_var)
 
-        # wjets
+        ## wjets
         xs_wjets_var = 0.05**2
         cost += (xs_wjets - 1.)**2 / (2*xs_wjets_var)
 
-        # fakes
+        ## fakes
         norm_fakes_var = 0.5**2
         cost += (norm_fakes - 1.)**2 / (2*norm_fakes_var)
 
-        # lepton effs
+        ## lepton effs
         eff_e_var = 0.01**2
-        cost += (eff_e_var - 1.)**2 / (2*eff_e_var)
+        cost += (eff_e - 1.)**2 / (2*eff_e_var)
 
         eff_mu_var = 0.01**2
-        cost += (eff_mu_var - 1.)**2 / (2*eff_mu_var)
+        cost += (eff_mu - 1.)**2 / (2*eff_mu_var)
 
         eff_tau_var = 0.05**2
-        cost += (eff_tau_var - 1.)**2 / (2*eff_tau_var)
+        cost += (eff_tau - 1.)**2 / (2*eff_tau_var)
         ########
 
         return cost

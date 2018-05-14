@@ -6,7 +6,7 @@ import pandas as pd
 import scripts.plot_tools as pt
 
 
-def pileup_morph(df, bins, selection):
+def pileup_morph(df, feature, bins):
     '''
     Generates templates for morphing of distributions due to pileup variance.
     '''
@@ -15,13 +15,18 @@ def pileup_morph(df, bins, selection):
 
     pileup_file = open('data/pileup_sf.pkl', 'rb')
     pu_bins     = pickle.load(pileup_file)
-    sf_nominal  = interp1d(bins, pickle.load(pileup_file), kind='linear')
-    sf_up       = interp1d(bins, pickle.load(pileup_file), kind='linear')
-    sf_down     = interp1d(bins, pickle.load(pileup_file), kind='linear')
+    sf_nominal  = interp1d(pu_bins, pickle.load(pileup_file), kind='linear')
+    sf_up       = interp1d(pu_bins, pickle.load(pileup_file), kind='linear')
+    sf_down     = interp1d(pu_bins, pickle.load(pileup_file), kind='linear')
 
-    df = df.query(f'n_pu > {bins.min()} and n_pu < {bins.max()}')
+    df_tmp     = df.query(f'n_pu > {pu_bins.min()} and n_pu < {pu_bins.max()}')
+    w_up       = df_tmp.weight*(sf_up(df_tmp.n_pu)/sf_nominal(df_tmp.n_pu))
+    w_down     = df_tmp.weight*(sf_down(df_tmp.n_pu)/sf_nominal(df_tmp.n_pu))
+    #w_up       = df_tmp.weight*(sf_up(df_tmp.n_pu)/df_tmp.pileup_weight)
+    #w_down     = df_tmp.weight*(sf_down(df_tmp.n_pu)/df_tmp.pileup_weight)
+    h_up, _      = np.histogram(df_tmp[feature], bins=bins, weights=w_up)
+    h_down, _    = np.histogram(df_tmp[feature], bins=bins, weights=w_down)
+    h_nominal, _ = np.histogram(df_tmp[feature], bins=bins, weights=df_tmp.weight)
 
-    w_up, w_down  = (df.weight/df.pileup)*sf_up(df.n_pu), (df_weight/df.pileup_weight)*sf_down(df.n_pu)
-    h_plus, _, _  = np.histogram(df.lepton2_pt, bins=bins, weights=w_up)
-    h_minus, _, _ = np.histogram(df.lepton2_pt, bins=bins, weights=w_down)
+    return h_up/h_nominal, h_down/h_nominal
     

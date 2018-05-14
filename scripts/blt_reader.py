@@ -91,12 +91,11 @@ def fill_event_vars(tree):
                     event_weight        = tree.eventWeight
                    )
 
-    #if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
-    #    out_dict['weight'] = 0.
-    #else:
-    #    out_dict['weight'] = tree.eventWeight
-
-    out_dict['weight'] = tree.eventWeight
+    out_dict['gen_weight'] = tree.genWeight
+    if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
+        out_dict['weight'] = 0.
+    else:
+        out_dict['weight'] = tree.eventWeight
 
     return out_dict
 
@@ -571,9 +570,9 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     do_mc       = True
-    do_data     = True
+    do_data     = False
     period      = 2016
-    infile      = f'data/bltuples/output_single_lepton.root'
+    infile      = f'data/bltuples/output_zjets_madgraph.root'
 
     dataset_list = []
     if period == 2016 and do_data:
@@ -587,14 +586,14 @@ if __name__ == '__main__':
     if do_mc:
         dataset_list.extend([
             #'ttbar_lep', 'ttbar_semilep',
-            'ttbar_inclusive',
-            't_tw', 'tbar_tw', #'t_t', 'tbar_t',
-            'w1jets', 'w2jets', 'w3jets', 'w4jets', 
+            #'ttbar_inclusive',
+            #'t_tw', 'tbar_tw', #'t_t', 'tbar_t',
+            #'w1jets', 'w2jets', 'w3jets', 'w4jets', 
             'zjets_m-50', 'zjets_m-10to50',
-            #'z1jets_m-50', 'z1jets_m-10to50',
-            #'z2jets_m-50', 'z2jets_m-10to50',
-            #'z3jets_m-50', 'z3jets_m-10to50',
-            #'z4jets_m-50', 'z4jets_m-10to50',
+            'z1jets_m-50', 'z1jets_m-10to50',
+            'z2jets_m-50', 'z2jets_m-10to50',
+            'z3jets_m-50', 'z3jets_m-10to50',
+            'z4jets_m-50', 'z4jets_m-10to50',
             #'qcd_ht100to200', 'qcd_ht200to300',
             #'qcd_ht300to500', 'qcd_ht500to1000',
             #'qcd_ht1000to1500', 'qcd_ht1500to2000',
@@ -609,7 +608,8 @@ if __name__ == '__main__':
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/single_lepton/{selection}_{period}'
+        output_path = f'data/flatuples/zjets_madgraph/{selection}_{period}'
+        #output_path = f'data/flatuples/single_lepton/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 

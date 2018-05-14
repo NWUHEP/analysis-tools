@@ -75,7 +75,18 @@ if __name__ == '__main__':
     pickle.dump(sf_down, outfile)
     outfile.close()
 
-    #plt.tight_layout()
     plt.savefig('plots/pileup_systematics.png')
     plt.savefig('plots/pileup_systematics.pdf')
     plt.close()
+
+    # save weights to TGraph for use in BLTSelector
+    out_file = r.TFile('data/pileup_sf_2016_full.root', 'RECREATE')
+    sf_graph = r.TGraph(spline_bins.size, spline_bins, sf_nominal)
+    sf_graph.SetName('pileup_sf')
+    sf_graph.SetTitle('pileup_sf')
+    out_file.Add(sf_graph)
+    out_file.Add(h_pileup_mc)
+    out_file.Add(h_pileup_data)
+    out_file.Write()
+    out_file.Close()
+

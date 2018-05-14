@@ -12,10 +12,10 @@ dataset_dict = dict(
                     t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets    = ['zjets_m-50',  'zjets_m-10to50', 
-                                'z1jets_m-50', 'z1jets_m-10to50', 
-                                'z2jets_m-50', 'z2jets_m-10to50', 
-                                'z3jets_m-50', 'z3jets_m-10to50', 
-                                'z4jets_m-50', 'z4jets_m-10to50'
+                                #'z1jets_m-50', 'z1jets_m-10to50', 
+                                #'z2jets_m-50', 'z2jets_m-10to50', 
+                                #'z3jets_m-50', 'z3jets_m-10to50', 
+                                #'z4jets_m-50', 'z4jets_m-10to50'
                                 ],
                     qcd      = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500', 
                                 'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000', 
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     cut += ' and ' + cuts[selection]
             
     ### Get dataframes with features for each of the datasets ###
-    data_manager = pt.DataManager(input_dir     = args.input,
+    data_manager = pt.DataManager(input_dir     = f'{args.input}/{args.selection}_{args.period}',
                                   dataset_names = [d for l in data_labels+model_labels for d in dataset_dict[l]],
                                   selection     = selection,
                                   period        = args.period,

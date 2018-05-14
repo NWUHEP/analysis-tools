@@ -3,12 +3,12 @@ import pandas as pd
 from skhep.modeling import bayesian_blocks
 
 import scripts.plot_tools as pt
+import scripts.systematic_tools as st
 
 if __name__ == '__main__':
 
     do_bb_binning = True
     output_path   = f'data/templates/bjet_binned_test'
-
     datasets = [
                 'muon_2016B', 'muon_2016C', 'muon_2016D',
                 'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
@@ -26,10 +26,10 @@ if __name__ == '__main__':
                 ]
 
 
-    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['ee']#, 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
         pt.make_directory(f'{output_path}/{selection}')
-        ntuple_dir = f'data/flatuples/{selection}_test_2016'
+        ntuple_dir = f'data/flatuples/single_lepton/{selection}_2016'
         features   = ['lepton1_pt']
         cuts       = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.4'
 
@@ -67,14 +67,14 @@ if __name__ == '__main__':
             labels += ['fakes']
             datasets.append('fakes')
 
-        print(f'Running over selection {selection}...')
+        #print(f'Running over selection {selection}...')
         for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
             dm = pt.DataManager(input_dir     = ntuple_dir,
                                 dataset_names = datasets,
                                 selection     = selection,
                                 scale         = 35.9e3,
                                 cuts          = cuts + f' and {bcut}',
-                                features      = features + ['n_bjets', 'gen_cat', 'run_number', 'event_number']
+                                features      = features + ['n_pu', 'n_bjets', 'gen_cat', 'run_number', 'event_number']
                                 )
 
             # this could be added as a method to the data_manager so I don't have to
@@ -84,8 +84,8 @@ if __name__ == '__main__':
             # sigal samples are split according the decay of the W bosons
             decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
             mc_conditions  = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
-            df_model       = dm.get_dataframes(['ttbar', 't'], concat=True)
-            df_model       = {n: df_model.query(c) for n, c in mc_conditions.items()}
+            df_top         = dm.get_dataframes(['ttbar', 't'], concat=True)
+            df_model       = {n: df_top.query(c) for n, c in mc_conditions.items()}
             for l in labels:
                 df_model[l] = dm.get_dataframe(l)
 
@@ -164,4 +164,14 @@ if __name__ == '__main__':
                 df_vars = pd.DataFrame(template_vars)
                 df_vars = df_vars.set_index('bins')
                 df_vars.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_var.csv')
+
+                ### produce morphing templates for shape systematics
+
+                # pileup
+                df_sys                = pd.DataFrame(dict(bins=binning[:-1]))
+                pu_up, pu_down        = st.pileup_morph(df_top, feature, binning)
+                df_sys['pileup_up']   = pu_up
+                df_sys['pileup_down'] = pu_down
+
+                df_sys.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_sys.csv', index=False)
 

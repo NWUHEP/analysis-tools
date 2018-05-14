@@ -9,12 +9,13 @@ import numpy as np
 import pandas as pd
 from scipy.stats import beta
 
-import matplotlib as mpl
-mpl.use('Agg')
+#import matplotlib as mpl
+#mpl.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
 
 from tqdm import tqdm
+tqdm.monitor_interval = 0
 
 def make_directory(file_path, clear=True):
     if not os.path.exists(file_path):
@@ -233,12 +234,17 @@ class DataManager():
                 scale = self._scale
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
-                scale /= init_count
+
+                if dataset.split('_')[0] == 'zjets':
+                    scale *= df.gen_weight
+                    neg_count = self._event_counts[dataset][9]
+                    scale /= init_count - 2*neg_count
+                else:
+                    scale /= init_count
 
                 df.loc[:, 'weight'] *= scale
-
             else:
-                df.loc[:, 'weight'] *= lut_entry.cross_section
+                df.loc[:, 'weight'] = 1.
 
             ### combined datasets if required ###
             if self._combine:
@@ -539,7 +545,7 @@ class PlotManager():
             if do_ratio:
                 axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
                 axes[1].set_ylabel(r'Data/MC')
-                axes[1].set_ylim((0.5, 1.99))
+                axes[1].set_ylim((0.75, 1.35))
                 axes[1].grid()
 
                 ### calculate ratios 

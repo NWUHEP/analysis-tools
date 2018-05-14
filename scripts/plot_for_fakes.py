@@ -84,13 +84,13 @@ if __name__ == '__main__':
 
     ### Cuts ###
     cut = 'n_muons == 3 \
-           and lepton3_pt > 20 \
            and lepton1_q != lepton2_q \
            and abs(dilepton1_mass - 91) < 15 \
-           and n_bjets == 0 \
-           and lepton3_pt > 10 \
-           and dilepton_probe_mass > 175 \
-           and lepton3_reliso < 0.15'
+           and lepton3_pt > 10' 
+           #and dilepton_probe_mass > 175 \
+           #and lepton3_reliso < 0.15'
+           #and lepton3_pt > 20 \
+           #and n_bjets == 0 \
 
     datasets  = dataset_dict['muon'] 
     datasets.extend(['ttbar_lep', 'ttbar_semilep', 'wz_3lnu', 'zz_4l', 'zjets_m-50'])
