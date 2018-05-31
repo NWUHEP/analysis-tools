@@ -17,6 +17,51 @@ plt.ioff()
 from tqdm import tqdm
 tqdm.monitor_interval = 0
 
+dataset_dict = dict(
+                    muon     = ['muon_2016B', 'muon_2016C', 'muon_2016D', 
+                                'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'],
+                    electron = ['electron_2016B', 'electron_2016C', 'electron_2016D', 
+                                'electron_2016E', 'electron_2016F', 'electron_2016G', 
+                                'electron_2016H'
+                                ],
+                    ttbar    = ['ttbar_inclusive'], #'ttbar_lep', 'ttbar_semilep',
+                    t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
+                    wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
+                    zjets    = ['zjets_m-50',  'zjets_m-10to50', 
+                                'z1jets_m-50', 'z1jets_m-10to50', 
+                                'z2jets_m-50', 'z2jets_m-10to50', 
+                                'z3jets_m-50', 'z3jets_m-10to50', 
+                                'z4jets_m-50', 'z4jets_m-10to50'
+                                ],
+                    qcd      = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500', 
+                                'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000', 
+                                'qcd_ht2000'
+                                ],
+                    diboson  = ['ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
+                    fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes', 
+                                'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes', 
+                                'muon_2016H_fakes'
+                                ],
+                    )
+
+cuts = dict(
+            ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 10 \
+                     and dilepton1_mass > 12 and (dilepton1_mass > 101 or dilepton1_mass < 81) \
+                     and n_bjets >= 1',
+            mumu  = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
+                     and dilepton1_mass > 12  and (dilepton1_mass > 101 or dilepton1_mass < 81) \
+                     and n_bjets >= 1',
+            emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 10 and dilepton1_mass > 12',
+            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
+                     and dilepton1_mass > 12 \
+                     and n_bjets >= 1',
+            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
+                     and dilepton1_mass > 12 \
+                     and n_bjets >= 1',
+            e4j   = 'lepton1_pt > 30 and n_bjets >= 1',
+            mu4j  = 'lepton1_pt > 25 and n_bjets >= 1',
+            )
+
 def make_directory(file_path, clear=True):
     if not os.path.exists(file_path):
         os.system('mkdir -p '+file_path)
@@ -230,12 +275,16 @@ class DataManager():
             df.loc[:,'label'] = df.shape[0]*[label, ]
 
             ### update weights with lumi scale factors ###
-            if label.split('_')[0] not in ['data', 'fakes']:
+            if label == 'data':
+                df.loc[:, 'weight'] = 1.
+            elif label == 'fakes':
+                df.loc[:, 'weight'] *= lut_entry.cross_section
+            else:
                 scale = self._scale
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
 
-                if dataset.split('_')[0] == 'zjets':
+                if dataset.split('_')[0] == 'zjets_alt':
                     scale *= df.gen_weight
                     neg_count = self._event_counts[dataset][9]
                     scale /= init_count - 2*neg_count
@@ -243,8 +292,6 @@ class DataManager():
                     scale /= init_count
 
                 df.loc[:, 'weight'] *= scale
-            else:
-                df.loc[:, 'weight'] = 1.
 
             ### combined datasets if required ###
             if self._combine:
@@ -545,7 +592,7 @@ class PlotManager():
             if do_ratio:
                 axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
                 axes[1].set_ylabel(r'Data/MC')
-                axes[1].set_ylim((0.75, 1.35))
+                axes[1].set_ylim((0.5, 1.5))
                 axes[1].grid()
 
                 ### calculate ratios 

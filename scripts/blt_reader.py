@@ -561,7 +561,7 @@ def pickle_ntuple(tree, dataset_name, output_path, selection):
     ntuple = fill_ntuple(tree, dataset_name, selection)
     df     = pd.DataFrame(ntuple)
     #df     = df.query('weight != 0')
-    df.to_pickle('{0}/ntuple_{1}.pkl'.format(output_path, dataset_name))
+    df.to_pickle(f'{output_path}/ntuple_{dataset_name}.pkl')
 
     print(f'{selection}::{dataset_name} pickled successfully')
 
@@ -570,9 +570,9 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     do_mc       = True
-    do_data     = False
+    do_data     = True
     period      = 2016
-    infile      = f'data/bltuples/output_zjets_madgraph.root'
+    infile      = f'data/bltuples/output_single_lepton.root'
 
     dataset_list = []
     if period == 2016 and do_data:
@@ -585,10 +585,14 @@ if __name__ == '__main__':
 
     if do_mc:
         dataset_list.extend([
-            #'ttbar_lep', 'ttbar_semilep',
-            #'ttbar_inclusive',
-            #'t_tw', 'tbar_tw', #'t_t', 'tbar_t',
-            #'w1jets', 'w2jets', 'w3jets', 'w4jets', 
+            'ttbar_inclusive',
+            #'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+            #'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+            #'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+            #'ttbar_inclusive_up', 'ttbar_inclusive_down',
+
+            't_tw', 'tbar_tw', #'t_t', 'tbar_t',
+            'w1jets', 'w2jets', 'w3jets', 'w4jets', 
             'zjets_m-50', 'zjets_m-10to50',
             'z1jets_m-50', 'z1jets_m-10to50',
             'z2jets_m-50', 'z2jets_m-10to50',
@@ -598,7 +602,7 @@ if __name__ == '__main__':
             #'qcd_ht300to500', 'qcd_ht500to1000',
             #'qcd_ht1000to1500', 'qcd_ht1500to2000',
             #'qcd_ht2000'
-            #'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
+            'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
             #'zz_4l'
             ])
 
@@ -608,12 +612,12 @@ if __name__ == '__main__':
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/zjets_madgraph/{selection}_{period}'
-        #output_path = f'data/flatuples/single_lepton/{selection}_{period}'
+        #output_path = f'data/flatuples/ttbar_systematics/{selection}_{period}'
+        output_path = f'data/flatuples/single_lepton_test/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 
-            froot  = r.TFile(infile)
+            froot = r.TFile(infile)
             files_list.append(froot)
 
             #ecount = froot.Get(f'{selection}/TotalEvents_{selection}_{dataset}')
@@ -628,7 +632,25 @@ if __name__ == '__main__':
             tree = froot.Get(f'{selection}/bltTree_{dataset}')
             p = mp.Process(target=pickle_ntuple, args=(tree, dataset, output_path, selection))
             p.start()
-            processes[dataset] = p
+            processes[f'{dataset}_{selection}'] = p
+
+        # special case: fakes
+        if selection in ['mutau', 'mu4j']:
+            for dataset in ['muon_2016B', 'muon_2016C', 
+                            'muon_2016D', 'muon_2016E', 
+                            'muon_2016F', 'muon_2016G', 'muon_2016H']:
+
+                froot = r.TFile(infile)
+                files_list.append(froot)
+
+                event_count[f'{dataset}_fakes'] = 10*[1.,]
+
+                #tree = froot.Get(f'{selection}/bltTree_{dataset}')
+                tree = froot.Get(f'{selection}_fakes/bltTree_{dataset}')
+                p = mp.Process(target=pickle_ntuple, 
+                               args=(tree, f'{dataset}_fakes', output_path, selection))
+                p.start()
+                processes[f'{dataset}_{selection}_fakes'] = p
 
         fname = f'{output_path}/event_counts.csv'
         df = pd.DataFrame(event_count)

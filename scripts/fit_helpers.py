@@ -80,7 +80,7 @@ class FitData(object):
     def get_params_init(self):
         return self._beta
 
-    def objective(self, params, data, cost_type='chi2'):
+    def objective(self, params, data, cost_type='chi2', mask=None):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -92,6 +92,7 @@ class FitData(object):
                  fractions, all successive ones are nuisance parameters.
         data : dataset to be fitted
         cost_type : either 'chi2' or 'poisson'
+        mask : an array with same size as the input parameters for indicating parameters to fix
         '''
 
         # unpack parameters here
@@ -122,15 +123,15 @@ class FitData(object):
 
                 # prepare mixture
                 f_model   = xs_top*f_sig
-                #f_model   = f_sig
                 var_model = var_sig
 
-                # get background components
+                # get background components and apply cross-section nuisance parameters
                 f_zjets, var_zjets = s_data['zjets'][b]
                 f_wjets, var_wjets = s_data['wjets'][b]
                 f_model   += xs_zjets*f_zjets + xs_wjets*f_wjets
                 var_model += var_zjets + var_wjets
 
+                # lepton efficiencies as normalization nuisance parameters
                 if sel in 'mumu':
                     f_model *= eff_mu**2
                 elif sel in 'ee':
@@ -146,15 +147,20 @@ class FitData(object):
                 elif sel == 'mu4j':
                     f_model *= eff_mu
 
-                if sel == 'mu4j': # maybe come up with a more elegant implementation
+                # apply overall lumi nuisance parameter, but exclude data-driven backgrounds
+                f_model *= lumi
+
+                # get fake background and include normalization nuisance parameters
+                if sel == 'mu4j': 
                     f_fakes, var_fakes = s_data['fakes'][b]
                     f_model   += norm_fakes*f_fakes
                     var_model += var_fakes
-                else:
-                    f_model *= lumi
 
-                #print(f_data)
-                #print(f_model)
+                # add removing shape information as an argument
+                #f_data = np.sum(f_data)
+                #f_model = np.sum(f_model)
+                #print(sel, f_data, f_model)
+
                 # calculate the cost
                 if cost_type == 'chi2':
                     mask = var_data + var_model > 0
@@ -164,22 +170,14 @@ class FitData(object):
                     mask = f_model > 0
                     nll = -f_data[mask]*np.log(f_model[mask]) + f_model[mask]
                 cost += np.sum(nll)
-                #print(np.sum(nll))
 
-                #print(f'{sel}, {b}, {cost:.2f}, {beta}')
+        # require that the branching fractions sum to 1
+        cost += (1 - np.sum(beta))**2/(2*0.0001**2)  
 
-                #sumnll = np.sum(nll)
-                #if isinstance(sumnll, type(np.nan)):
-                #    print(f_data, f_data.sum())
-                #    print(f_model, f_model.sum())
-                #    print(nll, np.sum(nll), type(np.sum(nll)))
-                #else:
-                #    cost += np.sum(nll)
-
-            # account for channel specific nuisance parameters here
-
-        cost += (1 - np.sum(beta))**2/(2*0.0001**2)  # require that the branching fractions sum to 1
-        #print(cost)
+        # constrain branching fractions (optional)
+        #beta_init = np.array(3*[0.108, ] + [1. - 3*0.108])
+        #beta_var = np.array(3*[0.001**2, ] + [0.0027**2])
+        #cost += np.sum((beta_init - beta)**2/(2*beta_var))
 
         # Add prior terms for nuisance parameters correlated across channels (lumi, cross-sections)
         # luminosity
@@ -199,7 +197,7 @@ class FitData(object):
         cost += (xs_wjets - 1.)**2 / (2*xs_wjets_var)
 
         ## fakes
-        norm_fakes_var = 0.5**2
+        norm_fakes_var = 0.25**2
         cost += (norm_fakes - 1.)**2 / (2*norm_fakes_var)
 
         ## lepton effs

@@ -26,10 +26,10 @@ if __name__ == '__main__':
                 ]
 
 
-    selections = ['ee']#, 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
         pt.make_directory(f'{output_path}/{selection}')
-        ntuple_dir = f'data/flatuples/single_lepton/{selection}_2016'
+        ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
         features   = ['lepton1_pt']
         cuts       = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.4'
 
@@ -82,22 +82,22 @@ if __name__ == '__main__':
 
             # prepare dataframes with signal templates
             # sigal samples are split according the decay of the W bosons
-            decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
-            mc_conditions  = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
-            df_top         = dm.get_dataframes(['ttbar', 't'], concat=True)
-            df_model       = {n: df_top.query(c) for n, c in mc_conditions.items()}
+            decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
+            mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
+            df_top        = dm.get_dataframes(['ttbar', 't'], concat=True)
+            df_model      = {n: df_top.query(c) for n, c in mc_conditions.items()}
             for l in labels:
                 df_model[l] = dm.get_dataframe(l)
 
             # get the data
-            df_data   = dm.get_dataframe('ttbar')
+            if df_top.shape[0] == 0: continue
 
             # bin the datasets to derive templates
             for feature in features:
                 hist_lut  = dm._lut_features.loc[feature]
 
-                ### get data histograms
-                x = df_data[feature].values
+                ### calculate binning
+                x = df_top[feature].values
                 if do_bb_binning:
                     print('Calculating Bayesian block binning...')
                     binning = bayesian_blocks(x[:30000], p0=0.001)
@@ -123,6 +123,7 @@ if __name__ == '__main__':
                     bin_range = (hist_lut.xmin, hist_lut.xmax)
 
                 # bin the data
+                x = dm.get_dataframe('data')[feature]
                 h, b = np.histogram(x,
                                     bins  = binning,
                                     range = bin_range,

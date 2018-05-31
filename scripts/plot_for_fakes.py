@@ -86,12 +86,14 @@ if __name__ == '__main__':
     cut = 'n_muons == 3 \
            and lepton1_q != lepton2_q \
            and abs(dilepton1_mass - 91) < 15 \
-           and lepton3_pt > 10' 
-           #and dilepton_probe_mass > 175 \
-           #and lepton3_reliso < 0.15'
-           #and lepton3_pt > 20 \
-           #and n_bjets == 0 \
+           and lepton3_pt > 10'
+           
+    cut += ' and dilepton_probe_mass > 200 \
+           and lepton3_reliso < 0.15 \
+           and lepton3_pt > 20 \
+           and n_bjets == 0'
 
+    suffix = 'wz_cr'
     datasets  = dataset_dict['muon'] 
     datasets.extend(['ttbar_lep', 'ttbar_semilep', 'wz_3lnu', 'zz_4l', 'zjets_m-50'])
     mc_labels = ['ttbar', 'zz_4l', 'wz_3lnu', 'zjets']
@@ -107,7 +109,7 @@ if __name__ == '__main__':
 
     ### Loop over features and make the plots ###
     pt.set_new_tdr()
-    output_path = f'plots/overlays/wz_cr'
+    output_path = f'plots/overlays/{suffix}'
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
                                   stack_labels   = mc_labels,
@@ -118,4 +120,4 @@ if __name__ == '__main__':
     plot_manager.make_overlays(features, do_ratio=True, overlay_style='errorbar')
 
     table = data_manager.print_yields(dataset_names = mc_labels + ['data'])
-    table.to_csv(f'data/yields_wz_cr.csv')
+    table.to_csv(f'data/yields_{suffix}.csv')

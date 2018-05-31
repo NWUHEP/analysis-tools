@@ -5,44 +5,6 @@ from itertools import chain
 
 import scripts.plot_tools as pt
 
-dataset_dict = dict(
-                    muon     = ['muon_2016B', 'muon_2016C', 'muon_2016D', 'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'],
-                    electron = ['electron_2016B', 'electron_2016C', 'electron_2016D', 'electron_2016E', 'electron_2016F', 'electron_2016G', 'electron_2016H'],
-                    ttbar    = ['ttbar_inclusive'], #'ttbar_lep', 'ttbar_semilep',
-                    t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
-                    wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
-                    zjets    = ['zjets_m-50',  'zjets_m-10to50', 
-                                #'z1jets_m-50', 'z1jets_m-10to50', 
-                                #'z2jets_m-50', 'z2jets_m-10to50', 
-                                #'z3jets_m-50', 'z3jets_m-10to50', 
-                                #'z4jets_m-50', 'z4jets_m-10to50'
-                                ],
-                    qcd      = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500', 
-                                'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000', 
-                                'qcd_ht2000'
-                                ],
-                    diboson  = ['ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
-                    fakes    = ['fakes'],
-                    )
-
-cuts = dict(
-            ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 10 \
-                     and dilepton1_mass > 12 and (dilepton1_mass > 101 or dilepton1_mass < 81) \
-                     and n_bjets >= 1',
-            mumu  = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
-                     and dilepton1_mass > 12  and (dilepton1_mass > 101 or dilepton1_mass < 81) \
-                     and n_bjets >= 1',
-            emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 10 and dilepton1_mass > 12',
-            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
-                     and dilepton1_mass > 12 \
-                     and n_bjets >= 1',
-            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
-                     and dilepton1_mass > 12 \
-                     and n_bjets >= 1',
-            e4j   = 'lepton1_pt > 30 and n_bjets >= 1',
-            mu4j  = 'lepton1_pt > 25 and n_bjets >= 1',
-            )
-
 if __name__ == '__main__':
 
     pt.set_new_tdr()
@@ -75,11 +37,10 @@ if __name__ == '__main__':
     data_labels  = ['muon', 'electron']
     model_labels = ['zjets', 'wjets', 't', 'ttbar']
 
-    if selection == 'mu4j':
+    if selection == 'mu4j' or selection == 'mutau':
         model_labels = ['fakes'] + model_labels
 
     # data samples
-
     features = [
                 #'lepton1_reco_weight', 'lepton2_reco_weight', 'trigger_weight', 
                 #'pileup_weight', 'top_pt_weight', 'event_weight',
@@ -115,11 +76,11 @@ if __name__ == '__main__':
 
     ### Cuts ###
     cut = 'n_jets + n_bjets >= 2'
-    cut += ' and ' + cuts[selection]
+    cut += ' and ' + pt.cuts[selection]
             
     ### Get dataframes with features for each of the datasets ###
     data_manager = pt.DataManager(input_dir     = f'{args.input}/{args.selection}_{args.period}',
-                                  dataset_names = [d for l in data_labels+model_labels for d in dataset_dict[l]],
+                                  dataset_names = [d for l in data_labels+model_labels for d in pt.dataset_dict[l]],
                                   selection     = selection,
                                   period        = args.period,
                                   scale         = args.lumi,
