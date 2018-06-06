@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['zjets', 'wjets', 't', 'ttbar']
+    model_labels = ['diboson', 'wjets', 'zjets', 't', 'ttbar']
 
     if selection == 'mu4j' or selection == 'mutau':
         model_labels = ['fakes'] + model_labels
@@ -50,6 +50,7 @@ if __name__ == '__main__':
                 'met_mag', 'met_phi', 'ht_mag', 'ht_phi',
 
                 'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 
+                'lepton1_mt', 
                 'lepton1_iso', 'lepton1_reliso', 
                 'jet1_pt', 'jet1_eta', 'jet1_phi',
                 'jet2_pt', 'jet2_eta', 'jet2_phi',
@@ -59,6 +60,7 @@ if __name__ == '__main__':
         features.extend([
                          'lead_lepton_pt', 'trailing_lepton_pt',
                          'lepton2_pt', 'lepton2_eta', 'lepton2_phi',
+                         'lepton2_mt', 
                          'lepton2_iso', 'lepton2_reliso', 
                          'lepton1_d0', 'lepton1_dz', 
                          'lepton2_d0', 'lepton2_dz',
@@ -75,7 +77,7 @@ if __name__ == '__main__':
 
 
     ### Cuts ###
-    cut = 'n_jets + n_bjets >= 2'
+    cut = 'n_jets + n_bjets >= 0'
     cut += ' and ' + pt.cuts[selection]
             
     ### Get dataframes with features for each of the datasets ###

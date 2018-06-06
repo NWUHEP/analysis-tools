@@ -5,77 +5,46 @@ from skhep.modeling import bayesian_blocks
 import scripts.plot_tools as pt
 import scripts.systematic_tools as st
 
+features = dict()
+features['mumu']  = ['lepton1_pt', 'lepton2_pt']
+features['ee']    = ['lepton1_pt', 'lepton2_pt']
+features['emu']   = ['lepton1_pt', 'trailing_lepton_pt', 'dilepton1_pt_asym']
+features['mutau'] = ['lepton1_pt', 'lepton2_pt', 'dilepton1_pt_asym']
+features['etau']  = ['lepton1_pt', 'lepton2_pt', 'dilepton1_pt_asym']
+features['mu4j']  = ['lepton1_pt']
+features['e4j']   = ['lepton1_pt']
+
 if __name__ == '__main__':
 
     do_bb_binning = True
     output_path   = f'data/templates/bjet_binned_test'
-    datasets = [
-                'muon_2016B', 'muon_2016C', 'muon_2016D',
-                'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
-                'electron_2016B', 'electron_2016C', 'electron_2016D',
-                'electron_2016E', 'electron_2016F', 'electron_2016G', 'electron_2016H',
-
-                'ttbar_inclusive', 
-                't_tw', 'tbar_tw',
-                'w1jets', 'w2jets', 'w3jets', 'w4jets',
-                'zjets_m-50', 'zjets_m-10to50',
-                'z1jets_m-50', 'z1jets_m-10to50',
-                'z2jets_m-50', 'z2jets_m-10to50',
-                'z3jets_m-50', 'z3jets_m-10to50',
-                'z4jets_m-50', 'z4jets_m-10to50',
-                ]
-
+    data_labels  = ['muon', 'electron']
+    model_labels = ['wjets', 'zjets', 't', 'ttbar']
+    datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
         pt.make_directory(f'{output_path}/{selection}')
         ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
-        features   = ['lepton1_pt']
-        cuts       = 'lepton1_pt > 25 and abs(lepton1_eta) < 2.4'
 
         # category specific parameters
         labels = ['zjets', 'wjets']
-        if selection == 'mumu':
-            features += ['lepton2_pt']
-            cuts  += ' and lepton2_pt > 10 \
-                      and lepton1_q != lepton2_q \
-                      and dilepton1_mass > 12 \
-                      and (dilepton1_mass < 80 or dilepton1_mass > 100)'
-        if selection == 'ee':
-            features += ['lepton2_pt']
-            cuts  += ' and lepton1_pt > 30 \
-                      and lepton1_q != lepton2_q \
-                      and dilepton1_mass > 12 \
-                      and (dilepton1_mass < 80 or dilepton1_mass > 100)'
-        elif selection == 'emu':
-            features += ['trailing_lepton_pt', 'dilepton1_pt_asym']
-            cuts  += ' and lepton1_q != lepton2_q \
-                      and dilepton1_mass > 12'
-        elif selection == 'etau':
-            features += ['lepton2_pt', 'dilepton1_pt_asym']
-            cuts  += ' and lepton1_pt > 30 \
-                      and lepton2_pt > 20 and abs(lepton2_eta) < 2.3 \
-                      and lepton1_q != lepton2_q \
-                      and dilepton1_mass > 12'
-        elif selection == 'mutau':
-            features += ['lepton2_pt', 'dilepton1_pt_asym']
-            cuts  += ' and lepton1_pt > 30 \
-                      and lepton2_pt > 20 and abs(lepton2_eta) < 2.3 \
-                      and lepton1_q != lepton2_q \
-                      and dilepton1_mass > 12'
-        elif selection == 'mu4j':
+        if selection == 'mu4j' or selection == 'mutau':
+            dataset_names = datasets + pt.dataset_dict['fakes']
             labels += ['fakes']
-            datasets.append('fakes')
 
+        dm = pt.DataManager(input_dir     = ntuple_dir,
+                            dataset_names = datasets,
+                            selection     = selection,
+                            scale         = 35.9e3,
+                            cuts          = pt.cuts[selection],
+                            features      = features[selection] + ['n_pu', 'n_bjets', 'gen_cat', 'run_number', 'event_number']
+                                )
         #print(f'Running over selection {selection}...')
         for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
-            dm = pt.DataManager(input_dir     = ntuple_dir,
-                                dataset_names = datasets,
-                                selection     = selection,
-                                scale         = 35.9e3,
-                                cuts          = cuts + f' and {bcut}',
-                                features      = features + ['n_pu', 'n_bjets', 'gen_cat', 'run_number', 'event_number']
-                                )
+            if selection is not 'emu' and bcut == 'n_bjets == 0': 
+                continue
+
 
             # this could be added as a method to the data_manager so I don't have to
             # make copies of (possibly very large) dataframes
@@ -84,17 +53,16 @@ if __name__ == '__main__':
             # sigal samples are split according the decay of the W bosons
             decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
             mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
-            df_top        = dm.get_dataframes(['ttbar', 't'], concat=True)
+            df_top        = dm.get_dataframes(['ttbar', 't'], concat=True).query(bcut)
             df_model      = {n: df_top.query(c) for n, c in mc_conditions.items()}
             for l in labels:
-                df_model[l] = dm.get_dataframe(l)
+                df_model[l] = dm.get_dataframe(l).query(bcut)
 
             # get the data
             if df_top.shape[0] == 0: continue
 
             # bin the datasets to derive templates
-            for feature in features:
-                hist_lut  = dm._lut_features.loc[feature]
+            for feature in features[selection]:
 
                 ### calculate binning
                 x = df_top[feature].values
@@ -119,11 +87,12 @@ if __name__ == '__main__':
                     bin_range = None
                 else:
                     print('Using user-defined binning...')
+                    hist_lut  = dm._lut_features.loc[feature]
                     binning = hist_lut.n_bins
                     bin_range = (hist_lut.xmin, hist_lut.xmax)
 
                 # bin the data
-                x = dm.get_dataframe('data')[feature]
+                x = dm.get_dataframe('data').query(bcut)[feature]
                 h, b = np.histogram(x,
                                     bins  = binning,
                                     range = bin_range,
