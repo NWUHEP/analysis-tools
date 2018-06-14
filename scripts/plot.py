@@ -49,8 +49,7 @@ if __name__ == '__main__':
                 'n_jets', 'n_fwdjets', 'n_bjets',
                 'met_mag', 'met_phi', 'ht_mag', 'ht_phi',
 
-                'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 
-                'lepton1_mt', 
+                'lepton1_pt', 'lepton1_eta', 'lepton1_phi', #'lepton1_mt', 
                 'lepton1_iso', 'lepton1_reliso', 
                 'jet1_pt', 'jet1_eta', 'jet1_phi',
                 'jet2_pt', 'jet2_eta', 'jet2_phi',
@@ -59,8 +58,7 @@ if __name__ == '__main__':
     if selection not in ['e4j', 'mu4j']:
         features.extend([
                          'lead_lepton_pt', 'trailing_lepton_pt',
-                         'lepton2_pt', 'lepton2_eta', 'lepton2_phi',
-                         'lepton2_mt', 
+                         'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_mt', 
                          'lepton2_iso', 'lepton2_reliso', 
                          'lepton1_d0', 'lepton1_dz', 
                          'lepton2_d0', 'lepton2_dz',
@@ -74,10 +72,8 @@ if __name__ == '__main__':
                          'dijet_pt_over_m',
                          ])
 
-
-
     ### Cuts ###
-    cut = 'n_jets + n_bjets >= 0'
+    cut = 'n_jets >= 2'
     cut += ' and ' + pt.cuts[selection]
             
     ### Get dataframes with features for each of the datasets ###

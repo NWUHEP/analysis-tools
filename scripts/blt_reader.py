@@ -102,6 +102,21 @@ def fill_event_vars(tree):
                     n_jets         = tree.nJets,
                     n_fwdjets      = tree.nFwdJets,
                     n_bjets        = tree.nBJets,
+
+                    # jet counting for systematics
+                    n_jets_jes_up       = tree.nJetsJESUp,
+                    n_jets_jes_down     = tree.nJetsJESDown,
+                    n_jets_jer_up       = tree.nJetsJERUp,
+                    n_jets_jer_down     = tree.nJetsJERDown,
+                    n_bjets_jes_up      = tree.nBJetsJESUp,
+                    n_bjets_jes_down    = tree.nBJetsJESDown,
+                    n_bjets_jer_up      = tree.nBJetsJERUp,
+                    n_bjets_jer_down    = tree.nBJetsJERDown,
+                    n_bjets_btag_up     = tree.nBJetsBTagUp,
+                    n_bjets_btag_down   = tree.nBJetsBTagDown,
+                    n_bjets_mistag_up   = tree.nBJetsMistagUp,
+                    n_bjets_mistag_down = tree.nBJetsMistagDown,
+
  
                     met_mag        = tree.met,
                     met_phi        = tree.metPhi,
@@ -335,7 +350,6 @@ def fill_jet_lepton_vars(tree):
                     mumuj2_j1_delta_r    = dilepton_j2.DeltaR(jet1),
                    )
 
-
     #if tree.nBJets > 0:
     #    if tree.leptonOneFlavor < 0:
     #        out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_j1, dilepton, lep1)
@@ -391,10 +405,13 @@ def fill_lepton4j_vars(tree):
     
     w_cand = jet1 + jet2
     htop_cand = w_cand + jet3
-    
+
+    met_p2 = r.TVector2(tree.met*np.cos(tree.metPhi), tree.met*np.sin(tree.metPhi))
+    lep_mt, lep_met_dphi = calculate_mt(lep, met_p2)
 
     out_dict = dict(
                     lepton1_pt      = lep.Pt(),
+                    lepton1_mt      = lep_mt,
                     lepton1_eta     = lep.Eta(),
                     lepton1_phi     = lep.Phi(),
                     lepton1_q       = np.sign(tree.leptonOneFlavor),
@@ -472,7 +489,6 @@ def fill_lepton4j_vars(tree):
 
                    )
 
-
     #if tree.nBJets > 0:
     #    if tree.leptonOneFlavor < 0:
     #        out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_j1, dilepton, lep1)
@@ -521,8 +537,8 @@ def pickle_ntuple(tree, dataset_name, output_path, selection):
 if __name__ == '__main__':
 
     ### Configuration ###
-    #selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['mutau']
+    selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    #selections  = ['mutau', 'etau']
     do_mc       = True
     do_data     = True
     period      = 2016
@@ -566,7 +582,7 @@ if __name__ == '__main__':
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/mutau_test/{selection}_{period}'
+        output_path = f'data/flatuples/single_lepton_test/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 

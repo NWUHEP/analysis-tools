@@ -6,11 +6,11 @@ import scripts.plot_tools as pt
 import scripts.systematic_tools as st
 
 features = dict()
-features['mumu']  = ['lepton1_pt', 'lepton2_pt']
-features['ee']    = ['lepton1_pt', 'lepton2_pt']
-features['emu']   = ['lepton1_pt', 'trailing_lepton_pt', 'dilepton1_pt_asym']
-features['mutau'] = ['lepton1_pt', 'lepton2_pt', 'dilepton1_pt_asym']
-features['etau']  = ['lepton1_pt', 'lepton2_pt', 'dilepton1_pt_asym']
+features['mumu']  = ['lepton2_pt']
+features['ee']    = ['lepton2_pt']
+features['emu']   = ['trailing_lepton_pt']
+features['mutau'] = ['lepton2_pt']#, 'dilepton1_pt_asym']
+features['etau']  = ['lepton2_pt']#, 'dilepton1_pt_asym']
 features['mu4j']  = ['lepton1_pt']
 features['e4j']   = ['lepton1_pt']
 
@@ -32,9 +32,11 @@ if __name__ == '__main__':
         if selection == 'mu4j' or selection == 'mutau':
             dataset_names = datasets + pt.dataset_dict['fakes']
             labels += ['fakes']
+        else:
+            dataset_names = datasets
 
         dm = pt.DataManager(input_dir     = ntuple_dir,
-                            dataset_names = datasets,
+                            dataset_names = dataset_names,
                             selection     = selection,
                             scale         = 35.9e3,
                             cuts          = pt.cuts[selection],
@@ -97,12 +99,12 @@ if __name__ == '__main__':
                                     bins  = binning,
                                     range = bin_range,
                                     )
-                overflow = x[x > b[-1]].size
-                h = np.append(h, overflow)
+                #overflow = x[x > b[-1]].size
+                #h = np.append(h, overflow)
 
                 ### get signal and background templates
-                template_vals = dict(bins=b, data=h)
-                template_vars = dict(bins=b, data=h)
+                template_vals = dict(bins=b[:-1], data=h)
+                template_vars = dict(bins=b[:-1], data=h)
                 for label, df in df_model.items():
                     x = df[feature].values
 
@@ -113,16 +115,16 @@ if __name__ == '__main__':
                                         range   = bin_range,
                                         weights = w
                                         )
-                    overflow = np.sum(w[x > b[-1]])
-                    h = np.append(h, overflow)
+                    #overflow = np.sum(w[x > b[-1]])
+                    #h = np.append(h, overflow)
 
                     hvar, _ = np.histogram(x,
                                            bins    = binning,
                                            range   = bin_range,
                                            weights = w**2
                                            )
-                    overflow = np.sum(w[x > b[-1]]**2)
-                    hvar = np.append(hvar, overflow)
+                    #overflow = np.sum(w[x > b[-1]]**2)
+                    #hvar = np.append(hvar, overflow)
 
                     template_vals[label] = h
                     template_vars[label] = hvar
@@ -136,12 +138,23 @@ if __name__ == '__main__':
                 df_vars.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_var.csv')
 
                 ### produce morphing templates for shape systematics
+                df_sys = pd.DataFrame(dict(bins=binning[:-1]))
 
                 # pileup
-                df_sys                = pd.DataFrame(dict(bins=binning[:-1]))
-                pu_up, pu_down        = st.pileup_morph(df_top, feature, binning)
-                df_sys['pileup_up']   = pu_up
-                df_sys['pileup_down'] = pu_down
+                print(df_vals.shape, df_sys.shape)
+                df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_top, feature, binning)
+
+                # lepton energy scale
+                if selection in ['mumu', 'emu', 'mu4j']:
+                    scale = 0.01
+                    df_sys['mu_es_up'], df_sys['mu_es_down'] = st.es_morph(df_top, feature, binning, scale)
+
+                if selection in ['ee', 'emu', 'e4j']:
+                    scale = 0.01
+                    df_sys['el_es_up'], df_sys['el_es_down'] = st.es_morph(df_top, feature, binning, scale)
+
+                if selection in ['etau', 'mutau']:
+                    scale = 0.01
+                    df_sys['tau_es_up'], df_sys['tau_es_down'] = st.es_morph(df_top, feature, binning, scale)
 
                 df_sys.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_sys.csv', index=False)
-

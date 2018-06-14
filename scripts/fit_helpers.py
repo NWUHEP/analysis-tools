@@ -22,6 +22,18 @@ def ebar_wrapper(data, ax, bins, limits, style):
                 markersize = 5
                 )
 
+def shape_morphing(f, up_template, down_template, order='quadratic'):
+    '''
+    Efficiency shape morphing for nuisance parameters.  
+    '''
+
+    if order == 'linear':
+        r_eff = 1 + f*(up_template - down_template)/2
+    elif order == 'quadratic':
+        r_eff = (f*(f - 1)/2)*down_template - (f - 1)*(f + 1) + (f*(f + 1)/2)*up_template
+
+    return r_eff
+
 class FitData(object):
     def __init__(self, path, selections, feature_map, bins=[0]):
         self._selections     = selections
@@ -40,30 +52,39 @@ class FitData(object):
         Retrieves data, bg, and signal templates as well as their variances.
         '''
 
-        out_data = dict(data = [], signal = [], zjets = [], wjets = [], fakes = [], bins = [])
+        out_data = dict()
         for b in self._bins:
+            bin_data = dict()
             # get our data
             df_templates = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_val.csv').set_index('bins')
+            df_syst      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_sys.csv').set_index('bins')
             df_vars      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_var.csv').set_index('bins')
 
             # replace NaN and negative entries with 0
-            df_templates, df_vars  = df_templates.fillna(0), df_vars.fillna(0)
+            df_templates = df_templates.fillna(0)
+            df_vars      = df_vars.fillna(0)
+            df_syst      = df_syst.fillna(0)
             df_templates[df_templates < 0.] = 0.
 
             # split template dataframe into data, bg, and signal, and then convert to numpy arrays
             decay_map = self._decay_map['decay'].values
-            out_data['bins'].append(df_templates.index.values)
-            out_data['data'].append((df_templates['data'].values, df_vars['data'].values))
+            bin_data['bins'] = df_templates.index.values
+            bin_data['data'] = (df_templates['data'].values, df_vars['data'].values)
 
             # get background components
-            out_data['zjets'].append((df_templates['zjets'].values, df_vars['zjets'].values))
-            out_data['wjets'].append((df_templates['wjets'].values, df_vars['wjets'].values))
+            bin_data['zjets'] = (df_templates['zjets'].values, df_vars['zjets'].values)
+            bin_data['wjets'] = (df_templates['wjets'].values, df_vars['wjets'].values)
 
-            if selection == 'mu4j':
-                out_data['fakes'].append((df_templates['fakes'].values, df_vars['fakes'].values))
+            if selection in ['mu4j', 'mutau']:
+                bin_data['fakes'] = (df_templates['fakes'].values, df_vars['fakes'].values)
 
             # get signal components
-            out_data['signal'].append((df_templates[decay_map].values, df_vars[decay_map].values))
+            bin_data['signal'] = (df_templates[decay_map].values, df_vars[decay_map].values)
+
+            # get shape variation templates 
+            bin_data['syst'] = df_syst
+
+            out_data[b] = bin_data
 
         return out_data
 
@@ -80,7 +101,7 @@ class FitData(object):
     def get_params_init(self):
         return self._beta
 
-    def objective(self, params, data, cost_type='chi2', mask=None):
+    def objective(self, params, data, cost_type='poisson'):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -100,6 +121,7 @@ class FitData(object):
         beta = params[:4]
 
         # nuisance parameters
+        # normalization
         lumi       = params[4]
         xs_top     = params[5]
         xs_zjets   = params[6]
@@ -108,6 +130,11 @@ class FitData(object):
         eff_e      = params[9]
         eff_mu     = params[10]
         eff_tau    = params[11]
+        # morphing
+        escale_e   = 1. - params[12]
+        escale_mu  = 1. - params[13]
+        escale_tau = 1. - params[14]
+        pileup     = 1. - params[15]
 
         # calculate per category, per bin costs
         cost = 0
@@ -115,10 +142,11 @@ class FitData(object):
             s_data = self.get_selection_data(sel)
 
             for b in self._bins:
-                f_data, var_data = data[sel][b], data[sel][b]
+                df_syst          = s_data[b]['syst']
+                f_data, var_data = data[b][sel], data[b][sel]
                 f_sig, var_sig   = signal_mixture_model(beta,
                                                         br_tau = self._tau_br,
-                                                        h_temp = s_data['signal'][b]
+                                                        h_temp = s_data[b]['signal']
                                                         )
 
                 # prepare mixture
@@ -126,33 +154,45 @@ class FitData(object):
                 var_model = var_sig
 
                 # get background components and apply cross-section nuisance parameters
-                f_zjets, var_zjets = s_data['zjets'][b]
-                f_wjets, var_wjets = s_data['wjets'][b]
+                f_zjets, var_zjets = s_data[b]['zjets']
+                f_wjets, var_wjets = s_data[b]['wjets']
                 f_model   += xs_zjets*f_zjets + xs_wjets*f_wjets
                 var_model += var_zjets + var_wjets
 
                 # lepton efficiencies as normalization nuisance parameters
-                if sel in 'mumu':
-                    f_model *= eff_mu**2
-                elif sel in 'ee':
+                # lepton energy scale as morphing parameters
+                if sel in 'ee':
                     f_model *= eff_e**2
+                    f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
                 elif sel in 'emu':
                     f_model *= eff_e*eff_mu
+                    f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
+                    f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
+                elif sel in 'mumu':
+                    f_model *= eff_mu**2
+                    f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
                 elif sel == 'etau':
                     f_model *= eff_tau*eff_e
+                    f_model *= shape_morphing(escale_tau, df_syst['tau_es_up'], df_syst['tau_es_down'])
                 elif sel == 'mutau':
                     f_model *= eff_tau*eff_mu
+                    f_model *= shape_morphing(escale_tau, df_syst['tau_es_up'], df_syst['tau_es_down'])
                 elif sel == 'e4j':
                     f_model *= eff_e
+                    f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
                 elif sel == 'mu4j':
                     f_model *= eff_mu
+                    f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
 
-                # apply overall lumi nuisance parameter, but exclude data-driven backgrounds
+                # apply overall lumi nuisance parameter
                 f_model *= lumi
+
+                # shape systematic from pileup
+                f_model *= shape_morphing(pileup, df_syst['pileup_up'], df_syst['pileup_down'])
 
                 # get fake background and include normalization nuisance parameters
                 if sel == 'mu4j': 
-                    f_fakes, var_fakes = s_data['fakes'][b]
+                    f_fakes, var_fakes = s_data[b]['fakes']
                     f_model   += norm_fakes*f_fakes
                     var_model += var_fakes
 
@@ -172,7 +212,7 @@ class FitData(object):
                 cost += np.sum(nll)
 
         # require that the branching fractions sum to 1
-        cost += (1 - np.sum(beta))**2/(2*0.0001**2)  
+        cost += (1 - np.sum(beta))**2/(2*0.000001**2)  
 
         # constrain branching fractions (optional)
         #beta_init = np.array(3*[0.108, ] + [1. - 3*0.108])
@@ -184,16 +224,20 @@ class FitData(object):
         lumi_var = 0.025**2
         cost += (lumi - 1.)**2 / (2*lumi_var)
 
+        # pileup
+        pileup_var = 1.**2
+        cost += (pileup - 1.)**2 / (2*pileup_var)
+
         ## top
         xs_top_var = 0.05**2
         cost += (xs_top - 1.)**2 / (2*xs_top_var)
 
         ## zjets
-        xs_zjets_var = 0.05**2
+        xs_zjets_var = 0.3**2
         cost += (xs_zjets - 1.)**2 / (2*xs_zjets_var)
 
         ## wjets
-        xs_wjets_var = 0.05**2
+        xs_wjets_var = 0.3**2
         cost += (xs_wjets - 1.)**2 / (2*xs_wjets_var)
 
         ## fakes
@@ -209,6 +253,16 @@ class FitData(object):
 
         eff_tau_var = 0.05**2
         cost += (eff_tau - 1.)**2 / (2*eff_tau_var)
+
+        ## lepton energy scales
+        escale_e_var = 0.2**2
+        cost += (escale_e - 1.)**2 / (2*escale_e_var)
+
+        escale_mu_var = 0.2**2
+        cost += (escale_mu - 1.)**2 / (2*escale_mu_var)
+
+        escale_tau_var = 1.**2
+        cost += (escale_tau - 1.)**2 / (2*escale_tau_var)
         ########
 
         return cost

@@ -58,10 +58,9 @@ cuts = dict(
                      and n_bjets >= 1',
             mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
                      and dilepton1_mass > 12 \
-                     and n_bjets >= 0',
-                     #and lepton1_mt < 40 \
-            e4j   = 'lepton1_pt > 30 and n_bjets >= 1',
-            mu4j  = 'lepton1_pt > 25 and n_bjets >= 1',
+                     and n_bjets >= 1',
+            e4j   = 'lepton1_pt > 30 and n_jets >= 4 and n_bjets >= 1',
+            mu4j  = 'lepton1_pt > 25 and n_jets >= 4 and n_bjets >= 1',
             )
 
 def make_directory(file_path, clear=True):
@@ -799,6 +798,7 @@ class PlotManager():
             make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
             make_directory('{0}/log/{1}'.format(self._output_path, lut_entry.category), False)
 
+            plt.tight_layout()
             ### Save output plot ###
             ### linear scale ###
             y_max = np.max(hist)
