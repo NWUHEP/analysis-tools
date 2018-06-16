@@ -47,10 +47,6 @@ if __name__ == '__main__':
             if selection is not 'emu' and bcut == 'n_bjets == 0': 
                 continue
 
-
-            # this could be added as a method to the data_manager so I don't have to
-            # make copies of (possibly very large) dataframes
-
             # prepare dataframes with signal templates
             # sigal samples are split according the decay of the W bosons
             decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
@@ -137,24 +133,43 @@ if __name__ == '__main__':
                 df_vars = df_vars.set_index('bins')
                 df_vars.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_var.csv')
 
+                # normalization systematics
+                df_sys_norm = pd.DataFrame(dict(
+                                                lumi       = [0.025, 0.025],
+                                                xs_top     = [0.05,  0.05],
+                                                xs_zjets   = [0.3, 0.3],
+                                                xs_wjets   = [0.3, 0.3],
+                                                eff_e_up   = [0.01, 0.01],
+                                                eff_mu_up  = [0.01, 0.01],
+                                                eff_tau_up = [0.05, 0.05],
+                                                ))
+
+                if selection in ['mutau', 'mu4j']:
+                    df_sys_norm['norm_fakes'] = [0.3, 0.3]
+
+                # jet systematics
+                df_sys_norm['jes'] = st.jet_scale(df_top)
+
+                df_sys_norm.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst_norm.csv', index=False)
+
                 ### produce morphing templates for shape systematics
-                df_sys = pd.DataFrame(dict(bins=binning[:-1]))
+                df_sys_shape = pd.DataFrame(dict(bins=binning[:-1]))
 
                 # pileup
-                print(df_vals.shape, df_sys.shape)
-                df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_top, feature, binning)
+                print(df_vals.shape, df_sys_shape.shape)
+                df_sys_shape['pileup_up'], df_sys_shape['pileup_down'] = st.pileup_morph(df_top, feature, binning)
 
                 # lepton energy scale
                 if selection in ['mumu', 'emu', 'mu4j']:
                     scale = 0.01
-                    df_sys['mu_es_up'], df_sys['mu_es_down'] = st.es_morph(df_top, feature, binning, scale)
+                    df_sys_shape['mu_es_up'], df_sys_shape['mu_es_down'] = st.es_morph(df_top, feature, binning, scale)
 
                 if selection in ['ee', 'emu', 'e4j']:
                     scale = 0.01
-                    df_sys['el_es_up'], df_sys['el_es_down'] = st.es_morph(df_top, feature, binning, scale)
+                    df_sys_shape['el_es_up'], df_sys_shape['el_es_down'] = st.es_morph(df_top, feature, binning, scale)
 
                 if selection in ['etau', 'mutau']:
                     scale = 0.01
-                    df_sys['tau_es_up'], df_sys['tau_es_down'] = st.es_morph(df_top, feature, binning, scale)
+                    df_sys_shape['tau_es_up'], df_sys_shape['tau_es_down'] = st.es_morph(df_top, feature, binning, scale)
 
-                df_sys.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_sys.csv', index=False)
+                df_sys_shape.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst_shape.csv', index=False)

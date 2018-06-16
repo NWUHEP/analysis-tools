@@ -30,9 +30,9 @@ def pileup_morph(df, feature, bins):
     
     return h_up/h_nominal, h_down/h_nominal
     
-def es_morph(df, feature, bins, scale):
+def les_morph(df, feature, bins, scale):
     '''
-    energy scale morphing
+    lepton energy scale morphing
     '''
 
     h_up, _      = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
@@ -41,5 +41,13 @@ def es_morph(df, feature, bins, scale):
 
     return h_up/h_nominal, h_down/h_nominal
 
+def jet_scale(df, sys_type):
+    '''
+    jet systematics are treated as normalization systematics, but will vary
+    depending on the jet/b tag multiplicity.
+    '''
+    h_nominal, b, _ = ax.hist(df.query('n_jets >= 2 and n_bjets >= 1')[feature], range=brange, bins=nbins, color='C1', linestyle='--', histtype='step')
+    h_plus, _, _ = ax.hist(df.query(f'n_jets_{sys_type}_up >= 2 and n_bjets_{sys_type}_up >= 1')[feature], range=brange, bins=nbins, color='C0', histtype='step')
+    h_minus, _, _ = ax.hist(df.query(f'n_jets_{sys_type}_down >= 2 and n_bjets_{sys_type}_down >= 1')[feature], range=brange, bins=nbins, color='C2', histtype='step')
 
 

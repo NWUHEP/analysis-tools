@@ -116,7 +116,6 @@ def fill_event_vars(tree):
                     n_bjets_btag_down   = tree.nBJetsBTagDown,
                     n_bjets_mistag_up   = tree.nBJetsMistagUp,
                     n_bjets_mistag_down = tree.nBJetsMistagDown,
-
  
                     met_mag        = tree.met,
                     met_phi        = tree.metPhi,
@@ -556,11 +555,6 @@ if __name__ == '__main__':
     if do_mc:
         dataset_list.extend([
             'ttbar_inclusive',
-            #'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-            #'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-            #'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-            #'ttbar_inclusive_up', 'ttbar_inclusive_down',
-
             't_tw', 'tbar_tw', #'t_t', 'tbar_t',
             'w1jets', 'w2jets', 'w3jets', 'w4jets', 
             'zjets_m-50', 'zjets_m-10to50',
@@ -576,13 +570,20 @@ if __name__ == '__main__':
             #'zz_4l'
             ])
 
+    #dataset_list = [
+    #                'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+    #                'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+    #                'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+    #                'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+    #                #'ttbar_inclusive_herwig'
+    #                ]
 
     ### Initialize multiprocessing queue and processes
     processes   = {}
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/single_lepton_test/{selection}_{period}'
+        output_path = f'data/flatuples/single_lepton/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 
@@ -604,7 +605,7 @@ if __name__ == '__main__':
             processes[f'{dataset}_{selection}'] = p
 
         # special case: fakes
-        if selection in ['mutau', 'mu4j']:
+        if selection in ['mutau', 'mu4j'] and do_data:
             for dataset in ['muon_2016B', 'muon_2016C', 
                             'muon_2016D', 'muon_2016E', 
                             'muon_2016F', 'muon_2016G', 'muon_2016H']:
