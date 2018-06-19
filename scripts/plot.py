@@ -73,7 +73,12 @@ if __name__ == '__main__':
                          ])
 
     ### Cuts ###
-    cut = 'n_jets >= 2'
+    if selection in ['e4j', 'mu4j']:
+        cut = 'n_jets >= 4 and n_bjets >= 1'
+    elif selection == 'emu':
+        cut = 'n_jets >= 2 and n_bjets >= 0'
+    else:
+        cut = 'n_jets >= 2 and n_bjets >= 1'
     cut += ' and ' + pt.cuts[selection]
             
     ### Get dataframes with features for each of the datasets ###

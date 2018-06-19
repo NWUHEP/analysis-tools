@@ -46,21 +46,19 @@ dataset_dict = dict(
 
 cuts = dict(
             ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 10 \
-                     and dilepton1_mass > 12 and (dilepton1_mass > 101 or dilepton1_mass < 81) \
-                     and n_bjets >= 0',
+                     and dilepton1_mass > 12 \
+                     and (dilepton1_mass > 101 or dilepton1_mass < 81)',
             mumu  = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
-                     and dilepton1_mass > 12  and (dilepton1_mass > 101 or dilepton1_mass < 81) \
-                     and n_bjets >= 0',
+                     and dilepton1_mass > 12 \
+                     and (dilepton1_mass > 101 or dilepton1_mass < 81)',
             emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 10 \
                      and dilepton1_mass > 12',
             etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
-                     and dilepton1_mass > 12 \
-                     and n_bjets >= 0',
+                     and dilepton1_mass > 12',
             mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
-                     and dilepton1_mass > 12 \
-                     and n_bjets >= 0',
-            e4j   = 'lepton1_pt > 30 and n_jets >= 4 and n_bjets >= 0',
-            mu4j  = 'lepton1_pt > 25 and n_jets >= 4 and n_bjets >= 0',
+                     and dilepton1_mass > 12',
+            e4j   = 'lepton1_pt > 30',
+            mu4j  = 'lepton1_pt > 25',
             )
 
 def make_directory(file_path, clear=True):
@@ -185,6 +183,20 @@ def set_new_tdr():
     plt.rcParams['figure.figsize']    = (10, 10)
     plt.rcParams['legend.fontsize']   = 20
     plt.rcParams['legend.numpoints']  = 1
+
+def set_default_style():
+    np.set_printoptions(precision=3)
+    matplotlib.style.use('default')
+    params = {'legend.fontsize': 14,
+              'axes.labelsize': 14,
+              'figure.figsize': (8, 8),
+              'axes.facecolor': 'white',
+              'axes.titlesize':'x-large',
+              'xtick.labelsize':12,
+              'ytick.labelsize':12,
+              }
+    matplotlib.rcParams.update(params)
+
 
 def add_lumi_text(ax, lumi, period):
     #ax.text(0.04, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)

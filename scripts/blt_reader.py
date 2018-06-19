@@ -538,10 +538,10 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     #selections  = ['mutau', 'etau']
-    do_mc       = True
-    do_data     = True
+    do_mc       = False
+    do_data     = False
     period      = 2016
-    infile      = f'data/bltuples/output_single_lepton.root'
+    infile      = f'data/bltuples/output_ttbar_syst.root'
 
     dataset_list = []
     if period == 2016 and do_data:
@@ -570,20 +570,20 @@ if __name__ == '__main__':
             #'zz_4l'
             ])
 
-    #dataset_list = [
-    #                'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-    #                'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-    #                'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-    #                'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-    #                #'ttbar_inclusive_herwig'
-    #                ]
+    dataset_list = [
+                    'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+                    'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+                    'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                    'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+                    #'ttbar_inclusive_herwig'
+                    ]
 
     ### Initialize multiprocessing queue and processes
     processes   = {}
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/single_lepton/{selection}_{period}'
+        output_path = f'data/flatuples/ttbar_systematics/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 

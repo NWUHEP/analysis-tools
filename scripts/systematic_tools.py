@@ -41,13 +41,24 @@ def les_morph(df, feature, bins, scale):
 
     return h_up/h_nominal, h_down/h_nominal
 
-def jet_scale(df, sys_type):
+def jet_scale(df, feature, bins, sys_type, jet_condition):
     '''
-    jet systematics are treated as normalization systematics, but will vary
-    depending on the jet/b tag multiplicity.
+    Jet systematics are treated as shape systematics, but mostly vary depending
+    on the jet/b tag multiplicity.  Nonetheless, it's easier to account for
+    them as a shape systematic.
     '''
-    h_nominal, b, _ = ax.hist(df.query('n_jets >= 2 and n_bjets >= 1')[feature], range=brange, bins=nbins, color='C1', linestyle='--', histtype='step')
-    h_plus, _, _ = ax.hist(df.query(f'n_jets_{sys_type}_up >= 2 and n_bjets_{sys_type}_up >= 1')[feature], range=brange, bins=nbins, color='C0', histtype='step')
-    h_minus, _, _ = ax.hist(df.query(f'n_jets_{sys_type}_down >= 2 and n_bjets_{sys_type}_down >= 1')[feature], range=brange, bins=nbins, color='C2', histtype='step')
 
+    # nominal histogram
+    h_nominal, _ = np.histogram(df.query(jet_condition)[feature], bins=bins, weights=df.query(jet_condition).weight)
 
+    # systematic up/down
+    up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
+    down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
+    if sys_type not in ['btag', 'mistag']:
+        up_condition   = up_condition.replace('n_jets', f'n_jets_{sys_type}_up')
+        down_condition = down_condition.replace('n_jets', f'n_jets_{sys_type}_down')
+
+    h_up, _      = np.histogram(df.query(up_condition)[feature], bins=bins, weights=df.query(up_condition).weight)
+    h_down, _    = np.histogram(df.query(down_condition)[feature], bins=bins, weights=df.query(down_condition).weight)
+
+    return h_up/h_nominal, h_down/h_nominal

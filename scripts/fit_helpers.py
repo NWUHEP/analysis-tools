@@ -57,7 +57,7 @@ class FitData(object):
             bin_data = dict()
             # get our data
             df_templates = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_val.csv').set_index('bins')
-            df_syst      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_sys.csv').set_index('bins')
+            df_syst      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_syst.csv').set_index('bins')
             df_vars      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_var.csv').set_index('bins')
 
             # replace NaN and negative entries with 0
@@ -130,11 +130,16 @@ class FitData(object):
         eff_e      = params[9]
         eff_mu     = params[10]
         eff_tau    = params[11]
+
         # morphing
+        pileup     = 1. - params[15]
         escale_e   = 1. - params[12]
         escale_mu  = 1. - params[13]
         escale_tau = 1. - params[14]
-        pileup     = 1. - params[15]
+        jes        = 1. - params[16]
+        jer        = 1. - params[17]
+        btag       = 1. - params[18]
+        mistag     = 1. - params[19]
 
         # calculate per category, per bin costs
         cost = 0
@@ -184,11 +189,26 @@ class FitData(object):
                     f_model *= eff_mu
                     f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
 
-                # apply overall lumi nuisance parameter
-                f_model *= lumi
+                # jet energy scale/resolution and b tag/mistag systematics
+                # (these are more like normalization systematics, but it's
+                # easier to apply them as shape systematics)
+                # jes
+                f_model *= shape_morphing(jes, df_syst['jes_up'], df_syst['jes_down'])
+
+                # jer
+                f_model *= shape_morphing(jer, df_syst['jer_up'], df_syst['jer_down'])
+
+                # btag
+                f_model *= shape_morphing(btag, df_syst['btag_up'], df_syst['btag_down'])
+
+                # mistag
+                f_model *= shape_morphing(mistag, df_syst['mistag_up'], df_syst['mistag_down'])
 
                 # shape systematic from pileup
                 f_model *= shape_morphing(pileup, df_syst['pileup_up'], df_syst['pileup_down'])
+
+                # apply overall lumi nuisance parameter
+                f_model *= lumi
 
                 # get fake background and include normalization nuisance parameters
                 if sel == 'mu4j': 
@@ -263,6 +283,23 @@ class FitData(object):
 
         escale_tau_var = 1.**2
         cost += (escale_tau - 1.)**2 / (2*escale_tau_var)
+
+        ## jes
+        jes_var = 1.**2
+        cost += (jes - 1.)**2 / (2*jes_var)
+
+        # jer
+        jer_var = 1.**2
+        cost += (jer - 1.)**2 / (2*jer_var)
+
+        # btag
+        btag_var = 1.**2
+        cost += (btag - 1.)**2 / (2*btag_var)
+
+        # mistag
+        mistag_var = 1.**2
+        cost += (mistag - 1.)**2 / (2*mistag_var)
+
         ########
 
         return cost

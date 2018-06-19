@@ -22,10 +22,17 @@ if __name__ == '__main__':
     model_labels = ['wjets', 'zjets', 't', 'ttbar']
     datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
 
+    #datasets = [
+    #            'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+    #            'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+    #            'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+    #            'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+    #           ]
+
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
         pt.make_directory(f'{output_path}/{selection}')
-        ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
+        ntuple_dir = f'data/flatuples/single_lepton/{selection}_2016'
 
         # category specific parameters
         labels = ['zjets', 'wjets']
@@ -40,21 +47,32 @@ if __name__ == '__main__':
                             selection     = selection,
                             scale         = 35.9e3,
                             cuts          = pt.cuts[selection],
-                            features      = features[selection] + ['n_pu', 'n_bjets', 'gen_cat', 'run_number', 'event_number']
-                                )
+                            )
+
+        dm_syst = pt.DataManager(input_dir     = ntuple_dir,
+                                 dataset_names = dataset_names,
+                                 selection     = selection,
+                                 scale         = 35.9e3,
+                                 cuts          = pt.cuts[selection],
+                                 )
         #print(f'Running over selection {selection}...')
         for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
-            if selection is not 'emu' and bcut == 'n_bjets == 0': 
+            if selection in ['mu4j', 'e4j'] and bcut == 'n_bjets == 0': 
                 continue
+
+            if selection in ['e4j', 'mu4j']:
+                jet_cut = 'n_jets >= 4'
+            else:
+                jet_cut = 'n_jets >= 2'
 
             # prepare dataframes with signal templates
             # sigal samples are split according the decay of the W bosons
             decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
             mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
-            df_top        = dm.get_dataframes(['ttbar', 't'], concat=True).query(bcut)
+            df_top        = dm.get_dataframes(['ttbar', 't'], concat=True).query(jet_cut + ' and ' + bcut)
             df_model      = {n: df_top.query(c) for n, c in mc_conditions.items()}
             for l in labels:
-                df_model[l] = dm.get_dataframe(l).query(bcut)
+                df_model[l] = dm.get_dataframe(l).query(jet_cut + ' and ' + bcut)
 
             # get the data
             if df_top.shape[0] == 0: continue
@@ -86,11 +104,11 @@ if __name__ == '__main__':
                 else:
                     print('Using user-defined binning...')
                     hist_lut  = dm._lut_features.loc[feature]
-                    binning = hist_lut.n_bins
+                    binning   = hist_lut.n_bins
                     bin_range = (hist_lut.xmin, hist_lut.xmax)
 
                 # bin the data
-                x = dm.get_dataframe('data').query(bcut)[feature]
+                x = dm.get_dataframe('data').query(jet_cut + ' and ' + bcut)[feature]
                 h, b = np.histogram(x,
                                     bins  = binning,
                                     range = bin_range,
@@ -133,43 +151,41 @@ if __name__ == '__main__':
                 df_vars = df_vars.set_index('bins')
                 df_vars.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_var.csv')
 
-                # normalization systematics
-                df_sys_norm = pd.DataFrame(dict(
-                                                lumi       = [0.025, 0.025],
-                                                xs_top     = [0.05,  0.05],
-                                                xs_zjets   = [0.3, 0.3],
-                                                xs_wjets   = [0.3, 0.3],
-                                                eff_e_up   = [0.01, 0.01],
-                                                eff_mu_up  = [0.01, 0.01],
-                                                eff_tau_up = [0.05, 0.05],
-                                                ))
-
-                if selection in ['mutau', 'mu4j']:
-                    df_sys_norm['norm_fakes'] = [0.3, 0.3]
-
-                # jet systematics
-                df_sys_norm['jes'] = st.jet_scale(df_top)
-
-                df_sys_norm.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst_norm.csv', index=False)
-
                 ### produce morphing templates for shape systematics
-                df_sys_shape = pd.DataFrame(dict(bins=binning[:-1]))
+                df_sys = pd.DataFrame(dict(bins=binning[:-1]))
+
+                ### jet systematics ###
+                df_top_no_jetcut = dm.get_dataframes(['ttbar', 't'], concat=True) # we need to get the dataframe without the jet cuts
+
+                # jes
+                df_sys['jes_up'], df_sys['jes_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'jes', jet_cut + ' and ' + bcut)
+
+                # jer
+                df_sys['jer_up'], df_sys['jer_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'jer', jet_cut + ' and ' + bcut)
+
+                # b tag eff
+                df_sys['btag_up'], df_sys['btag_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'btag', jet_cut + ' and ' + bcut)
+
+                # mistag eff
+                df_sys['mistag_up'], df_sys['mistag_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'mistag', jet_cut + ' and ' + bcut)
 
                 # pileup
-                print(df_vals.shape, df_sys_shape.shape)
-                df_sys_shape['pileup_up'], df_sys_shape['pileup_down'] = st.pileup_morph(df_top, feature, binning)
+                df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_top, feature, binning)
 
-                # lepton energy scale
+                ### lepton energy scale ###
                 if selection in ['mumu', 'emu', 'mu4j']:
                     scale = 0.01
-                    df_sys_shape['mu_es_up'], df_sys_shape['mu_es_down'] = st.es_morph(df_top, feature, binning, scale)
+                    df_sys['mu_es_up'], df_sys['mu_es_down'] = st.les_morph(df_top, feature, binning, scale)
 
                 if selection in ['ee', 'emu', 'e4j']:
                     scale = 0.01
-                    df_sys_shape['el_es_up'], df_sys_shape['el_es_down'] = st.es_morph(df_top, feature, binning, scale)
+                    df_sys['el_es_up'], df_sys['el_es_down'] = st.les_morph(df_top, feature, binning, scale)
 
                 if selection in ['etau', 'mutau']:
                     scale = 0.01
-                    df_sys_shape['tau_es_up'], df_sys_shape['tau_es_down'] = st.es_morph(df_top, feature, binning, scale)
+                    df_sys['tau_es_up'], df_sys['tau_es_down'] = st.les_morph(df_top, feature, binning, scale)
 
-                df_sys_shape.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst_shape.csv', index=False)
+                # theory systematics
+
+                # write the systematics file
+                df_sys.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst.csv', index=False)
