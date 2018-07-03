@@ -136,6 +136,19 @@ def fill_event_vars(tree):
     else:
         out_dict['weight'] = tree.eventWeight
 
+    if dataset == 'ttbar_inclusive':
+        out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
+        out_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
+        out_dict['qcd_weight_nom_down']  = tree.qcdWeights[2]
+        out_dict['qcd_weight_up_nom']    = tree.qcdWeights[3]
+        out_dict['qcd_weight_up_up']     = tree.qcdWeights[4]
+        out_dict['qcd_weight_up_down']   = tree.qcdWeights[5]
+        out_dict['qcd_weight_down_nom']  = tree.qcdWeights[6]
+        out_dict['qcd_weight_down_up']   = tree.qcdWeights[7]
+        out_dict['qcd_weight_down_down'] = tree.qcdWeights[8]
+        out_dict['pdf_var']              = tree.pdfWeight + (tree.qcdWeights[0] - tree.qcdWeights[9])**2
+        out_dict['alpha_s_err']          = tree.alphaS
+
     return out_dict
 
 def fill_dilepton_vars(tree):
@@ -538,10 +551,10 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     #selections  = ['mutau', 'etau']
-    do_mc       = False
-    do_data     = False
+    do_mc       = True
+    do_data     = True
     period      = 2016
-    infile      = f'data/bltuples/output_ttbar_syst.root'
+    infile      = f'data/bltuples/output_single_lepton.root'
 
     dataset_list = []
     if period == 2016 and do_data:
@@ -570,20 +583,20 @@ if __name__ == '__main__':
             #'zz_4l'
             ])
 
-    dataset_list = [
-                    'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-                    'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-                    'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-                    'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-                    #'ttbar_inclusive_herwig'
-                    ]
+    #dataset_list = [
+    #                'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+    #                'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+    #                'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+    #                'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+    #                #'ttbar_inclusive_herwig'
+    #                ]
 
     ### Initialize multiprocessing queue and processes
     processes   = {}
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/ttbar_systematics/{selection}_{period}'
+        output_path = f'data/flatuples/single_lepton_test/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 

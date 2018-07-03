@@ -22,17 +22,17 @@ if __name__ == '__main__':
     model_labels = ['wjets', 'zjets', 't', 'ttbar']
     datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
 
-    #datasets = [
-    #            'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-    #            'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-    #            'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-    #            'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-    #           ]
+    datasets_ttbar_syst = [
+                'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+                'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+                'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+               ]
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
         pt.make_directory(f'{output_path}/{selection}')
-        ntuple_dir = f'data/flatuples/single_lepton/{selection}_2016'
+        ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
 
         # category specific parameters
         labels = ['zjets', 'wjets']
@@ -49,12 +49,6 @@ if __name__ == '__main__':
                             cuts          = pt.cuts[selection],
                             )
 
-        dm_syst = pt.DataManager(input_dir     = ntuple_dir,
-                                 dataset_names = dataset_names,
-                                 selection     = selection,
-                                 scale         = 35.9e3,
-                                 cuts          = pt.cuts[selection],
-                                 )
         #print(f'Running over selection {selection}...')
         for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
             if selection in ['mu4j', 'e4j'] and bcut == 'n_bjets == 0': 
@@ -64,6 +58,14 @@ if __name__ == '__main__':
                 jet_cut = 'n_jets >= 4'
             else:
                 jet_cut = 'n_jets >= 2'
+
+            dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
+                                     dataset_names = datasets_ttbar_syst,
+                                     selection     = selection,
+                                     scale         = 35.9e3,
+                                     cuts          = pt.cuts[selection] + ' and ' + jet_cut + ' and ' + bcut
+                                     )
+
 
             # prepare dataframes with signal templates
             # sigal samples are split according the decay of the W bosons
@@ -186,6 +188,26 @@ if __name__ == '__main__':
                     df_sys['tau_es_up'], df_sys['tau_es_down'] = st.les_morph(df_top, feature, binning, scale)
 
                 # theory systematics
+                df_top = dm.get_dataframe('ttbar').query(jet_cut + ' and ' + bcut)
+
+                # isr
+                df_sys['isr_up'], df_sys['isr_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'isr')
+
+                # fsr
+                df_sys['fsr_up'], df_sys['fsr_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'fsr')
+
+                # ME-PS (hdamp)
+                df_sys['hdamp_up'], df_sys['hdamp_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'hdamp')
+
+                # UE tune
+                df_sys['tune_up'], df_sys['tune_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'tune')
+
+                # PDF scale (average over MC replicas)
+                df_sys['pdf_up'], df_sys['pdf_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'pdf')
+
+                # QCD scale (mu_R and mu_F variation)
+                df_sys['qcd_up'], df_sys['qcd_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'qcd')
+
 
                 # write the systematics file
                 df_sys.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst.csv', index=False)

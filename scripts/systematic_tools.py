@@ -62,3 +62,38 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
     h_down, _    = np.histogram(df.query(down_condition)[feature], bins=bins, weights=df.query(down_condition).weight)
 
     return h_up/h_nominal, h_down/h_nominal
+
+def theory_systematics(df_nominal, dm, feature, bins, sys_type):
+    '''
+    Theory systematics are handled in two different ways: a subset of the
+    systematics are estimated from dedicated samples where a particular
+    generator parameter has been scale +/- 1 sigma from the nominal value.
+    These indclude,
+       * isr
+       * fsr
+       * ME+PS (hdamp)
+       * UE (tune)
+    Other systematics are calculated based on event level weights.  These include,
+       * PDF
+       * alpha_s
+       * QCD scale (mu_R and mu_F)
+    (It may make more sense to split this into two functions)
+    '''
+
+    h_nominal, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight)
+    if sys_type in ['isr', 'fsr', 'hdamp', 'tune']:
+        df_up     = dm.get_dataframe(f'ttbar_{sys_type}up')
+        df_down   = dm.get_dataframe(f'ttbar_{sys_type}down')
+
+        h_up, _   = np.histogram(df_up[feature], bins=bins, weights=df_up.weight)
+        h_down, _ = np.histogram(df_down[feature], bins=bins, weights=df_down.weight)
+    elif sys_type == 'pdf':
+        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*(1 + np.sqrt(df_nominal.pdf_var)/np.sqrt(99)))
+        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*(1 - np.sqrt(df_nominal.pdf_var)/np.sqrt(99)))
+    elif sys_type == 'qcd':
+        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_up_up)
+        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_down_down)
+
+    return h_up/h_nominal, h_down/h_nominal
+
+

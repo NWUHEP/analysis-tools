@@ -131,15 +131,27 @@ class FitData(object):
         eff_mu     = params[10]
         eff_tau    = params[11]
 
-        # morphing
-        pileup     = 1. - params[15]
-        escale_e   = 1. - params[12]
-        escale_mu  = 1. - params[13]
-        escale_tau = 1. - params[14]
+        # morphing 
+        pileup     = 1. - params[12]
+
+        # lepton energy scale
+        escale_e   = 1. - params[13]
+        escale_mu  = 1. - params[14]
+        escale_tau = 1. - params[15]
+
+        # jet systematics
         jes        = 1. - params[16]
         jer        = 1. - params[17]
         btag       = 1. - params[18]
         mistag     = 1. - params[19]
+
+        # theory systematics
+        fsr        = 1. - params[20]
+        isr        = 1. - params[21]
+        tune       = 1. - params[22]
+        hdamp      = 1. - params[23]
+        qcd        = 1. - params[24]
+        pdf        = 1. - params[25]
 
         # calculate per category, per bin costs
         cost = 0
@@ -206,6 +218,25 @@ class FitData(object):
 
                 # shape systematic from pileup
                 f_model *= shape_morphing(pileup, df_syst['pileup_up'], df_syst['pileup_down'])
+
+                # theory systematics #
+                # fsr
+                f_model *= shape_morphing(fsr, df_syst['fsr_up'], df_syst['fsr_down'])
+
+                # isr
+                f_model *= shape_morphing(isr, df_syst['isr_up'], df_syst['isr_down'])
+
+                # UE tune
+                f_model *= shape_morphing(tune, df_syst['tune_up'], df_syst['tune_down'])
+
+                # ME-PS matching
+                f_model *= shape_morphing(hdamp, df_syst['hdamp_up'], df_syst['hdamp_down'])
+
+                # QCD scale (mu_R/mu_F variation)
+                f_model *= shape_morphing(qcd, df_syst['qcd_up'], df_syst['qcd_down'])
+
+                # PDF variation
+                f_model *= shape_morphing(pdf, df_syst['pdf_up'], df_syst['pdf_down'])
 
                 # apply overall lumi nuisance parameter
                 f_model *= lumi
@@ -275,7 +306,7 @@ class FitData(object):
         cost += (eff_tau - 1.)**2 / (2*eff_tau_var)
 
         ## lepton energy scales
-        escale_e_var = 0.2**2
+        escale_e_var = 0.5**2
         cost += (escale_e - 1.)**2 / (2*escale_e_var)
 
         escale_mu_var = 0.2**2
@@ -300,7 +331,31 @@ class FitData(object):
         mistag_var = 1.**2
         cost += (mistag - 1.)**2 / (2*mistag_var)
 
-        ########
+        # fsr
+        fsr_var = 0.5**2
+        cost += (fsr - 1.)**2 / (2*fsr_var)
+
+        # isr
+        isr_var = 1.**2
+        cost += (isr - 1.)**2 / (2*isr_var)
+
+        # tune
+        tune_var = 1.**2
+        cost += (tune - 1.)**2 / (2*tune_var)
+
+        # hdamp
+        hdamp_var = 1.**2
+        cost += (hdamp - 1.)**2 / (2*hdamp_var)
+
+        # qcd
+        qcd_var = 1.**2
+        cost += (qcd - 1.)**2 / (2*qcd_var)
+
+        # pdf
+        pdf_var = 1.**2
+        cost += (pdf - 1.)**2 / (2*pdf_var)
+
+        ###########################################
 
         return cost
 
