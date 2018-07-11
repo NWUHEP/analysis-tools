@@ -55,7 +55,11 @@ class FitData(object):
         out_data = dict()
         for b in self._bins:
             bin_data = dict()
-            # get our data
+
+            # get the data for bin 'b'
+            if b == 0 and selection in ['e4j', 'mu4j']: # need at least one b tag for single lepton channels
+                continue
+
             df_templates = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_val.csv').set_index('bins')
             df_syst      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_syst.csv').set_index('bins')
             df_vars      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_var.csv').set_index('bins')
@@ -127,31 +131,37 @@ class FitData(object):
         xs_zjets   = params[6]
         xs_wjets   = params[7]
         norm_fakes = params[8]
+
+        # lepton efficiencies
         eff_e      = params[9]
         eff_mu     = params[10]
         eff_tau    = params[11]
 
+        # triggers
+        trigger_e  = params[12]
+        trigger_mu = params[13]
+
         # morphing 
-        pileup     = 1. - params[12]
+        pileup     = 1. - params[14]
 
         # lepton energy scale
-        escale_e   = 1. - params[13]
-        escale_mu  = 1. - params[14]
-        escale_tau = 1. - params[15]
+        escale_e   = 1. - params[15]
+        escale_mu  = 1. - params[16]
+        escale_tau = 1. - params[17]
 
         # jet systematics
-        jes        = 1. - params[16]
-        jer        = 1. - params[17]
-        btag       = 1. - params[18]
-        mistag     = 1. - params[19]
+        jes        = 1. - params[18]
+        jer        = 1. - params[19]
+        btag       = 1. - params[20]
+        mistag     = 1. - params[21]
 
         # theory systematics
-        fsr        = 1. - params[20]
-        isr        = 1. - params[21]
-        tune       = 1. - params[22]
-        hdamp      = 1. - params[23]
-        qcd        = 1. - params[24]
-        pdf        = 1. - params[25]
+        fsr        = 1. - params[22]
+        isr        = 1. - params[23]
+        tune       = 1. - params[24]
+        hdamp      = 1. - params[25]
+        qcd        = 1. - params[26]
+        pdf        = 1. - params[27]
 
         # calculate per category, per bin costs
         cost = 0
@@ -179,31 +189,39 @@ class FitData(object):
                 # lepton efficiencies as normalization nuisance parameters
                 # lepton energy scale as morphing parameters
                 if sel in 'ee':
+                    f_model *= trigger_e**2
                     f_model *= eff_e**2
                     f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
                 elif sel in 'emu':
+                    f_model *= trigger_mu*trigger_e
                     f_model *= eff_e*eff_mu
                     f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
                     f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
                 elif sel in 'mumu':
+                    f_model *= trigger_mu**2
                     f_model *= eff_mu**2
                     f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
                 elif sel == 'etau':
+                    f_model *= trigger_e
                     f_model *= eff_tau*eff_e
                     f_model *= shape_morphing(escale_tau, df_syst['tau_es_up'], df_syst['tau_es_down'])
                 elif sel == 'mutau':
+                    f_model *= trigger_mu
                     f_model *= eff_tau*eff_mu
                     f_model *= shape_morphing(escale_tau, df_syst['tau_es_up'], df_syst['tau_es_down'])
                 elif sel == 'e4j':
+                    f_model *= trigger_e
                     f_model *= eff_e
                     f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
                 elif sel == 'mu4j':
+                    f_model *= trigger_mu
                     f_model *= eff_mu
                     f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
 
                 # jet energy scale/resolution and b tag/mistag systematics
                 # (these are more like normalization systematics, but it's
                 # easier to apply them as shape systematics)
+
                 # jes
                 f_model *= shape_morphing(jes, df_syst['jes_up'], df_syst['jes_down'])
 
@@ -305,55 +323,62 @@ class FitData(object):
         eff_tau_var = 0.05**2
         cost += (eff_tau - 1.)**2 / (2*eff_tau_var)
 
+        ## trigger effs 
+        trigger_e_var = 0.01**2
+        cost += (trigger_e - 1.)**2 / (2*trigger_e_var)
+
+        trigger_mu_var = 0.01**2
+        cost += (trigger_mu - 1.)**2 / (2*trigger_mu_var)
+
         ## lepton energy scales
         escale_e_var = 0.5**2
-        cost += (escale_e - 1.)**2 / (2*escale_e_var)
+        cost += escale_e**2 / (2*escale_e_var)
 
         escale_mu_var = 0.2**2
-        cost += (escale_mu - 1.)**2 / (2*escale_mu_var)
+        cost += escale_mu**2 / (2*escale_mu_var)
 
         escale_tau_var = 1.**2
-        cost += (escale_tau - 1.)**2 / (2*escale_tau_var)
+        cost += escale_tau**2 / (2*escale_tau_var)
 
         ## jes
         jes_var = 1.**2
-        cost += (jes - 1.)**2 / (2*jes_var)
+        cost += jes**2 / (2*jes_var)
 
         # jer
         jer_var = 1.**2
-        cost += (jer - 1.)**2 / (2*jer_var)
+        cost += jer**2 / (2*jer_var)
 
         # btag
         btag_var = 1.**2
-        cost += (btag - 1.)**2 / (2*btag_var)
+        cost += btag**2 / (2*btag_var)
 
         # mistag
         mistag_var = 1.**2
-        cost += (mistag - 1.)**2 / (2*mistag_var)
+        cost += mistag**2 / (2*mistag_var)
 
         # fsr
         fsr_var = 0.5**2
-        cost += (fsr - 1.)**2 / (2*fsr_var)
+        cost += fsr**2 / (2*fsr_var)
 
         # isr
         isr_var = 1.**2
-        cost += (isr - 1.)**2 / (2*isr_var)
+        cost += isr**2 / (2*isr_var)
 
         # tune
         tune_var = 1.**2
-        cost += (tune - 1.)**2 / (2*tune_var)
+        cost += tune**2 / (2*tune_var)
 
         # hdamp
         hdamp_var = 1.**2
-        cost += (hdamp - 1.)**2 / (2*hdamp_var)
+        cost += hdamp**2 / (2*hdamp_var)
 
         # qcd
         qcd_var = 1.**2
-        cost += (qcd - 1.)**2 / (2*qcd_var)
+        cost += qcd**2 / (2*qcd_var)
 
         # pdf
         pdf_var = 1.**2
-        cost += (pdf - 1.)**2 / (2*pdf_var)
+        cost += pdf**2 / (2*pdf_var)
 
         ###########################################
 

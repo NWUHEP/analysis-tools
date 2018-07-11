@@ -3,6 +3,9 @@
 import argparse
 from itertools import chain
 
+import matplotlib as mpl
+mpl.use('Agg')
+
 import scripts.plot_tools as pt
 
 if __name__ == '__main__':
@@ -37,13 +40,16 @@ if __name__ == '__main__':
     data_labels  = ['muon', 'electron']
     model_labels = ['diboson', 'wjets', 'zjets', 't', 'ttbar']
 
-    if selection == 'mu4j' or selection == 'mutau':
+    if selection == 'mu4j': 
         model_labels = ['fakes'] + model_labels
+    elif selection in ['mutau', 'etau']:
+        model_labels = ['fakes_ss'] + model_labels
 
     # data samples
     features = [
                 #'lepton1_reco_weight', 'lepton2_reco_weight', 'trigger_weight', 
                 #'pileup_weight', 'top_pt_weight', 'event_weight',
+                'gen_cat',
 
                 'n_pv', 'n_muons', 'n_electrons', 'n_taus',
                 'n_jets', 'n_fwdjets', 'n_bjets',
@@ -71,12 +77,16 @@ if __name__ == '__main__':
                          'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
                          'dijet_pt_over_m',
                          ])
+        if selection in ['etau', 'mutau']:
+            features.append('tau_decay_mode')
 
     ### Cuts ###
     if selection in ['e4j', 'mu4j']:
         cut = 'n_jets >= 4 and n_bjets >= 1'
     elif selection == 'emu':
         cut = 'n_jets >= 2 and n_bjets >= 0'
+    elif selection in ['etau', 'mutau']:
+        cut = 'n_jets >= 2 and n_bjets >= 1'
     else:
         cut = 'n_jets >= 2 and n_bjets >= 1'
     cut += ' and ' + pt.cuts[selection]

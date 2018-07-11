@@ -29,16 +29,19 @@ if __name__ == '__main__':
                 'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
                ]
 
-    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['ee']#, 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
         pt.make_directory(f'{output_path}/{selection}')
         ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
 
         # category specific parameters
-        labels = ['zjets', 'wjets']
-        if selection == 'mu4j' or selection == 'mutau':
+        labels = ['ttbar', 'tW', 'wjets', 'zjets', 'diboson']
+        if selection == 'mu4j':
             dataset_names = datasets + pt.dataset_dict['fakes']
             labels += ['fakes']
+        elif selection == 'etau' or selection == 'mutau':
+            dataset_names = datasets + pt.dataset_dict['fakes_ss']
+            labels += ['fakes_ss']
         else:
             dataset_names = datasets
 
@@ -59,31 +62,24 @@ if __name__ == '__main__':
             else:
                 jet_cut = 'n_jets >= 2'
 
-            dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
-                                     dataset_names = datasets_ttbar_syst,
-                                     selection     = selection,
-                                     scale         = 35.9e3,
-                                     cuts          = pt.cuts[selection] + ' and ' + jet_cut + ' and ' + bcut
-                                     )
-
 
             # prepare dataframes with signal templates
             # sigal samples are split according the decay of the W bosons
             decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
             mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
-            df_top        = dm.get_dataframes(['ttbar', 't'], concat=True).query(jet_cut + ' and ' + bcut)
-            df_model      = {n: df_top.query(c) for n, c in mc_conditions.items()}
+
+            df_model = {}
             for l in labels:
                 df_model[l] = dm.get_dataframe(l).query(jet_cut + ' and ' + bcut)
 
             # get the data
-            if df_top.shape[0] == 0: continue
+            if df_model['ttbar'].shape[0] == 0: continue
 
             # bin the datasets to derive templates
             for feature in features[selection]:
 
                 ### calculate binning
-                x = df_top[feature].values
+                x = df_ttbar[feature].values
                 if do_bb_binning:
                     print('Calculating Bayesian block binning...')
                     binning = bayesian_blocks(x[:30000], p0=0.001)
@@ -157,56 +153,63 @@ if __name__ == '__main__':
                 df_sys = pd.DataFrame(dict(bins=binning[:-1]))
 
                 ### jet systematics ###
-                df_top_no_jetcut = dm.get_dataframes(['ttbar', 't'], concat=True) # we need to get the dataframe without the jet cuts
+                df_ttbar_no_jetcut = dm.get_dataframes(['ttbar', 't', 'wjets'], concat=True) # we need to get the dataframe without the jet cuts
 
                 # jes
-                df_sys['jes_up'], df_sys['jes_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'jes', jet_cut + ' and ' + bcut)
+                df_sys['jes_up'], df_sys['jes_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'jes', jet_cut + ' and ' + bcut)
 
                 # jer
-                df_sys['jer_up'], df_sys['jer_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'jer', jet_cut + ' and ' + bcut)
+                df_sys['jer_up'], df_sys['jer_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'jer', jet_cut + ' and ' + bcut)
 
                 # b tag eff
-                df_sys['btag_up'], df_sys['btag_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'btag', jet_cut + ' and ' + bcut)
+                df_sys['btag_up'], df_sys['btag_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'btag', jet_cut + ' and ' + bcut)
 
                 # mistag eff
-                df_sys['mistag_up'], df_sys['mistag_down'] = st.jet_scale(df_top_no_jetcut, feature, binning, 'mistag', jet_cut + ' and ' + bcut)
+                df_sys['mistag_up'], df_sys['mistag_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'mistag', jet_cut + ' and ' + bcut)
 
                 # pileup
-                df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_top, feature, binning)
+                df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_ttbar, feature, binning)
 
                 ### lepton energy scale ###
                 if selection in ['mumu', 'emu', 'mu4j']:
                     scale = 0.01
-                    df_sys['mu_es_up'], df_sys['mu_es_down'] = st.les_morph(df_top, feature, binning, scale)
+                    df_sys['mu_es_up'], df_sys['mu_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
 
                 if selection in ['ee', 'emu', 'e4j']:
                     scale = 0.01
-                    df_sys['el_es_up'], df_sys['el_es_down'] = st.les_morph(df_top, feature, binning, scale)
+                    df_sys['el_es_up'], df_sys['el_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
 
                 if selection in ['etau', 'mutau']:
                     scale = 0.01
-                    df_sys['tau_es_up'], df_sys['tau_es_down'] = st.les_morph(df_top, feature, binning, scale)
+                    df_sys['tau_es_up'], df_sys['tau_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
 
                 # theory systematics
-                df_top = dm.get_dataframe('ttbar').query(jet_cut + ' and ' + bcut)
+                dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
+                                         dataset_names = datasets_ttbar_syst,
+                                         selection     = selection,
+                                         scale         = 35.9e3,
+                                         cuts          = pt.cuts[selection] + ' and ' + jet_cut + ' and ' + bcut
+                                         )
+
+                df_ttbar = dm.get_dataframe('ttbar').query(jet_cut + ' and ' + bcut)
 
                 # isr
-                df_sys['isr_up'], df_sys['isr_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'isr')
+                df_sys['isr_up'], df_sys['isr_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'isr')
 
                 # fsr
-                df_sys['fsr_up'], df_sys['fsr_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'fsr')
+                df_sys['fsr_up'], df_sys['fsr_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'fsr')
 
                 # ME-PS (hdamp)
-                df_sys['hdamp_up'], df_sys['hdamp_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'hdamp')
+                df_sys['hdamp_up'], df_sys['hdamp_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'hdamp')
 
                 # UE tune
-                df_sys['tune_up'], df_sys['tune_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'tune')
+                df_sys['tune_up'], df_sys['tune_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'tune')
 
                 # PDF scale (average over MC replicas)
-                df_sys['pdf_up'], df_sys['pdf_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'pdf')
+                df_sys['pdf_up'], df_sys['pdf_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'pdf')
 
                 # QCD scale (mu_R and mu_F variation)
-                df_sys['qcd_up'], df_sys['qcd_down'] = st.theory_systematics(df_top, dm_syst, feature, binning, 'qcd')
+                df_sys['qcd_up'], df_sys['qcd_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'qcd')
 
 
                 # write the systematics file

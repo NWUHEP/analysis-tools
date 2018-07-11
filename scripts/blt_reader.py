@@ -146,7 +146,7 @@ def fill_event_vars(tree):
         out_dict['qcd_weight_down_nom']  = tree.qcdWeights[6]
         out_dict['qcd_weight_down_up']   = tree.qcdWeights[7]
         out_dict['qcd_weight_down_down'] = tree.qcdWeights[8]
-        out_dict['pdf_var']              = tree.pdfWeight + (tree.qcdWeights[0] - tree.qcdWeights[9])**2
+        out_dict['pdf_var']              = tree.pdfWeight 
         out_dict['alpha_s_err']          = tree.alphaS
 
     return out_dict

@@ -9,8 +9,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import beta
 
-#import matplotlib as mpl
-#mpl.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
 
@@ -42,6 +40,7 @@ dataset_dict = dict(
                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes', 
                                 'muon_2016H_fakes'
                                 ],
+                    fakes_ss = ['fakes_ss']
                     )
 
 cuts = dict(
@@ -290,7 +289,7 @@ class DataManager():
             ### update weights with lumi scale factors ###
             if label == 'data':
                 df.loc[:, 'weight'] = 1.
-            elif label == 'fakes':
+            elif label in ['fakes', 'fakes_ss']:
                 df.loc[:, 'weight'] *= lut_entry.cross_section
             else:
                 scale = self._scale
