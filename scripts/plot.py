@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['diboson', 'wjets', 'zjets', 't', 'ttbar']
+    model_labels = ['diboson', 'zjets', 't', 'wjets', 'ttbar']
 
     if selection == 'mu4j': 
         model_labels = ['fakes'] + model_labels
@@ -57,8 +57,8 @@ if __name__ == '__main__':
 
                 'lepton1_pt', 'lepton1_eta', 'lepton1_phi', #'lepton1_mt', 
                 'lepton1_iso', 'lepton1_reliso', 
-                'jet1_pt', 'jet1_eta', 'jet1_phi',
-                'jet2_pt', 'jet2_eta', 'jet2_phi',
+                #'jet1_pt', 'jet1_eta', 'jet1_phi',
+                #'jet2_pt', 'jet2_eta', 'jet2_phi',
                ]
 
     if selection not in ['e4j', 'mu4j']:
@@ -73,9 +73,9 @@ if __name__ == '__main__':
                          'dilepton1_mass', 'dilepton1_pt', 'dilepton1_eta', 'dilepton1_phi', 
                          'dilepton1_pt_over_m', 'dilepton1_pt_asym',
 
-                         'jet_delta_eta', 'jet_delta_phi', 'jet_delta_r',
-                         'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
-                         'dijet_pt_over_m',
+                         #'jet_delta_eta', 'jet_delta_phi', 'jet_delta_r',
+                         #'dijet_mass', 'dijet_pt', 'dijet_eta', 'dijet_phi', 
+                         #'dijet_pt_over_m',
                          ])
         if selection in ['etau', 'mutau']:
             features.append('tau_decay_mode')

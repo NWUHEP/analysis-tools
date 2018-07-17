@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,6 +12,25 @@ import numdifftools as nd
 import scripts.plot_tools as pt
 
 np.set_printoptions(precision=2)
+
+features = dict()
+features['mumu']  = 'lepton2_pt'
+features['ee']    = 'lepton2_pt'
+features['emu']   = 'trailing_lepton_pt'
+features['mutau'] = 'lepton2_pt'#, 'dilepton1_pt_asym'
+features['etau']  = 'lepton2_pt'#, 'dilepton1_pt_asym'
+features['mu4j']  = 'lepton1_pt'
+features['e4j']   = 'lepton1_pt'
+
+fancy_labels = dict()
+fancy_labels['mumu']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$')
+fancy_labels['ee']    = (r'$\sf p_{T,e}$', r'$\sf ee$')
+fancy_labels['emu']   = (r'$\sf p_{T,trailing}$', r'$\sf e\mu$')
+fancy_labels['mutau'] = (r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$')
+fancy_labels['etau']  = (r'$\sf p_{T,\tau}$', r'$\sf e\tau$')
+fancy_labels['mu4j']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$')
+fancy_labels['e4j']   = (r'$\sf p_{T,e}$', r'$\sf e+jets$')
+
 
 def ebar_wrapper(data, ax, bins, limits, style):
     x, y, err = pt.hist_to_errorbar(data, bins, limits)
@@ -35,10 +56,9 @@ def shape_morphing(f, up_template, down_template, order='quadratic'):
     return r_eff
 
 class FitData(object):
-    def __init__(self, path, selections, feature_map, bins=[0]):
+    def __init__(self, path, selections, feature_map):
         self._selections     = selections
         self._n_selections   = len(selections)
-        self._bins           = bins
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
         self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
 
@@ -49,48 +69,17 @@ class FitData(object):
 
     def _initialize_template_data(self, location, target, selection):
         '''
-        Retrieves data, bg, and signal templates as well as their variances.
+        Gets data for given selection including:
+        * data templates
+        * signal templates
+        * background templates
+        * morphing templates for shape systematics
+        * binning
         '''
-
-        out_data = dict()
-        for b in self._bins:
-            bin_data = dict()
-
-            # get the data for bin 'b'
-            if b == 0 and selection in ['e4j', 'mu4j']: # need at least one b tag for single lepton channels
-                continue
-
-            df_templates = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_val.csv').set_index('bins')
-            df_syst      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_syst.csv').set_index('bins')
-            df_vars      = pd.read_csv(f'{location}/{selection}/{target}_bin-{b}_var.csv').set_index('bins')
-
-            # replace NaN and negative entries with 0
-            df_templates = df_templates.fillna(0)
-            df_vars      = df_vars.fillna(0)
-            df_syst      = df_syst.fillna(0)
-            df_templates[df_templates < 0.] = 0.
-
-            # split template dataframe into data, bg, and signal, and then convert to numpy arrays
-            decay_map = self._decay_map['decay'].values
-            bin_data['bins'] = df_templates.index.values
-            bin_data['data'] = (df_templates['data'].values, df_vars['data'].values)
-
-            # get background components
-            bin_data['zjets'] = (df_templates['zjets'].values, df_vars['zjets'].values)
-            bin_data['wjets'] = (df_templates['wjets'].values, df_vars['wjets'].values)
-
-            if selection in ['mu4j', 'mutau']:
-                bin_data['fakes'] = (df_templates['fakes'].values, df_vars['fakes'].values)
-
-            # get signal components
-            bin_data['signal'] = (df_templates[decay_map].values, df_vars[decay_map].values)
-
-            # get shape variation templates 
-            bin_data['syst'] = df_syst
-
-            out_data[b] = bin_data
-
-        return out_data
+        infile = open(f'{location}/{selection}_templates.pkl', 'rb')
+        data = pickle.load(infile)
+        infile.close()
+        return data
 
     def _initialize_nuisance_parameters(self, selections):
         '''
@@ -105,7 +94,7 @@ class FitData(object):
     def get_params_init(self):
         return self._beta
 
-    def objective(self, params, data, cost_type='poisson'):
+    def objective(self, params, data, cost_type='poisson', no_shape=False):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -118,6 +107,7 @@ class FitData(object):
         data : dataset to be fitted
         cost_type : either 'chi2' or 'poisson'
         mask : an array with same size as the input parameters for indicating parameters to fix
+        no_shape : sums over all bins in input templates
         '''
 
         # unpack parameters here
@@ -125,66 +115,82 @@ class FitData(object):
         beta = params[:4]
 
         # nuisance parameters
-        # normalization
+        ## normalization
         lumi       = params[4]
-        xs_top     = params[5]
-        xs_zjets   = params[6]
-        xs_wjets   = params[7]
-        norm_fakes = params[8]
+        xs_ttbar   = params[5]
+        xs_tw      = params[6]
+        xs_zjets   = params[7]
+        xs_wjets   = params[8]
+        xs_diboson = params[9]
+        norm_fakes = params[10]
 
-        # lepton efficiencies
-        eff_e      = params[9]
-        eff_mu     = params[10]
-        eff_tau    = params[11]
+        ### triggers
+        trigger_e  = params[11]
+        trigger_mu = params[12]
 
-        # triggers
-        trigger_e  = params[12]
-        trigger_mu = params[13]
+        ### lepton efficiencies
+        eff_e      = params[13]
+        eff_mu     = params[14]
+        eff_tau    = params[15]
 
-        # morphing 
-        pileup     = 1. - params[14]
+        ## morphing 
+        pileup     = 1. - params[16]
 
-        # lepton energy scale
-        escale_e   = 1. - params[15]
-        escale_mu  = 1. - params[16]
-        escale_tau = 1. - params[17]
+        ### lepton energy scale
+        escale_e   = 1. - params[17]
+        escale_mu  = 1. - params[18]
+        escale_tau = 1. - params[19]
 
-        # jet systematics
-        jes        = 1. - params[18]
-        jer        = 1. - params[19]
-        btag       = 1. - params[20]
-        mistag     = 1. - params[21]
+        ### jet systematics
+        jes        = 1. - params[20]
+        jer        = 1. - params[21]
+        btag       = 1. - params[22]
+        mistag     = 1. - params[23]
 
-        # theory systematics
-        fsr        = 1. - params[22]
-        isr        = 1. - params[23]
-        tune       = 1. - params[24]
-        hdamp      = 1. - params[25]
-        qcd        = 1. - params[26]
-        pdf        = 1. - params[27]
+        ### theory systematics
+        fsr        = 1. - params[24]
+        isr        = 1. - params[25]
+        tune       = 1. - params[26]
+        hdamp      = 1. - params[27]
+        qcd        = 1. - params[28]
+        pdf        = 1. - params[29]
 
         # calculate per category, per bin costs
         cost = 0
         for sel in self._selections:
-            s_data = self.get_selection_data(sel)
+            sdata = self.get_selection_data(sel)
 
-            for b in self._bins:
-                df_syst          = s_data[b]['syst']
-                f_data, var_data = data[b][sel], data[b][sel]
-                f_sig, var_sig   = signal_mixture_model(beta,
-                                                        br_tau = self._tau_br,
-                                                        h_temp = s_data[b]['signal']
-                                                        )
+            for b, bdata in sdata.items():
+                if b == 0: continue
 
-                # prepare mixture
-                f_model   = xs_top*f_sig
-                var_model = var_sig
+                df_syst   = bdata['systematics']
+                templates = bdata['templates']
 
-                # get background components and apply cross-section nuisance parameters
-                f_zjets, var_zjets = s_data[b]['zjets']
-                f_wjets, var_wjets = s_data[b]['wjets']
-                f_model   += xs_zjets*f_zjets + xs_wjets*f_wjets
-                var_model += var_zjets + var_wjets
+                # get the data
+                f_data, var_data = templates['data']['val'], templates['data']['var']
+
+                # get simulated background components and apply cross-section nuisance parameters
+                f_zjets, var_zjets     = templates['zjets']['val'], templates['zjets']['var']
+                f_diboson, var_diboson = templates['diboson']['val'], templates['diboson']['var']
+                f_model   = xs_zjets*f_zjets + xs_diboson*f_diboson
+                var_model = var_zjets + var_diboson
+
+                # get the signal components and apply mixing of W decay modes according to beta
+                for sig_label in ['ttbar', 't']:#, 'wjets']:
+                    signal_template = list(templates[sig_label].values())
+                    f_sig, var_sig = signal_mixture_model(beta,
+                                                          br_tau   = self._tau_br,
+                                                          h_temp   = signal_template,
+                                                          single_w = (sig_label == 'wjets')
+                                                          )
+                    # prepare mixture
+                    var_model += var_sig
+                    if sig_label == 'ttbar':
+                        f_model   += xs_ttbar*f_sig
+                    elif sig_label == 't':
+                        f_model   += xs_tw*f_sig
+                    elif sig_label == 'wjets':
+                        f_model   += xs_wjets*f_sig
 
                 # lepton efficiencies as normalization nuisance parameters
                 # lepton energy scale as morphing parameters
@@ -222,53 +228,53 @@ class FitData(object):
                 # (these are more like normalization systematics, but it's
                 # easier to apply them as shape systematics)
 
-                # jes
+                ## jes
                 f_model *= shape_morphing(jes, df_syst['jes_up'], df_syst['jes_down'])
 
-                # jer
+                ## jer
                 f_model *= shape_morphing(jer, df_syst['jer_up'], df_syst['jer_down'])
 
-                # btag
+                ## btag
                 f_model *= shape_morphing(btag, df_syst['btag_up'], df_syst['btag_down'])
 
-                # mistag
+                ## mistag
                 f_model *= shape_morphing(mistag, df_syst['mistag_up'], df_syst['mistag_down'])
 
-                # shape systematic from pileup
+                ## shape systematic from pileup
                 f_model *= shape_morphing(pileup, df_syst['pileup_up'], df_syst['pileup_down'])
 
-                # theory systematics #
-                # fsr
+                # theory systematics 
+                ## fsr
                 f_model *= shape_morphing(fsr, df_syst['fsr_up'], df_syst['fsr_down'])
 
-                # isr
+                ## isr
                 f_model *= shape_morphing(isr, df_syst['isr_up'], df_syst['isr_down'])
 
-                # UE tune
+                ## UE tune
                 f_model *= shape_morphing(tune, df_syst['tune_up'], df_syst['tune_down'])
 
-                # ME-PS matching
+                ## ME-PS matching
                 f_model *= shape_morphing(hdamp, df_syst['hdamp_up'], df_syst['hdamp_down'])
 
-                # QCD scale (mu_R/mu_F variation)
+                ## QCD scale (mu_R/mu_F variation)
                 f_model *= shape_morphing(qcd, df_syst['qcd_up'], df_syst['qcd_down'])
 
-                # PDF variation
+                ## PDF variation
                 f_model *= shape_morphing(pdf, df_syst['pdf_up'], df_syst['pdf_down'])
 
                 # apply overall lumi nuisance parameter
                 f_model *= lumi
 
                 # get fake background and include normalization nuisance parameters
-                if sel == 'mu4j': 
-                    f_fakes, var_fakes = s_data[b]['fakes']
+                if sel in ['etau', 'mutau', 'mu4j']: 
+                    f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
                     f_model   += norm_fakes*f_fakes
                     var_model += var_fakes
 
                 # add removing shape information as an argument
-                #f_data = np.sum(f_data)
-                #f_model = np.sum(f_model)
-                #print(sel, f_data, f_model)
+                if no_shape:
+                    f_data = np.sum(f_data)
+                    f_model = np.sum(f_model)
 
                 # calculate the cost
                 if cost_type == 'chi2':
@@ -293,21 +299,25 @@ class FitData(object):
         lumi_var = 0.025**2
         cost += (lumi - 1.)**2 / (2*lumi_var)
 
-        # pileup
-        pileup_var = 1.**2
-        cost += (pileup - 1.)**2 / (2*pileup_var)
+        ## ttbar
+        xs_ttbar_var = 0.05**2
+        cost += (xs_ttbar - 1.)**2 / (2*xs_ttbar_var)
 
-        ## top
-        xs_top_var = 0.05**2
-        cost += (xs_top - 1.)**2 / (2*xs_top_var)
+        ## tW
+        xs_tw_var = 0.1**2
+        cost += (xs_tw - 1.)**2 / (2*xs_tw_var)
 
         ## zjets
-        xs_zjets_var = 0.3**2
+        xs_zjets_var = 0.1**2
         cost += (xs_zjets - 1.)**2 / (2*xs_zjets_var)
 
         ## wjets
-        xs_wjets_var = 0.3**2
+        xs_wjets_var = 0.05**2
         cost += (xs_wjets - 1.)**2 / (2*xs_wjets_var)
+
+        ## diboson
+        xs_diboson_var = 0.1**2
+        cost += (xs_diboson - 1.)**2 / (2*xs_diboson_var)
 
         ## fakes
         norm_fakes_var = 0.25**2
@@ -330,7 +340,11 @@ class FitData(object):
         trigger_mu_var = 0.01**2
         cost += (trigger_mu - 1.)**2 / (2*trigger_mu_var)
 
-        ## lepton energy scales
+        # pileup
+        pileup_var = 1.**2
+        cost += pileup**2 / (2*pileup_var)
+
+        # lepton energy scales
         escale_e_var = 0.5**2
         cost += escale_e**2 / (2*escale_e_var)
 
@@ -385,41 +399,51 @@ class FitData(object):
         return cost
 
 
-def signal_amplitudes(beta, br_tau):
+def signal_amplitudes(beta, br_tau, single_w = False):
     '''
-    returns an array of branching fractions for each signal channel.
+    Returns an array of branching fractions for each signal channel.
 
     parameters:
     ===========
     beta : W branching fractions [beta_e, beta_mu, beta_tau, beta_h]
     br_tau : tau branching fractions [br_e, br_mu, br_h]
+    single_w : if process contains a single w decay
     '''
-    amplitudes = np.array([beta[0]*beta[0],  # e, e
-                           beta[1]*beta[1],  # mu, mu
-                           2*beta[0]*beta[1],  # e, mu
-                           beta[2]*beta[2]*br_tau[0]**2,  # tau_e, tau_e
-                           beta[2]*beta[2]*br_tau[1]**2,  # tau_mu, tau_mu
-                           2*beta[2]*beta[2]*br_tau[0]*br_tau[1],  # tau_e, tau_m
-                           2*beta[2]*beta[2]*br_tau[0]*br_tau[2],  # tau_e, tau_
-                           2*beta[2]*beta[2]*br_tau[1]*br_tau[2],  # tau_mu, tau_h
-                           2*beta[0]*beta[2]*br_tau[0],  # e, tau_e
-                           beta[2]*beta[2]*br_tau[2]*br_tau[2],  # tau_h, tau_h
-                           2*beta[0]*beta[2]*br_tau[1],  # e, tau_mu
-                           2*beta[0]*beta[2]*br_tau[2],  # e, tau_h
-                           2*beta[1]*beta[2]*br_tau[0],  # mu, tau_e
-                           2*beta[1]*beta[2]*br_tau[1],  # mu, tau_mu
-                           2*beta[1]*beta[2]*br_tau[2],  # mu, tau_h
-                           2*beta[0]*beta[3],  # e, h
-                           2*beta[1]*beta[3],  # mu, h
-                           2*beta[2]*beta[3]*br_tau[0],  # tau_e, h
-                           2*beta[2]*beta[3]*br_tau[1],  # tau_mu, h
-                           2*beta[2]*beta[3]*br_tau[2],  # tau_h, h
-                           beta[3]*beta[3],  # tau_h, h
-                           ])
+    if single_w:
+        amplitudes = np.array([beta[0],  # e 
+                               beta[1],  # mu
+                               beta[2]*br_tau[0],  # tau_e
+                               beta[2]*br_tau[1],  # tau_mu
+                               beta[2]*br_tau[2],  # tau_h
+                               beta[3],  # h
+                               ])
+    else:
+        amplitudes = np.array([beta[0]*beta[0],  # e, e
+                               beta[1]*beta[1],  # mu, mu
+                               2*beta[0]*beta[1],  # e, mu
+                               beta[2]*beta[2]*br_tau[0]**2,  # tau_e, tau_e
+                               beta[2]*beta[2]*br_tau[1]**2,  # tau_mu, tau_mu
+                               2*beta[2]*beta[2]*br_tau[0]*br_tau[1],  # tau_e, tau_m
+                               2*beta[2]*beta[2]*br_tau[0]*br_tau[2],  # tau_e, tau_
+                               2*beta[2]*beta[2]*br_tau[1]*br_tau[2],  # tau_mu, tau_h
+                               2*beta[0]*beta[2]*br_tau[0],  # e, tau_e
+                               beta[2]*beta[2]*br_tau[2]*br_tau[2],  # tau_h, tau_h
+                               2*beta[0]*beta[2]*br_tau[1],  # e, tau_mu
+                               2*beta[0]*beta[2]*br_tau[2],  # e, tau_h
+                               2*beta[1]*beta[2]*br_tau[0],  # mu, tau_e
+                               2*beta[1]*beta[2]*br_tau[1],  # mu, tau_mu
+                               2*beta[1]*beta[2]*br_tau[2],  # mu, tau_h
+                               2*beta[0]*beta[3],  # e, h
+                               2*beta[1]*beta[3],  # mu, h
+                               2*beta[2]*beta[3]*br_tau[0],  # tau_e, h
+                               2*beta[2]*beta[3]*br_tau[1],  # tau_mu, h
+                               2*beta[2]*beta[3]*br_tau[2],  # tau_h, h
+                               beta[3]*beta[3],  # tau_h, h
+                               ])
 
     return amplitudes
 
-def signal_mixture_model(beta, br_tau, h_temp, mask=None, sample=False):
+def signal_mixture_model(beta, br_tau, h_temp, mask=None, sample=False, single_w=False):
     '''
     Mixture model for the ttbar/tW signal model.  The output will be an array
     corresponding to a sum over the input template histograms scaled by their
@@ -432,11 +456,17 @@ def signal_mixture_model(beta, br_tau, h_temp, mask=None, sample=False):
     h_temp : a tuple with the template histograms and their errors
     mask : a mask that selects a subset of mixture components
     sample : if True, the input templates will be sampled before returning
+    single_w : if process contains a single w decay
     '''
 
-    beta_init  = signal_amplitudes([0.108, 0.108, 0.108, 0.676], [0.1783, 0.1741, 0.6476])
-    beta_fit   = signal_amplitudes(beta, br_tau)
-    beta_ratio = beta_fit/beta_init
+    if single_w:
+        beta_init  = signal_amplitudes([0.108, 0.108, 0.108, 0.676], [0.1783, 0.1741, 0.6476], single_w)
+        beta_fit   = signal_amplitudes(beta, br_tau, single_w)
+        beta_ratio = beta_fit/beta_init
+    else:
+        beta_init  = signal_amplitudes([0.108, 0.108, 0.108, 0.676], [0.1783, 0.1741, 0.6476])
+        beta_fit   = signal_amplitudes(beta, br_tau)
+        beta_ratio = beta_fit/beta_init
 
     if not isinstance(mask, type(None)):
         beta_ratio = mask*beta_ratio

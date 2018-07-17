@@ -1,25 +1,19 @@
+import pickle
+
 import numpy as np
 import pandas as pd
 from skhep.modeling import bayesian_blocks
 
 import scripts.plot_tools as pt
+import scripts.fit_helpers as fh
 import scripts.systematic_tools as st
-
-features = dict()
-features['mumu']  = ['lepton2_pt']
-features['ee']    = ['lepton2_pt']
-features['emu']   = ['trailing_lepton_pt']
-features['mutau'] = ['lepton2_pt']#, 'dilepton1_pt_asym']
-features['etau']  = ['lepton2_pt']#, 'dilepton1_pt_asym']
-features['mu4j']  = ['lepton1_pt']
-features['e4j']   = ['lepton1_pt']
 
 if __name__ == '__main__':
 
     do_bb_binning = True
     output_path   = f'data/templates/bjet_binned_test'
     data_labels  = ['muon', 'electron']
-    model_labels = ['wjets', 'zjets', 't', 'ttbar']
+    model_labels = ['wjets', 'zjets', 't', 'ttbar', 'diboson']
     datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
 
     datasets_ttbar_syst = [
@@ -29,13 +23,20 @@ if __name__ == '__main__':
                 'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
                ]
 
-    selections = ['ee']#, 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    # sigal samples are split according the decay of the W bosons
+    decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
+    mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
+
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     for selection in selections:
-        pt.make_directory(f'{output_path}/{selection}')
+        print(selection)
+        feature = fh.features[selection]
+        pt.make_directory(f'{output_path}')
         ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
+        outfile = open(f'{output_path}/{selection}_templates.pkl', 'wb')
 
         # category specific parameters
-        labels = ['ttbar', 'tW', 'wjets', 'zjets', 'diboson']
+        labels = ['ttbar', 't', 'wjets', 'zjets', 'diboson']
         if selection == 'mu4j':
             dataset_names = datasets + pt.dataset_dict['fakes']
             labels += ['fakes']
@@ -53,8 +54,9 @@ if __name__ == '__main__':
                             )
 
         #print(f'Running over selection {selection}...')
+        data = dict()
         for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
-            if selection in ['mu4j', 'e4j'] and bcut == 'n_bjets == 0': 
+            if selection not in ['mutau', 'etau'] and bcut == 'n_bjets == 0': 
                 continue
 
             if selection in ['e4j', 'mu4j']:
@@ -63,65 +65,94 @@ if __name__ == '__main__':
                 jet_cut = 'n_jets >= 2'
 
 
-            # prepare dataframes with signal templates
-            # sigal samples are split according the decay of the W bosons
-            decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
-            mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
-
             df_model = {}
             for l in labels:
                 df_model[l] = dm.get_dataframe(l).query(jet_cut + ' and ' + bcut)
 
-            # get the data
+            ### calculate binning based on ttbar sample
+            df_ttbar = df_model['ttbar']
             if df_model['ttbar'].shape[0] == 0: continue
 
-            # bin the datasets to derive templates
-            for feature in features[selection]:
+            x = df_ttbar[feature].values # what's going on here \0/
+            if do_bb_binning:
+                print('Calculating Bayesian block binning...')
+                binning = bayesian_blocks(x[:30000], p0=0.0001)
 
-                ### calculate binning
-                x = df_ttbar[feature].values
-                if do_bb_binning:
-                    print('Calculating Bayesian block binning...')
-                    binning = bayesian_blocks(x[:30000], p0=0.001)
-
-                    if feature == 'dilepton1_pt_asym':
-                        dxmin, dxmax = 0.01, 1
-                    else:
-                        dxmin, dxmax = 1, 1e9
-
-                    dx      = np.abs(binning[1:] - binning[:-1])
-                    mask    = np.logical_and(dx > dxmin, dx < dxmax)
-                    mask    = np.concatenate(([True], mask))
-
-                    if feature != 'dilepton1_pt_asym':
-                        binning = np.around(binning[mask])
-
-                    print('Done!')
-                    #print(f'bins for {feature}: {binning}')
-                    bin_range = None
+                if feature == 'dilepton1_pt_asym':
+                    dxmin, dxmax = 0.01, 1
                 else:
-                    print('Using user-defined binning...')
-                    hist_lut  = dm._lut_features.loc[feature]
-                    binning   = hist_lut.n_bins
-                    bin_range = (hist_lut.xmin, hist_lut.xmax)
+                    dxmin, dxmax = 1, 1e9
 
-                # bin the data
-                x = dm.get_dataframe('data').query(jet_cut + ' and ' + bcut)[feature]
-                h, b = np.histogram(x,
-                                    bins  = binning,
-                                    range = bin_range,
-                                    )
-                #overflow = x[x > b[-1]].size
-                #h = np.append(h, overflow)
+                dx      = np.abs(binning[1:] - binning[:-1])
+                mask    = np.logical_and(dx > dxmin, dx < dxmax)
+                mask    = np.concatenate(([True], mask))
 
-                ### get signal and background templates
-                template_vals = dict(bins=b[:-1], data=h)
-                template_vars = dict(bins=b[:-1], data=h)
-                for label, df in df_model.items():
+                if feature != 'dilepton1_pt_asym':
+                    binning = np.around(binning[mask])
+
+                print('Done!')
+                #print(f'bins for {feature}: {binning}')
+                bin_range = None
+            else:
+                print('Using user-defined binning...')
+                hist_lut  = dm._lut_features.loc[feature]
+                binning   = hist_lut.n_bins
+                bin_range = (hist_lut.xmin, hist_lut.xmax)
+
+            # bin the data
+            x = dm.get_dataframe('data').query(jet_cut + ' and ' + bcut)[feature]
+            h, b = np.histogram(x,
+                                bins  = binning,
+                                range = bin_range,
+                                )
+            #overflow = x[x > b[-1]].size
+            #h = np.append(h, overflow)
+
+            ### get signal and background templates
+            templates = dict(data = dict(val = h, var = h))
+            for label, df in df_model.items():
+                if label in ['ttbar', 't', 'wjets']: # divide ttbar and tW samples into 21 decay modes
+                    dvals = dict()
+                    dvars = dict()
+                    for n, c in mc_conditions.items():
+                        idecay = int(c.split()[-1])
+                        if label == 'wjets' and (idecay < 16): 
+                            continue
+
+                        x = df.query(c)[feature].values
+                        w = df.query(c)['weight'].values
+                        h, _ = np.histogram(x,
+                                            bins    = binning,
+                                            range   = bin_range,
+                                            weights = w
+                                            )
+                        #overflow = np.sum(w[x > b[-1]])
+                        #h = np.append(h, overflow)
+
+                        hvar, _ = np.histogram(x,
+                                               bins    = binning,
+                                               range   = bin_range,
+                                               weights = w**2
+                                               )
+                        #overflow = np.sum(w[x > b[-1]]**2)
+                        #hvar = np.append(hvar, overflow)
+
+                        if label == 'wjets':
+                            n = n.rsplit('_', 1)[0]
+                        dvals[n] = h
+                        dvars[n] = hvar
+
+                    # make sure the columns are properly ordered
+                    if label == 'wjets':
+                        dlabels = ['we', 'wmu', 'wtau_e', 'wtau_mu', 'wtau_h', 'wh']
+                    else:
+                        dlabels = decay_map['decay']
+                    templates[label] = dict(val = pd.DataFrame(dvals)[dlabels], var = pd.DataFrame(dvars)[dlabels])
+
+                else: # 1 template per background
                     x = df[feature].values
+                    w = df['weight'].values
 
-                    # get the binned data
-                    w = df.weight
                     h, _ = np.histogram(x,
                                         bins    = binning,
                                         range   = bin_range,
@@ -138,79 +169,92 @@ if __name__ == '__main__':
                     #overflow = np.sum(w[x > b[-1]]**2)
                     #hvar = np.append(hvar, overflow)
 
-                    template_vals[label] = h
-                    template_vars[label] = hvar
+                    if label == 'fakes_ss':
+                        label = 'fakes'
+                    templates[label] = dict(val = h, var = hvar)
 
-                df_vals = pd.DataFrame(template_vals)
-                df_vals = df_vals.set_index('bins')
-                df_vals.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_val.csv')
+            #store[f'{selection}/{i}] = templates
+            #store.close()
 
-                df_vars = pd.DataFrame(template_vars)
-                df_vars = df_vars.set_index('bins')
-                df_vars.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_var.csv')
+            ### produce morphing templates for shape systematics
+            df_sys = pd.DataFrame(dict(bins=binning[:-1]))
 
-                ### produce morphing templates for shape systematics
-                df_sys = pd.DataFrame(dict(bins=binning[:-1]))
+            ### jet systematics ###
+            df_ttbar_no_jetcut = dm.get_dataframes(['ttbar', 't', 'wjets'], concat=True) # we need to get the dataframe without the jet cuts
+            h_nominal, _ = np.histogram(df_ttbar[feature], bins=binning, weights=df_ttbar.weight)
 
-                ### jet systematics ###
-                df_ttbar_no_jetcut = dm.get_dataframes(['ttbar', 't', 'wjets'], concat=True) # we need to get the dataframe without the jet cuts
+            # jes
+            df_sys['jes_up'], df_sys['jes_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'jes', jet_cut + ' and ' + bcut)
+            st.template_overlays(h_nominal, h_nominal*df_sys['jes_up'], h_nominal*df_sys['jes_down'], binning, 'jes', selection, feature, i)
 
-                # jes
-                df_sys['jes_up'], df_sys['jes_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'jes', jet_cut + ' and ' + bcut)
+            # jer
+            df_sys['jer_up'], df_sys['jer_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'jer', jet_cut + ' and ' + bcut)
+            st.template_overlays(h_nominal, h_nominal*df_sys['jer_up'], h_nominal*df_sys['jer_down'], binning, 'jer', selection, feature, i)
 
-                # jer
-                df_sys['jer_up'], df_sys['jer_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'jer', jet_cut + ' and ' + bcut)
+            # b tag eff
+            df_sys['btag_up'], df_sys['btag_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'btag', jet_cut + ' and ' + bcut)
+            st.template_overlays(h_nominal, h_nominal*df_sys['btag_up'], h_nominal*df_sys['btag_down'], binning, 'btag', selection, feature, i)
 
-                # b tag eff
-                df_sys['btag_up'], df_sys['btag_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'btag', jet_cut + ' and ' + bcut)
+            # mistag eff
+            df_sys['mistag_up'], df_sys['mistag_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'mistag', jet_cut + ' and ' + bcut)
+            st.template_overlays(h_nominal, h_nominal*df_sys['mistag_up'], h_nominal*df_sys['mistag_down'], binning, 'mistag', selection, feature, i)
 
-                # mistag eff
-                df_sys['mistag_up'], df_sys['mistag_down'] = st.jet_scale(df_ttbar_no_jetcut, feature, binning, 'mistag', jet_cut + ' and ' + bcut)
+            # pileup
+            df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_ttbar, feature, binning)
+            st.template_overlays(h_nominal, h_nominal*df_sys['pileup_up'], h_nominal*df_sys['pileup_down'], binning, 'pileup', selection, feature, i)
 
-                # pileup
-                df_sys['pileup_up'], df_sys['pileup_down'] = st.pileup_morph(df_ttbar, feature, binning)
+            ### lepton energy scale ###
+            if selection in ['mumu', 'emu', 'mu4j']:
+                scale = 0.01
+                df_sys['mu_es_up'], df_sys['mu_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
+                st.template_overlays(h_nominal, h_nominal*df_sys['mu_es_up'], h_nominal*df_sys['mu_es_down'], binning, 'mu_es', selection, feature, i)
 
-                ### lepton energy scale ###
-                if selection in ['mumu', 'emu', 'mu4j']:
-                    scale = 0.01
-                    df_sys['mu_es_up'], df_sys['mu_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
+            if selection in ['ee', 'emu', 'e4j']:
+                scale = 0.01
+                df_sys['el_es_up'], df_sys['el_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
+                st.template_overlays(h_nominal, h_nominal*df_sys['el_es_up'], h_nominal*df_sys['el_es_down'], binning, 'el_es', selection, feature, i)
 
-                if selection in ['ee', 'emu', 'e4j']:
-                    scale = 0.01
-                    df_sys['el_es_up'], df_sys['el_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
+            if selection in ['etau', 'mutau']:
+                scale = 0.01
+                df_sys['tau_es_up'], df_sys['tau_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
+                st.template_overlays(h_nominal, h_nominal*df_sys['tau_es_up'], h_nominal*df_sys['tau_es_down'], binning, 'tau_es', selection, feature, i)
 
-                if selection in ['etau', 'mutau']:
-                    scale = 0.01
-                    df_sys['tau_es_up'], df_sys['tau_es_down'] = st.les_morph(df_ttbar, feature, binning, scale)
+            # theory systematics
+            dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
+                                     dataset_names = datasets_ttbar_syst,
+                                     selection     = selection,
+                                     scale         = 35.9e3,
+                                     cuts          = pt.cuts[selection] + ' and ' + jet_cut + ' and ' + bcut
+                                     )
 
-                # theory systematics
-                dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
-                                         dataset_names = datasets_ttbar_syst,
-                                         selection     = selection,
-                                         scale         = 35.9e3,
-                                         cuts          = pt.cuts[selection] + ' and ' + jet_cut + ' and ' + bcut
-                                         )
+            df_ttbar = dm.get_dataframe('ttbar').query(jet_cut + ' and ' + bcut)
 
-                df_ttbar = dm.get_dataframe('ttbar').query(jet_cut + ' and ' + bcut)
+            # isr
+            df_sys['isr_up'], df_sys['isr_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'isr')
+            st.template_overlays(h_nominal, h_nominal*df_sys['isr_up'], h_nominal*df_sys['isr_down'], binning, 'isr', selection, feature, i)
 
-                # isr
-                df_sys['isr_up'], df_sys['isr_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'isr')
+            # fsr
+            df_sys['fsr_up'], df_sys['fsr_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'fsr')
+            st.template_overlays(h_nominal, h_nominal*df_sys['fsr_up'], h_nominal*df_sys['fsr_down'], binning, 'fsr', selection, feature, i)
 
-                # fsr
-                df_sys['fsr_up'], df_sys['fsr_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'fsr')
+            # ME-PS (hdamp)
+            df_sys['hdamp_up'], df_sys['hdamp_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'hdamp')
+            st.template_overlays(h_nominal, h_nominal*df_sys['hdamp_up'], h_nominal*df_sys['hdamp_down'], binning, 'hdamp', selection, feature, i)
 
-                # ME-PS (hdamp)
-                df_sys['hdamp_up'], df_sys['hdamp_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'hdamp')
+            # UE tune
+            df_sys['tune_up'], df_sys['tune_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'tune')
+            st.template_overlays(h_nominal, h_nominal*df_sys['tune_up'], h_nominal*df_sys['tune_down'], binning, 'tune', selection, feature, i)
 
-                # UE tune
-                df_sys['tune_up'], df_sys['tune_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'tune')
+            # PDF scale (average over MC replicas)
+            df_sys['pdf_up'], df_sys['pdf_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'pdf')
+            st.template_overlays(h_nominal, h_nominal*df_sys['pdf_up'], h_nominal*df_sys['pdf_down'], binning, 'pdf', selection, feature, i)
 
-                # PDF scale (average over MC replicas)
-                df_sys['pdf_up'], df_sys['pdf_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'pdf')
+            # QCD scale (mu_R and mu_F variation)
+            df_sys['qcd_up'], df_sys['qcd_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'qcd')
+            st.template_overlays(h_nominal, h_nominal*df_sys['qcd_up'], h_nominal*df_sys['qcd_down'], binning, 'qcd', selection, feature, i)
 
-                # QCD scale (mu_R and mu_F variation)
-                df_sys['qcd_up'], df_sys['qcd_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'qcd')
+            data[i] = dict(bins = binning, templates = templates, systematics = df_sys)
 
-
-                # write the systematics file
-                df_sys.to_csv(f'{output_path}/{selection}/{feature}_bin-{i}_syst.csv', index=False)
+        # write the templates and morphing templates to file
+        pickle.dump(data, outfile)
+        outfile.close()

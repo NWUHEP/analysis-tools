@@ -2,9 +2,10 @@
 import pickle
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 import scripts.plot_tools as pt
-
+import scripts.fit_helpers as fh
 
 def pileup_morph(df, feature, bins):
     '''
@@ -96,4 +97,46 @@ def theory_systematics(df_nominal, dm, feature, bins, sys_type):
 
     return h_up/h_nominal, h_down/h_nominal
 
+def template_overlays(h_nominal, h_up, h_down, bins, systematic, selection, feature, jetcat):
+    '''
+    Overlay nominal, variation up, and variation down templates.
+    '''
+    fig, axes = plt.subplots(2, 1, figsize=(6, 6), facecolor='white', sharex=False, gridspec_kw={'height_ratios':[3,1]})
+    fig.subplots_adjust(hspace=0)
+
+    dx = (bins[1:] - bins[:-1])/2
+    x = bins[:-1] + dx
+
+    ax = axes[0]
+    ax.plot(x, h_nominal/dx, drawstyle='steps-post', c='C1', linestyle='-', linewidth=1.)
+    ax.plot(x, h_up/dx, drawstyle='steps-post', c='C0', linestyle='-', linewidth=1.)
+    ax.plot(x, h_down/dx, drawstyle='steps-post', c='C2', linestyle='-', linewidth=1.)
+    ax.fill_between(x, h_up/dx, h_down/dx, color = 'C1', alpha=0.5, step='post')
+
+    ax.set_xlim(bins[0], bins[-2])
+    ax.set_ylim(0., 1.25*np.max(h_nominal/dx))
+    ax.legend(['nominal', r'$+\sigma$', r'$-\sigma$'])
+    ax.set_ylabel('Entries / GeV')
+    ax.set_title(fh.fancy_labels[selection][1])
+    ax.grid()
+
+    ax = axes[1]
+    y_up   = h_up/h_nominal
+    y_down = h_down/h_nominal
+    ax.plot(x, y_up, 'C0', drawstyle='steps-post')
+    ax.plot(x, y_down, 'C2', drawstyle='steps-post')
+    ax.fill_between(x, y_up, y_down, color = 'C1', alpha=0.5, step='post')
+    ax.plot([bins[0], bins[-2]], [1, 1], 'C1--')
+
+    ax.set_xlim(bins[0], bins[-2])
+    ax.set_ylim(0.95*np.min([y_up.min(), y_down.min()]), 1.05*np.max([y_up.max(), y_down.max()]))
+    ax.set_xlabel(fh.fancy_labels[selection][0])
+    ax.set_ylabel(r'$\sf \frac{N^{\pm}}{N^{0}}$', fontsize=14)
+    ax.grid()
+    #ax.set_yscale('linear')
+
+    plt.tight_layout()
+    plt.savefig(f'plots/systematics/{selection}/{systematic}_{jetcat}.pdf')
+    plt.savefig(f'plots/systematics/{selection}/{systematic}_{jetcat}.png')
+    plt.close()
 
