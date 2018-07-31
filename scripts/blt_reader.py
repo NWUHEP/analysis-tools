@@ -9,6 +9,7 @@ import pandas as pd
 import ROOT as r
 
 from tqdm import tqdm, trange
+import scripts.plot_tools as pt
 
 '''
 Script for getting blt data out of ROOT files and into CSV format.
@@ -549,54 +550,39 @@ def pickle_ntuple(tree, dataset_name, output_path, selection):
 if __name__ == '__main__':
 
     ### Configuration ###
-    selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    #selections  = ['mutau', 'etau']
-    do_mc       = True
-    do_data     = True
+    infile      = 'data/bltuples/output_single_lepton.root'
+    output_dir  = 'data/flatuples/single_lepton_ttbar_syst'
+    selections  = ['mu4j', 'mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    do_data     = False
+    do_mc       = False
+    do_syst     = True
     period      = 2016
-    infile      = f'data/bltuples/output_single_lepton.root'
 
+    # configure datasets to run over
     dataset_list = []
-    if period == 2016 and do_data:
-        dataset_list.extend([
-            'muon_2016B', 'muon_2016C', 'muon_2016D', 
-            'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H',
-            'electron_2016B', 'electron_2016C', 'electron_2016D', 
-            'electron_2016E', 'electron_2016F', 'electron_2016G', 'electron_2016H',
-            ])
-
+    data_labels  = ['muon', 'electron']
+    mc_labels    = ['zjets', 'ttbar', 'diboson', 't', 'wjets']
+    if do_data:
+        dataset_list.extend(d for l in data_labels for d in pt.dataset_dict[l])
     if do_mc:
-        dataset_list.extend([
-            'ttbar_inclusive',
-            't_tw', 'tbar_tw', #'t_t', 'tbar_t',
-            'w1jets', 'w2jets', 'w3jets', 'w4jets', 
-            'zjets_m-50', 'zjets_m-10to50',
-            'z1jets_m-50', 'z1jets_m-10to50',
-            'z2jets_m-50', 'z2jets_m-10to50',
-            'z3jets_m-50', 'z3jets_m-10to50',
-            'z4jets_m-50', 'z4jets_m-10to50',
-            #'qcd_ht100to200', 'qcd_ht200to300',
-            #'qcd_ht300to500', 'qcd_ht500to1000',
-            #'qcd_ht1000to1500', 'qcd_ht1500to2000',
-            #'qcd_ht2000'
-            'ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q', 'zz_2l2nu',
-            #'zz_4l'
-            ])
+        dataset_list.extend(d for l in mc_labels for d in pt.dataset_dict[l])
 
-    #dataset_list = [
-    #                'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-    #                'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-    #                'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-    #                'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-    #                #'ttbar_inclusive_herwig'
-    #                ]
+    # for ttbar systematics
+    if do_syst:
+        dataset_list = [
+                        'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+                        'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+                        'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                        'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+                        #'ttbar_inclusive_herwig'
+                        ]
 
     ### Initialize multiprocessing queue and processes
     processes   = {}
     files_list  = [] # There needs to be multiple instances of the file to access each of the trees.  Not great...
     event_count = {}
     for selection in selections:
-        output_path = f'data/flatuples/single_lepton_test/{selection}_{period}'
+        output_path = f'{output_dir}/{selection}_{period}'
         make_directory(output_path, clear=True)
         for dataset in dataset_list:
 

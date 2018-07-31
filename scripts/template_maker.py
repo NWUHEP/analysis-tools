@@ -28,10 +28,10 @@ if __name__ == '__main__':
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    pt.make_directory(f'{output_path}')
     for selection in selections:
         print(selection)
         feature = fh.features[selection]
-        pt.make_directory(f'{output_path}')
         ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
         outfile = open(f'{output_path}/{selection}_templates.pkl', 'wb')
 
@@ -76,12 +76,12 @@ if __name__ == '__main__':
             x = df_ttbar[feature].values # what's going on here \0/
             if do_bb_binning:
                 print('Calculating Bayesian block binning...')
-                binning = bayesian_blocks(x[:30000], p0=0.0001)
+                binning = bayesian_blocks(x[:30000], p0=0.00001)
 
                 if feature == 'dilepton1_pt_asym':
                     dxmin, dxmax = 0.01, 1
                 else:
-                    dxmin, dxmax = 1, 1e9
+                    dxmin, dxmax = 2, 1e9
 
                 dx      = np.abs(binning[1:] - binning[:-1])
                 mask    = np.logical_and(dx > dxmin, dx < dxmax)
@@ -111,7 +111,8 @@ if __name__ == '__main__':
             ### get signal and background templates
             templates = dict(data = dict(val = h, var = h))
             for label, df in df_model.items():
-                if label in ['ttbar', 't', 'wjets']: # divide ttbar and tW samples into 21 decay modes
+                if label in ['ttbar', 't', 'wjets']: 
+                    # divide ttbar and tW samples into 21 decay modes and w+jets sample into 6 decay modes
                     dvals = dict()
                     dvars = dict()
                     for n, c in mc_conditions.items():
@@ -172,9 +173,6 @@ if __name__ == '__main__':
                     if label == 'fakes_ss':
                         label = 'fakes'
                     templates[label] = dict(val = h, var = hvar)
-
-            #store[f'{selection}/{i}] = templates
-            #store.close()
 
             ### produce morphing templates for shape systematics
             df_sys = pd.DataFrame(dict(bins=binning[:-1]))
