@@ -78,7 +78,7 @@ def theory_systematics(df_nominal, dm, feature, bins, sys_type):
        * PDF
        * alpha_s
        * QCD scale (mu_R and mu_F)
-    (It may make more sense to split this into two functions)
+    The variation due to normalization is divided out so that only the slope changes are present.
     '''
 
     h_nominal, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight)
@@ -95,7 +95,11 @@ def theory_systematics(df_nominal, dm, feature, bins, sys_type):
         h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_up_up)
         h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_down_down)
 
-    return h_up/h_nominal, h_down/h_nominal
+    # divide out the normalization and scale to nominal 
+    h_up = h_up/(h_up.sum()*h_nominal)
+    h_down = h_down/(h_down.sum()*h_nominal)
+
+    return h_up, h_down
 
 def template_overlays(h_nominal, h_up, h_down, bins, systematic, selection, feature, jetcat):
     '''

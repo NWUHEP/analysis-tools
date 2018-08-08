@@ -184,6 +184,7 @@ def set_new_tdr():
     plt.rcParams['legend.numpoints']  = 1
 
 def set_default_style():
+    import matplotlib
     np.set_printoptions(precision=3)
     matplotlib.style.use('default')
     params = {'legend.fontsize': 14,

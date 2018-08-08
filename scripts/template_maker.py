@@ -11,17 +11,17 @@ import scripts.systematic_tools as st
 if __name__ == '__main__':
 
     do_bb_binning = True
-    output_path   = f'data/templates/bjet_binned_test'
+    output_path   = f'data/templates/bjet_binned'
     data_labels  = ['muon', 'electron']
     model_labels = ['wjets', 'zjets', 't', 'ttbar', 'diboson']
     datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
 
     datasets_ttbar_syst = [
-                'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-                'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-                'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-                'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-               ]
+                           'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+                           'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+                           'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                           'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+                          ]
 
     # sigal samples are split according the decay of the W bosons
     decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
@@ -31,9 +31,9 @@ if __name__ == '__main__':
     pt.make_directory(f'{output_path}')
     for selection in selections:
         print(selection)
-        feature = fh.features[selection]
-        ntuple_dir = f'data/flatuples/single_lepton_test/{selection}_2016'
-        outfile = open(f'{output_path}/{selection}_templates.pkl', 'wb')
+        feature    = fh.features[selection]
+        ntuple_dir = f'data/flatuples/single_lepton/{selection}_2016'
+        outfile    = open(f'{output_path}/{selection}_templates.pkl', 'wb')
 
         # category specific parameters
         labels = ['ttbar', 't', 'wjets', 'zjets', 'diboson']
@@ -112,7 +112,8 @@ if __name__ == '__main__':
             templates = dict(data = dict(val = h, var = h))
             for label, df in df_model.items():
                 if label in ['ttbar', 't', 'wjets']: 
-                    # divide ttbar and tW samples into 21 decay modes and w+jets sample into 6 decay modes
+                    # divide ttbar and tW samples into 21 decay modes and
+                    # w+jets sample into 6 decay modes
                     dvals = dict()
                     dvars = dict()
                     for n, c in mc_conditions.items():
@@ -248,6 +249,12 @@ if __name__ == '__main__':
             st.template_overlays(h_nominal, h_nominal*df_sys['pdf_up'], h_nominal*df_sys['pdf_down'], binning, 'pdf', selection, feature, i)
 
             # QCD scale (mu_R and mu_F variation)
+            df_sys['mur_up'], df_sys['mur_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'mur')
+            st.template_overlays(h_nominal, h_nominal*df_sys['mur_up'], h_nominal*df_sys['mur_down'], binning, 'mur', selection, feature, i)
+
+            df_sys['muf_up'], df_sys['muf_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'muf')
+            st.template_overlays(h_nominal, h_nominal*df_sys['muf_up'], h_nominal*df_sys['muf_down'], binning, 'muf', selection, feature, i)
+
             df_sys['qcd_up'], df_sys['qcd_down'] = st.theory_systematics(df_ttbar, dm_syst, feature, binning, 'qcd')
             st.template_overlays(h_nominal, h_nominal*df_sys['qcd_up'], h_nominal*df_sys['qcd_down'], binning, 'qcd', selection, feature, i)
 

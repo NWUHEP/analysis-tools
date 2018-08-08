@@ -40,7 +40,7 @@ if __name__ == '__main__':
     data_labels  = ['muon', 'electron']
     model_labels = ['diboson', 'zjets', 't', 'wjets', 'ttbar']
 
-    if selection == 'mu4j': 
+    if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
     elif selection in ['mutau', 'etau']:
         model_labels = ['fakes_ss'] + model_labels
@@ -115,4 +115,4 @@ if __name__ == '__main__':
     plot_manager.make_overlays(features, do_ratio=True, overlay_style='errorbar')
 
     table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=['n_bjets >= 1', 'n_bjets >= 2'])
-    table.to_csv(f'data/yields_{selection}.csv')
+    table.to_csv(f'{output_path}/yields_{selection}.csv')

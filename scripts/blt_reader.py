@@ -551,8 +551,8 @@ if __name__ == '__main__':
 
     ### Configuration ###
     infile      = 'data/bltuples/output_single_lepton.root'
-    output_dir  = 'data/flatuples/single_lepton_ttbar_syst'
-    selections  = ['mu4j', 'mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    output_dir  = 'data/flatuples/e4j_syst'
+    selections  = ['e4j'] #'mu4j', 'mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     do_data     = False
     do_mc       = False
     do_syst     = True
@@ -604,10 +604,8 @@ if __name__ == '__main__':
             processes[f'{dataset}_{selection}'] = p
 
         # special case: fakes
-        if selection in ['mutau', 'mu4j'] and do_data:
-            for dataset in ['muon_2016B', 'muon_2016C', 
-                            'muon_2016D', 'muon_2016E', 
-                            'muon_2016F', 'muon_2016G', 'muon_2016H']:
+        if selection in ['mutau', 'mu4j', 'etau', 'e4j'] and do_data:
+            for dataset in [d for l in data_labels for d in pt.dataset_dict[l]]:
 
                 froot = r.TFile(infile)
                 files_list.append(froot)
