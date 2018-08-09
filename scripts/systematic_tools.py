@@ -91,7 +91,13 @@ def theory_systematics(df_nominal, dm, feature, bins, sys_type):
     elif sys_type == 'pdf':
         h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*(1 + np.sqrt(df_nominal.pdf_var)/np.sqrt(99)))
         h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*(1 - np.sqrt(df_nominal.pdf_var)/np.sqrt(99)))
-    elif sys_type == 'qcd':
+    elif sys_type == 'mur':
+        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_up_nom)
+        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_down_nom)
+    elif sys_type == 'muf':
+        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_nom_up)
+        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_nom_down)
+    elif sys_type == 'mur_muf':
         h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_up_up)
         h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_down_down)
 
@@ -101,46 +107,139 @@ def theory_systematics(df_nominal, dm, feature, bins, sys_type):
 
     return h_up, h_down
 
-def template_overlays(h_nominal, h_up, h_down, bins, systematic, selection, feature, jetcat):
-    '''
-    Overlay nominal, variation up, and variation down templates.
-    '''
-    fig, axes = plt.subplots(2, 1, figsize=(6, 6), facecolor='white', sharex=False, gridspec_kw={'height_ratios':[3,1]})
-    fig.subplots_adjust(hspace=0)
+class SystematicTemplateGenerator():
+    def __init__(selection, binning, h_nominal, cut, icut):
+        self._selection = selection
+        self._feature   = feature
+        self._binning   = binning
+        self._h         = h_nominal
+        self._cut       = cut
+        self._icut      = icut
+        self._df_sys    = pd.DataFrame(dict(bins=binning[:-1]))
 
-    dx = (bins[1:] - bins[:-1])/2
-    x = bins[:-1] + dx
+    def get_syst_dataframe():
+        return self._df_sys
 
-    ax = axes[0]
-    ax.plot(x, h_nominal/dx, drawstyle='steps-post', c='C1', linestyle='-', linewidth=1.)
-    ax.plot(x, h_up/dx, drawstyle='steps-post', c='C0', linestyle='-', linewidth=1.)
-    ax.plot(x, h_down/dx, drawstyle='steps-post', c='C2', linestyle='-', linewidth=1.)
-    ax.fill_between(x, h_up/dx, h_down/dx, color = 'C1', alpha=0.5, step='post')
+    def jet_shape_systematics(self, df):
+        '''
+        Generates morpthing templates for: 
+           * jet energy scale/resolution
+           * b tag/mistag efficiency
 
-    ax.set_xlim(bins[0], bins[-2])
-    ax.set_ylim(0., 1.25*np.max(h_nominal/dx))
-    ax.legend(['nominal', r'$+\sigma$', r'$-\sigma$'])
-    ax.set_ylabel('Entries / GeV')
-    ax.set_title(fh.fancy_labels[selection][1])
-    ax.grid()
+        Parameters:
+        ===========
+        df: dataframe for target dataset without the jet cuts applied
+        '''
 
-    ax = axes[1]
-    y_up   = h_up/h_nominal
-    y_down = h_down/h_nominal
-    ax.plot(x, y_up, 'C0', drawstyle='steps-post')
-    ax.plot(x, y_down, 'C2', drawstyle='steps-post')
-    ax.fill_between(x, y_up, y_down, color = 'C1', alpha=0.5, step='post')
-    ax.plot([bins[0], bins[-2]], [1, 1], 'C1--')
+        for syst_type in ['jes', 'jer', 'btag', 'mistag']:
+            h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
+            self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
+            self.template_overlays(h_up, h_down, syst_type)
 
-    ax.set_xlim(bins[0], bins[-2])
-    ax.set_ylim(0.95*np.min([y_up.min(), y_down.min()]), 1.05*np.max([y_up.max(), y_down.max()]))
-    ax.set_xlabel(fh.fancy_labels[selection][0])
-    ax.set_ylabel(r'$\sf \frac{N^{\pm}}{N^{0}}$', fontsize=14)
-    ax.grid()
-    #ax.set_yscale('linear')
+    def reco_shape_systematics(self, df)
+        '''
+        Generates templates for:
+           * pileup
+           * lepton energy scale
 
-    plt.tight_layout()
-    plt.savefig(f'plots/systematics/{selection}/{systematic}_{jetcat}.pdf')
-    plt.savefig(f'plots/systematics/{selection}/{systematic}_{jetcat}.png')
-    plt.close()
+        Parameters:
+        ===========
+        df: dataframe for target dataset with
+       '''
+
+        # pileup
+        h_up, h_down = pileup_morph(df, feature, binning)
+        self.template_overlays(h_up, h_down, 'pileup')
+        self._df_sys['pileup_up'], self._df_sys['pileup_down'] = h_up, h_down
+
+        # lepton energy scale
+        ## muon scale
+        if selection in ['mumu', 'emu', 'mu4j']:
+            scale = 0.002 # need reference
+            h_up, h_down = les_morph(df, feature, binning, scale)
+            self.template_overlays(h_up, h_down, 'mu_es')
+            self._df_sys['mu_es_up'], self._df_sys['mu_es_down'] = h_up, h_down
+
+        ## electron scale
+        if selection in ['ee', 'emu', 'e4j']:
+            scale = 0.005 # need reference
+            h_up, h_down = les_morph(df, feature, binning, scale)
+            self.template_overlays(h_up, h_down, 'el_es')
+            self._df_sys['el_es_up'], self._df_sys['el_es_down'] = h_up, h_down
+
+        ## tau scale
+        if selection in ['etau', 'mutau']:
+            scale = 0.012 # https://twiki.cern.ch/twiki/bin/viewauth/CMS/TauIDRecommendation13TeV#Tau_energy_scale
+            h_up, h_down = les_morph(df, feature, binning, scale)
+            self.template_overlays(h_up, h_down, 'tau_es')
+            self._df_sys['tau_es_up'], self._df_sys['tau_es_down'] = h_up, h_down
+
+        return
+
+    def theory_shape_systematics(self, df):
+        '''
+        Generates templates for theory systematics:
+           * QCD scale
+           * alpha_s
+           * UE
+           * ME-PS
+           * PDF
+
+        Parameters:
+        ===========
+        df: dataframe for target dataset 
+        '''
+
+        for syst_type in ['isr', 'fsr', 'hdamp', 'tune', 'mur', 'muf', 'mur_muf', 'pdf']:
+            h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
+            self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
+            self.template_overlays(h_up, h_down, syst_type)
+
+        return
+
+
+    def template_overlays(h_up, h_down, systematic):
+        '''
+        Overlay nominal, variation up, and variation down templates.
+        '''
+        fig, axes = plt.subplots(2, 1, figsize=(6, 6), facecolor='white', sharex=False, gridspec_kw={'height_ratios':[3,1]})
+        fig.subplots_adjust(hspace=0)
+
+        bins = self._binning
+        dx = (bins[1:] - bins[:-1])/2
+        x = bins[:-1] + dx
+
+        ax = axes[0]
+        h_nominal = self._h
+        ax.plot(x, h_nominal/dx, drawstyle='steps-post', c='C1', linestyle='-', linewidth=1.)
+        ax.plot(x, h_up/dx,      drawstyle='steps-post', c='C0', linestyle='-', linewidth=1.)
+        ax.plot(x, h_down/dx,    drawstyle='steps-post', c='C2', linestyle='-', linewidth=1.)
+        ax.fill_between(x, h_up/dx, h_down/dx, color = 'C1', alpha=0.5, step='post')
+
+        ax.set_xlim(bins[0], bins[-2])
+        ax.set_ylim(0., 1.25*np.max(h_nominal/dx))
+        ax.legend(['nominal', r'$+\sigma$', r'$-\sigma$'])
+        ax.set_ylabel('Entries / GeV')
+        ax.set_title(fh.fancy_labels[self._selection][1])
+        ax.grid()
+
+        ax = axes[1]
+        y_up   = h_up/h_nominal
+        y_down = h_down/h_nominal
+        ax.plot(x, y_up,   'C0', drawstyle='steps-post')
+        ax.plot(x, y_down, 'C2', drawstyle='steps-post')
+        ax.fill_between(x, y_up, y_down, color = 'C1', alpha=0.5, step='post')
+        ax.plot([bins[0], bins[-2]], [1, 1], 'C1--')
+
+        ax.set_xlim(bins[0], bins[-2])
+        ax.set_ylim(0.95*np.min([y_up.min(), y_down.min()]), 1.05*np.max([y_up.max(), y_down.max()]))
+        ax.set_xlabel(fh.fancy_labels[self._selection][0])
+        ax.set_ylabel(r'$\sf \frac{N^{\pm}}{N^{0}}$', fontsize=14)
+        ax.grid()
+        #ax.set_yscale('linear')
+
+        plt.tight_layout()
+        plt.savefig(f'plots/systematics/{self._selection}/{systematic}_{jetcat}.pdf')
+        plt.savefig(f'plots/systematics/{self._selection}/{systematic}_{jetcat}.png')
+        plt.close()
 
