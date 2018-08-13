@@ -65,18 +65,16 @@ def shape_morphing(f, templates, order='quadratic'):
     return t_eff
 
 class FitData(object):
-    def __init__(self, path, selections, feature_map, param_names, param_var):
+    def __init__(self, path, selections, feature_map):
         self._selections     = selections
         self._n_selections   = len(selections)
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
         self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
-        self._param_names    = param_names 
-        self._param_vars     = dict(zip(param_names, param_var))
 
         # parameters
         self._beta   = [0.108, 0.108, 0.108, 1 - 3*0.108]  # e, mu, tau, h
         self._tau_br = [0.1783, 0.1741, 0.6476]  # e, mu, h
-        #self._initialize_nuisance_parameters(selections)
+        self._initialize_nuisance_parameters()
 
     def _initialize_template_data(self, location, target, selection):
         '''
@@ -92,12 +90,11 @@ class FitData(object):
         infile.close()
         return data
 
-    def _initialize_nuisance_parameters(self, selections):
+    def _initialize_nuisance_parameters(self):
         '''
         Retrieves nuisance parameters (needs development)
         '''
-        pass
-        #self._nuisance_params = pd.read_csv('data/nuisance_parameters.csv')
+        self._nuisance_params = pd.read_csv('data/nuisance_parameters.csv')
 
     def get_selection_data(self, selection):
         return self._selection_data[selection]
@@ -111,11 +108,13 @@ class FitData(object):
         in templates dataframe. 
         '''
         t_nominal = templates['val'] 
-        t_new= t_nominal
+        t_new = np.zeros(t_nominal.shape)
         for pname, pval in pdict.items():
             t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down'] 
             dt = shape_morphing(pval, (t_nominal, t_up, t_down)) - t_nominal
             t_new += dt
+
+        t_new += t_nominal
 
         return t_new
 

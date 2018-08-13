@@ -1,0 +1,29 @@
+name, label,        val_init, var_init, type, ttbar, t, zjets, wjets, diboson, fakes
+lumi,r'$L_{int}$',1,0.025,    norm,1,1,1,1,1,0
+xs_ttbar,r’\sigma_{t\bar{t}}$’,1,0.05,    norm,1,0,0,0,0,0
+xs_t,r’\sigma_{tW}$’,1,0.1,    norm,0,1,0,0,0,0
+xs_zjets,r’\sigma_{Z}$’,1,0.1,    norm,0,0,1,0,0,0
+xs_wjets,r’\sigma_{W}$’,1,0.05,    norm,0,0,0,1,0,0
+xs_diboson,r’\sigma_{VV}$’,1,0.1,    norm,0,0,0,0,1,0
+norm_fakes,'qcd norm’,1,0.25,    norm,0,0,0,0,0,1
+trigger_e,r’$e$ trigger’,1,0.01,    norm,1,1,1,1,1,1
+trigger_mu,r’$\mu$ trigger’,1,0.01,    norm,1,1,1,1,1,1
+eff_e,r’$\epsilon_{e}$,1,0.01,    norm,1,1,1,1,1,1
+eff_mu,r’$\epsilon_{\mu}$,1,0.01,    norm,1,1,1,1,1,1
+eff_tau,r’$\epsilon_{\tau}$,1,0.05,    norm,1,1,1,1,1,1
+pileup,'pileup’,0,1,shape,1,1,0,0,0,0
+escale_e,r’$e$ ES’,0,1,shape,1,1,0,0,0,0
+escale_mu,r’$\mu$ ES’,0,1,shape,1,1,0,0,0,0
+escale_tau,r’$\tau$ ES’,0,1,shape,1,1,0,0,0,0
+jes,'JES’,0,1,shape,1,1,0,0,0,0
+jer,'JER’,0,1,shape,1,1,0,0,0,0
+btag,'b tag’,0,1,shape,1,1,0,0,0,0
+mistag,'mistag’,0,1,shape,1,1,0,0,0,0
+mur,r’$\mu_{r}$’,0,1,shape,1,0,0,0,0,0
+muf,r’$\mu_{f}$’,0,1,shape,1,0,0,0,0,0
+mur_muf,r’$\mu_{r}+\mu_{f}$’,0,1,shape,1,0,0,0,0,0
+pdf,'PDF’,0,1,shape,1,0,0,0,0,0
+fsr,r’$\alpha_{s}$ (FSR)’,0,1,shape,1,0,0,0,0,0
+isr,r’$\alpha_{s}$ (ISR)’,0,1,shape,1,0,0,0,0,0
+tune,'UE’,0,1,shape,1,0,0,0,0,0
+hdamp,'ME-PS’,0,1,shape,1,0,0,0,0,0

@@ -56,7 +56,7 @@ if __name__ == '__main__':
                             cuts          = pt.cuts[selection],
                             )
 
-        dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
+        dm_syst = pt.DataManager(input_dir     = f'local_data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
                                  dataset_names = datasets_ttbar_syst,
                                  selection     = selection,
                                  scale         = 35.9e3,
