@@ -52,9 +52,9 @@ cuts = dict(
                      and (dilepton1_mass > 101 or dilepton1_mass < 81)',
             emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 10 \
                      and dilepton1_mass > 12',
-            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
+            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 18 \
                      and dilepton1_mass > 12',
-            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
+            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 18 \
                      and dilepton1_mass > 12',
             e4j   = 'lepton1_pt > 30',
             mu4j  = 'lepton1_pt > 25',

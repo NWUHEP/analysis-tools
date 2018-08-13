@@ -14,13 +14,13 @@ import scripts.plot_tools as pt
 np.set_printoptions(precision=2)
 
 features = dict()
-features['mumu']  = 'lepton2_pt'
-features['ee']    = 'lepton2_pt'
-features['emu']   = 'trailing_lepton_pt'
-features['mutau'] = 'lepton2_pt'#, 'dilepton1_pt_asym'
-features['etau']  = 'lepton2_pt'#, 'dilepton1_pt_asym'
-features['mu4j']  = 'lepton1_pt'
-features['e4j']   = 'lepton1_pt'
+features['mumu']  = 'lepton2_pt' # trailing muon pt
+features['ee']    = 'lepton2_pt' # trailing electron pt
+features['emu']   = 'trailing_lepton_pt' # like the name says
+features['mutau'] = 'lepton2_pt' # tau pt
+features['etau']  = 'lepton2_pt' # tau pt
+features['mu4j']  = 'lepton1_pt' # muon pt
+features['e4j']   = 'lepton1_pt' # electron pt
 
 fancy_labels = dict()
 fancy_labels['mumu']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$')
@@ -43,24 +43,35 @@ def ebar_wrapper(data, ax, bins, limits, style):
                 markersize = 5
                 )
 
-def shape_morphing(f, up_template, down_template, order='quadratic'):
+def shape_morphing(f, templates, order='quadratic'):
     '''
     Efficiency shape morphing for nuisance parameters.  
+
+    Parameters:
+    ===========
+    f: value of nuisance parameter
+    templates: triplet of (nominal, up, down) template variations
+    order: choose either a linear or quadratic variation of templates with nuisance parameter f
     '''
+    t_nom  = templates[0]
+    t_up   = templates[1]
+    t_down = templates[2]
 
     if order == 'linear':
-        r_eff = 1 + f*(up_template - down_template)/2
+        t_eff = t_nom + f*(t_up - t_down)/2
     elif order == 'quadratic':
-        r_eff = (f*(f - 1)/2)*down_template - (f - 1)*(f + 1) + (f*(f + 1)/2)*up_template
+        t_eff = (f*(f - 1)/2)*t_down - (f - 1)*(f + 1)*t_nom + (f*(f + 1)/2)*t_up
 
-    return r_eff
+    return t_eff
 
 class FitData(object):
-    def __init__(self, path, selections, feature_map):
+    def __init__(self, path, selections, feature_map, param_names, param_var):
         self._selections     = selections
         self._n_selections   = len(selections)
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
         self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
+        self._param_names    = param_names 
+        self._param_vars     = dict(zip(param_names, param_var))
 
         # parameters
         self._beta   = [0.108, 0.108, 0.108, 1 - 3*0.108]  # e, mu, tau, h
@@ -94,6 +105,21 @@ class FitData(object):
     def get_params_init(self):
         return self._beta
 
+    def modify_template(self, templates, pdict):
+        '''
+        Modifies a single template based on all shape nuisance parameters save
+        in templates dataframe. 
+        '''
+        t_nominal = templates['val'] 
+        t_new= t_nominal
+        for pname, pval in pdict.items():
+            t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down'] 
+            dt = shape_morphing(pval, (t_nominal, t_up, t_down)) - t_nominal
+            t_new += dt
+
+        return t_new
+
+
     def objective(self, params, data, cost_type='poisson', no_shape=False):
         '''
         Cost function for MC data model.  This version has no background
@@ -113,47 +139,7 @@ class FitData(object):
         # unpack parameters here
         # branching fractions first
         beta = params[:4]
-
-        # nuisance parameters
-        ## normalization
-        lumi       = params[4]
-        xs_ttbar   = params[5]
-        xs_tw      = params[6]
-        xs_zjets   = params[7]
-        xs_wjets   = params[8]
-        xs_diboson = params[9]
-        norm_fakes = params[10]
-
-        ### triggers
-        trigger_e  = params[11]
-        trigger_mu = params[12]
-
-        ### lepton efficiencies
-        eff_e      = params[13]
-        eff_mu     = params[14]
-        eff_tau    = params[15]
-
-        ## morphing 
-        pileup     = 1. - params[16]
-
-        ### lepton energy scale
-        escale_e   = 1. - params[17]
-        escale_mu  = 1. - params[18]
-        escale_tau = 1. - params[19]
-
-        ### jet systematics
-        jes        = 1. - params[20]
-        jer        = 1. - params[21]
-        btag       = 1. - params[22]
-        mistag     = 1. - params[23]
-
-        ### theory systematics
-        fsr        = 1. - params[24]
-        isr        = 1. - params[25]
-        tune       = 1. - params[26]
-        hdamp      = 1. - params[27]
-        qcd        = 1. - params[28]
-        pdf        = 1. - params[29]
+        pdict = dict(zip(self._param_names, params))
 
         # calculate per category, per bin costs
         cost = 0
@@ -161,9 +147,6 @@ class FitData(object):
             sdata = self.get_selection_data(sel)
 
             for b, bdata in sdata.items():
-                if b == 0: continue
-
-                df_syst   = bdata['systematics']
                 templates = bdata['templates']
 
                 # get the data
@@ -172,95 +155,45 @@ class FitData(object):
                 # get simulated background components and apply cross-section nuisance parameters
                 f_zjets, var_zjets     = templates['zjets']['val'], templates['zjets']['var']
                 f_diboson, var_diboson = templates['diboson']['val'], templates['diboson']['var']
-                f_model   = xs_zjets*f_zjets + xs_diboson*f_diboson
+                f_model   = pdict['xs_zjets']*f_zjets + pdict['xs_diboson']*f_diboson
                 var_model = var_zjets + var_diboson
 
                 # get the signal components and apply mixing of W decay modes according to beta
                 for sig_label in ['ttbar', 't']:#, 'wjets']:
-                    signal_template = list(templates[sig_label].values())
-                    f_sig, var_sig = signal_mixture_model(beta,
-                                                          br_tau   = self._tau_br,
-                                                          h_temp   = signal_template,
-                                                          single_w = (sig_label == 'wjets')
-                                                          )
+                    template_collection = templates[sig_label]
+                    signal_template     = pd.DataFrame.from_items((dm, modify_template(t[dm], pdict)) for dm, t in templates[sig_label])
+                    f_sig, var_sig      = signal_mixture_model(beta,
+                                                               br_tau   = self._tau_br,
+                                                               h_temp   = signal_template,
+                                                               single_w = (sig_label == 'wjets')
+                                                              )
                     # prepare mixture
                     var_model += var_sig
-                    if sig_label == 'ttbar':
-                        f_model   += xs_ttbar*f_sig
-                    elif sig_label == 't':
-                        f_model   += xs_tw*f_sig
-                    elif sig_label == 'wjets':
-                        f_model   += xs_wjets*f_sig
+                    f_model += pdict[f'xs_{sig_label}']
 
                 # lepton efficiencies as normalization nuisance parameters
                 # lepton energy scale as morphing parameters
                 if sel in 'ee':
-                    f_model *= trigger_e**2
-                    f_model *= eff_e**2
-                    f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
+                    f_model *= pdict['trigger_e']**2
+                    f_model *= pdict['eff_e']**2
                 elif sel in 'emu':
-                    f_model *= trigger_mu*trigger_e
-                    f_model *= eff_e*eff_mu
-                    f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
-                    f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
+                    f_model *= pdict['trigger_mu']*pdict['trigger_e']
+                    f_model *= pdict['eff_e']*pdict['eff_mu']
                 elif sel in 'mumu':
                     f_model *= trigger_mu**2
                     f_model *= eff_mu**2
-                    f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
                 elif sel == 'etau':
                     f_model *= trigger_e
                     f_model *= eff_tau*eff_e
-                    f_model *= shape_morphing(escale_tau, df_syst['tau_es_up'], df_syst['tau_es_down'])
                 elif sel == 'mutau':
                     f_model *= trigger_mu
                     f_model *= eff_tau*eff_mu
-                    f_model *= shape_morphing(escale_tau, df_syst['tau_es_up'], df_syst['tau_es_down'])
                 elif sel == 'e4j':
                     f_model *= trigger_e
                     f_model *= eff_e
-                    f_model *= shape_morphing(escale_e, df_syst['el_es_up'], df_syst['el_es_down'])
                 elif sel == 'mu4j':
                     f_model *= trigger_mu
                     f_model *= eff_mu
-                    f_model *= shape_morphing(escale_mu, df_syst['mu_es_up'], df_syst['mu_es_down'])
-
-                # jet energy scale/resolution and b tag/mistag systematics
-                # (these are more like normalization systematics, but it's
-                # easier to apply them as shape systematics)
-
-                ## jes
-                f_model *= shape_morphing(jes, df_syst['jes_up'], df_syst['jes_down'])
-
-                ## jer
-                f_model *= shape_morphing(jer, df_syst['jer_up'], df_syst['jer_down'])
-
-                ## btag
-                f_model *= shape_morphing(btag, df_syst['btag_up'], df_syst['btag_down'])
-
-                ## mistag
-                f_model *= shape_morphing(mistag, df_syst['mistag_up'], df_syst['mistag_down'])
-
-                ## shape systematic from pileup
-                f_model *= shape_morphing(pileup, df_syst['pileup_up'], df_syst['pileup_down'])
-
-                # theory systematics 
-                ## fsr
-                f_model *= shape_morphing(fsr, df_syst['fsr_up'], df_syst['fsr_down'])
-
-                ## isr
-                f_model *= shape_morphing(isr, df_syst['isr_up'], df_syst['isr_down'])
-
-                ## UE tune
-                f_model *= shape_morphing(tune, df_syst['tune_up'], df_syst['tune_down'])
-
-                ## ME-PS matching
-                f_model *= shape_morphing(hdamp, df_syst['hdamp_up'], df_syst['hdamp_down'])
-
-                ## QCD scale (mu_R/mu_F variation)
-                f_model *= shape_morphing(qcd, df_syst['qcd_up'], df_syst['qcd_down'])
-
-                ## PDF variation
-                f_model *= shape_morphing(pdf, df_syst['pdf_up'], df_syst['pdf_down'])
 
                 # apply overall lumi nuisance parameter
                 f_model *= lumi
@@ -268,10 +201,10 @@ class FitData(object):
                 # get fake background and include normalization nuisance parameters
                 if sel in ['etau', 'mutau', 'mu4j']: 
                     f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
-                    f_model   += norm_fakes*f_fakes
+                    f_model   += pdict['norm_fakes']*f_fakes
                     var_model += var_fakes
 
-                # add removing shape information as an argument
+                # for testing fit without kinematic fit
                 if no_shape:
                     f_data = np.sum(f_data)
                     f_model = np.sum(f_model)
@@ -289,112 +222,10 @@ class FitData(object):
         # require that the branching fractions sum to 1
         cost += (1 - np.sum(beta))**2/(2*0.000001**2)  
 
-        # constrain branching fractions (optional)
-        #beta_init = np.array(3*[0.108, ] + [1. - 3*0.108])
-        #beta_var = np.array(3*[0.001**2, ] + [0.0027**2])
-        #cost += np.sum((beta_init - beta)**2/(2*beta_var))
-
-        # Add prior terms for nuisance parameters correlated across channels (lumi, cross-sections)
-        # luminosity
-        lumi_var = 0.025**2
-        cost += (lumi - 1.)**2 / (2*lumi_var)
-
-        ## ttbar
-        xs_ttbar_var = 0.05**2
-        cost += (xs_ttbar - 1.)**2 / (2*xs_ttbar_var)
-
-        ## tW
-        xs_tw_var = 0.1**2
-        cost += (xs_tw - 1.)**2 / (2*xs_tw_var)
-
-        ## zjets
-        xs_zjets_var = 0.1**2
-        cost += (xs_zjets - 1.)**2 / (2*xs_zjets_var)
-
-        ## wjets
-        xs_wjets_var = 0.05**2
-        cost += (xs_wjets - 1.)**2 / (2*xs_wjets_var)
-
-        ## diboson
-        xs_diboson_var = 0.1**2
-        cost += (xs_diboson - 1.)**2 / (2*xs_diboson_var)
-
-        ## fakes
-        norm_fakes_var = 0.25**2
-        cost += (norm_fakes - 1.)**2 / (2*norm_fakes_var)
-
-        ## lepton effs
-        eff_e_var = 0.01**2
-        cost += (eff_e - 1.)**2 / (2*eff_e_var)
-
-        eff_mu_var = 0.01**2
-        cost += (eff_mu - 1.)**2 / (2*eff_mu_var)
-
-        eff_tau_var = 0.05**2
-        cost += (eff_tau - 1.)**2 / (2*eff_tau_var)
-
-        ## trigger effs 
-        trigger_e_var = 0.01**2
-        cost += (trigger_e - 1.)**2 / (2*trigger_e_var)
-
-        trigger_mu_var = 0.01**2
-        cost += (trigger_mu - 1.)**2 / (2*trigger_mu_var)
-
-        # pileup
-        pileup_var = 1.**2
-        cost += pileup**2 / (2*pileup_var)
-
-        # lepton energy scales
-        escale_e_var = 0.5**2
-        cost += escale_e**2 / (2*escale_e_var)
-
-        escale_mu_var = 0.2**2
-        cost += escale_mu**2 / (2*escale_mu_var)
-
-        escale_tau_var = 1.**2
-        cost += escale_tau**2 / (2*escale_tau_var)
-
-        ## jes
-        jes_var = 1.**2
-        cost += jes**2 / (2*jes_var)
-
-        # jer
-        jer_var = 1.**2
-        cost += jer**2 / (2*jer_var)
-
-        # btag
-        btag_var = 1.**2
-        cost += btag**2 / (2*btag_var)
-
-        # mistag
-        mistag_var = 1.**2
-        cost += mistag**2 / (2*mistag_var)
-
-        # fsr
-        fsr_var = 0.5**2
-        cost += fsr**2 / (2*fsr_var)
-
-        # isr
-        isr_var = 1.**2
-        cost += isr**2 / (2*isr_var)
-
-        # tune
-        tune_var = 1.**2
-        cost += tune**2 / (2*tune_var)
-
-        # hdamp
-        hdamp_var = 1.**2
-        cost += hdamp**2 / (2*hdamp_var)
-
-        # qcd
-        qcd_var = 1.**2
-        cost += qcd**2 / (2*qcd_var)
-
-        # pdf
-        pdf_var = 1.**2
-        cost += pdf**2 / (2*pdf_var)
-
-        ###########################################
+        # Add prior terms for nuisance parameters correlated across channels
+        # (lumi, cross-sections) luminosity
+        for pname in self._param_names:
+            cost += (pdict[pname] - self._param_init[pname])**2 / (2*self._param_vars[pname])
 
         return cost
 
@@ -453,31 +284,25 @@ def signal_mixture_model(beta, br_tau, h_temp, mask=None, sample=False, single_w
     ==========
     beta : branching fractions for the W decay
     br_tau : branching fractions for the tau decay
-    h_temp : a tuple with the template histograms and their errors
+    h_temp : dataframe with template histograms for each signal component
     mask : a mask that selects a subset of mixture components
     sample : if True, the input templates will be sampled before returning
     single_w : if process contains a single w decay
     '''
 
-    if single_w:
-        beta_init  = signal_amplitudes([0.108, 0.108, 0.108, 0.676], [0.1783, 0.1741, 0.6476], single_w)
-        beta_fit   = signal_amplitudes(beta, br_tau, single_w)
-        beta_ratio = beta_fit/beta_init
-    else:
-        beta_init  = signal_amplitudes([0.108, 0.108, 0.108, 0.676], [0.1783, 0.1741, 0.6476])
-        beta_fit   = signal_amplitudes(beta, br_tau)
-        beta_ratio = beta_fit/beta_init
+    beta_init  = signal_amplitudes([0.108, 0.108, 0.108, 0.676], [0.1783, 0.1741, 0.6476], single_w)
+    beta_fit   = signal_amplitudes(beta, br_tau, single_w)
+    beta_ratio = beta_fit/beta_init
 
     if not isinstance(mask, type(None)):
         beta_ratio = mask*beta_ratio
 
     if sample:
-        f = np.dot(np.random.poisson(h_temp[0]), beta_ratio)
+        f = np.dot(np.random.poisson(h_temp), beta_ratio)
     else:
-        f = np.dot(h_temp[0], beta_ratio)
-    var = np.dot(h_temp[1], beta_ratio**2)
+        f = np.dot(h_temp, beta_ratio)
 
-    return f, var
+    return f
 
 def calculate_covariance(f, x0):
     '''

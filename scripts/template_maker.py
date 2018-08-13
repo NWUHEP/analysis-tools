@@ -12,7 +12,7 @@ import scripts.systematic_tools as st
 if __name__ == '__main__':
 
     do_bb_binning = True
-    output_path   = f'data/templates/bjet_binned'
+    output_path   = f'local_data/templates/bjet_binned'
     data_labels  = ['muon', 'electron']
     model_labels = ['wjets', 'zjets', 't', 'ttbar', 'diboson']
     datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
@@ -28,12 +28,12 @@ if __name__ == '__main__':
     decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
-    selections = ['ee']#, 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
     pt.make_directory(f'{output_path}')
     for selection in selections:
-        print(f'Running over selection {selection}...')
+        print(f'Running over category {selection}...')
         feature    = fh.features[selection]
-        ntuple_dir = f'data/flatuples/single_lepton/{selection}_2016'
+        ntuple_dir = f'local_data/flatuples/single_lepton/{selection}_2016'
         outfile    = open(f'{output_path}/{selection}_templates.pkl', 'wb')
 
         # category specific parameters
@@ -47,6 +47,8 @@ if __name__ == '__main__':
         else:
             dataset_names = datasets
 
+        #labels =['ttbar']
+
         dm = pt.DataManager(input_dir     = ntuple_dir,
                             dataset_names = dataset_names,
                             selection     = selection,
@@ -54,17 +56,49 @@ if __name__ == '__main__':
                             cuts          = pt.cuts[selection],
                             )
 
-        #dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
-        #                         dataset_names = datasets_ttbar_syst,
-        #                         selection     = selection,
-        #                         scale         = 35.9e3,
-        #                         cuts          = pt.cuts[selection]
-        #                         )
+        dm_syst = pt.DataManager(input_dir     = f'data/flatuples/single_lepton_ttbar_syst/{selection}_2016',
+                                 dataset_names = datasets_ttbar_syst,
+                                 selection     = selection,
+                                 scale         = 35.9e3,
+                                 cuts          = pt.cuts[selection]
+                                 )
 
+        # the theory systematics should not modify the overall ttbar
+        # cross-section.  To enforce this, a scaling factor is derived for each
+        # systematic type so that their integral is the same as the nominal
+        # ttbar sample (technically, this should be done over all final state
+        # categories... maybe later).
+        #corr_theory = calculate_theory_rescales(dm, dm_syst)
+        k_theory = dict()
+        df_ttbar = dm.get_dataframe('ttbar')
+        w_nominal = df_ttbar.weight
+        n_nominal = w_nominal.sum()
+
+        # mur
+        k_theory['mur_up']       = np.sum(w_nominal*df_ttbar.qcd_weight_up_nom)/n_nominal
+        k_theory['mur_down']     = np.sum(w_nominal*df_ttbar.qcd_weight_down_nom)/n_nominal
+
+        # muf
+        k_theory['muf_up']       = np.sum(w_nominal*df_ttbar.qcd_weight_nom_up)/n_nominal
+        k_theory['muf_down']     = np.sum(w_nominal*df_ttbar.qcd_weight_nom_down)/n_nominal
+
+        # muf
+        k_theory['mur_muf_up']   = np.sum(w_nominal*df_ttbar.qcd_weight_up_up)/n_nominal
+        k_theory['mur_muf_down'] = np.sum(w_nominal*df_ttbar.qcd_weight_down_down)/n_nominal
+
+        # pdf
+        k_theory['pdf_up']       = np.sum(w_nominal*(1 + np.sqrt(df_ttbar.pdf_var)/np.sqrt(100)))/n_nominal
+        k_theory['pdf_down']     = np.sum(w_nominal*(1 - np.sqrt(df_ttbar.pdf_var)/np.sqrt(100)))/n_nominal
+
+        for ds in datasets_ttbar_syst:
+            ds = ds.replace('_inclusive', '')
+            df_syst  = dm_syst.get_dataframe(ds)
+            l = ds.split('_')[-1]
+            k_theory[l] = df_syst.weight.sum()/n_nominal
 
         data = dict()
         for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
-            if selection not in ['mutau', 'etau'] and bcut == 'n_bjets == 0': 
+            if selection in ['mu4j', 'e4j'] and bcut == 'n_bjets == 0': 
                 continue
 
             if selection in ['e4j', 'mu4j']:
@@ -72,12 +106,14 @@ if __name__ == '__main__':
             else:
                 jet_cut = 'n_jets >= 2'
             full_cut = f'{jet_cut} and {bcut}'
+            print(f'Applying selection "{full_cut}".')
 
-            ### calculate binning based on ttbar sample
-            df_ttbar = dm.get_dataframe('ttbar', full_cut)
-            if df_ttbar.shape[0] == 0: continue
 
-            x = df_ttbar[feature].values 
+            ### calculate binning based on data sample
+            df_data = dm.get_dataframe('data', full_cut)
+            if df_data.shape[0] == 0: continue
+
+            x = df_data[feature].values 
             if do_bb_binning:
                 print('Calculating Bayesian block binning...')
                 binning = bayesian_blocks(x[:30000], p0=0.00001)
@@ -148,15 +184,27 @@ if __name__ == '__main__':
 
                         # save templates, statistical errors, and systematic variations
                         df_temp = pd.DataFrame(dict(bins=binning[:-1], val=h, var=hvar))
-                    
+                        df_temp = df_temp.set_index('bins')
+                         
                         ### produce morphing templates for shape systematics
-                        df = dm.get_dataframe(label)
-                        syst_gen = st.SystematicTemplateGenerator(selection, binning, h, full_cut, i)
-                        syst_gen.jet_shape_systematics(df_temp, h, df, binning, selection, full_cut)
+                        if np.any(h != 0):
+                            if np.sqrt(np.sum(hvar))/np.sum(h) < 0.1: # only consider systematics if sigma_N/N < 10%
 
-                        #df = df.query(full_cut)
-                        #st.reco_shape_systematics(df_temp, h, df, binning, selection)
-                        #st.theory_shape_systematics(df_temp, h, df, binning, selection)
+                                df = dm.get_dataframe(label, c)
+                                syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{n}', 
+                                                                          feature, binning, 
+                                                                          h, full_cut, i)
+                                syst_gen.jet_shape_systematics(df) # don't apply jet cut for jet syst.
+
+                                df = df.query(full_cut)
+                                syst_gen.reco_shape_systematics(df)
+                                if label == 'ttbar':
+                                    syst_gen.theory_shape_systematics(df, dm_syst, f'{full_cut} and {c}', k_theory)
+
+                                df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
+
+                                #df = df.query(full_cut)
+
                         mode_dict[n] = df_temp
 
                     templates[label] = mode_dict
@@ -185,7 +233,7 @@ if __name__ == '__main__':
                         label = 'fakes'
                     templates[label] = dict(val = h, var = hvar)
 
-            data[i] = dict(bins = binning, templates = templates, systematics = df_sys)
+            data[i] = dict(bins = binning, templates = templates)
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)

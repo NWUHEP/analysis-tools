@@ -88,7 +88,7 @@ if __name__ == '__main__':
     elif selection in ['etau', 'mutau']:
         cut = 'n_jets >= 2 and n_bjets >= 1'
     else:
-        cut = 'n_jets >= 2 and n_bjets >= 1'
+        cut = 'n_jets >= 2 and n_bjets == 0'
     cut += ' and ' + pt.cuts[selection]
             
     ### Get dataframes with features for each of the datasets ###
