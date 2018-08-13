@@ -1,29 +1,29 @@
-name, label,        val_init, var_init, type, ttbar, t, zjets, wjets, diboson, fakes
-lumi,r'$L_{int}$',1,0.025,    norm,1,1,1,1,1,0
-xs_ttbar,rÕ\sigma_{t\bar{t}}$Õ,1,0.05,    norm,1,0,0,0,0,0
-xs_t,rÕ\sigma_{tW}$Õ,1,0.1,    norm,0,1,0,0,0,0
-xs_zjets,rÕ\sigma_{Z}$Õ,1,0.1,    norm,0,0,1,0,0,0
-xs_wjets,rÕ\sigma_{W}$Õ,1,0.05,    norm,0,0,0,1,0,0
-xs_diboson,rÕ\sigma_{VV}$Õ,1,0.1,    norm,0,0,0,0,1,0
-norm_fakes,'qcd normÕ,1,0.25,    norm,0,0,0,0,0,1
-trigger_e,rÕ$e$ triggerÕ,1,0.01,    norm,1,1,1,1,1,1
-trigger_mu,rÕ$\mu$ triggerÕ,1,0.01,    norm,1,1,1,1,1,1
-eff_e,rÕ$\epsilon_{e}$,1,0.01,    norm,1,1,1,1,1,1
-eff_mu,rÕ$\epsilon_{\mu}$,1,0.01,    norm,1,1,1,1,1,1
-eff_tau,rÕ$\epsilon_{\tau}$,1,0.05,    norm,1,1,1,1,1,1
-pileup,'pileupÕ,0,1,shape,1,1,0,0,0,0
-escale_e,rÕ$e$ ESÕ,0,1,shape,1,1,0,0,0,0
-escale_mu,rÕ$\mu$ ESÕ,0,1,shape,1,1,0,0,0,0
-escale_tau,rÕ$\tau$ ESÕ,0,1,shape,1,1,0,0,0,0
-jes,'JESÕ,0,1,shape,1,1,0,0,0,0
-jer,'JERÕ,0,1,shape,1,1,0,0,0,0
-btag,'b tagÕ,0,1,shape,1,1,0,0,0,0
-mistag,'mistagÕ,0,1,shape,1,1,0,0,0,0
-mur,rÕ$\mu_{r}$Õ,0,1,shape,1,0,0,0,0,0
-muf,rÕ$\mu_{f}$Õ,0,1,shape,1,0,0,0,0,0
-mur_muf,rÕ$\mu_{r}+\mu_{f}$Õ,0,1,shape,1,0,0,0,0,0
-pdf,'PDFÕ,0,1,shape,1,0,0,0,0,0
-fsr,rÕ$\alpha_{s}$ (FSR)Õ,0,1,shape,1,0,0,0,0,0
-isr,rÕ$\alpha_{s}$ (ISR)Õ,0,1,shape,1,0,0,0,0,0
-tune,'UEÕ,0,1,shape,1,0,0,0,0,0
-hdamp,'ME-PSÕ,0,1,shape,1,0,0,0,0,0
+name,label,val_init,var_init,type,ttbar,t,zjets,wjets,diboson,fakes
+lumi,r'$L_{int}$',1,0.025,norm,1,1,1,1,1,0
+xs_ttbar,râ€™\sigma_{t\bar{t}}$â€™,1,0.05,norm,1,0,0,0,0,0
+xs_t,râ€™\sigma_{tW}$â€™,1,0.1,norm,0,1,0,0,0,0
+xs_zjets,râ€™\sigma_{Z}$â€™,1,0.1,norm,0,0,1,0,0,0
+xs_wjets,râ€™\sigma_{W}$â€™,1,0.05,norm,0,0,0,1,0,0
+xs_diboson,râ€™\sigma_{VV}$â€™,1,0.1,norm,0,0,0,0,1,0
+norm_fakes,'qcdnormâ€™,1,0.25,norm,0,0,0,0,0,1
+trigger_e,râ€™$e$triggerâ€™,1,0.01,norm,1,1,1,1,1,1
+trigger_mu,râ€™$\mu$triggerâ€™,1,0.01,norm,1,1,1,1,1,1
+eff_e,râ€™$\epsilon_{e}$â€™,1,0.01,norm,1,1,1,1,1,1
+eff_mu,râ€™$\epsilon_{\mu}$â€™,1,0.01,norm,1,1,1,1,1,1
+eff_tau,râ€™$\epsilon_{\tau}$â€™,1,0.05,norm,1,1,1,1,1,1
+pileup,'pileupâ€™,0,1,shape,1,1,0,0,0,0
+escale_e,râ€™$e$ESâ€™,0,1,shape,1,1,0,0,0,0
+escale_mu,râ€™$\mu$ESâ€™,0,1,shape,1,1,0,0,0,0
+escale_tau,râ€™$\tau$ESâ€™,0,1,shape,1,1,0,0,0,0
+jes,'JESâ€™,0,1,shape,1,1,0,0,0,0
+jer,'JERâ€™,0,1,shape,1,1,0,0,0,0
+btag,'btagâ€™,0,1,shape,1,1,0,0,0,0
+mistag,'mistagâ€™,0,1,shape,1,1,0,0,0,0
+mur,râ€™$\mu_{r}$â€™,0,1,shape,1,0,0,0,0,0
+muf,râ€™\mu_{f}$â€™,0,1,shape,1,0,0,0,0,0
+mur_muf,râ€™$\mu_{r}+\mu_{f}$â€™,0,1,shape,1,0,0,0,0,0
+pdf,'PDFâ€™,0,1,shape,1,0,0,0,0,0
+fsr,râ€™$\alpha_{s}$(FSR)â€™,0,1,shape,1,0,0,0,0,0
+isr,râ€™$\alpha_{s}$(ISR)â€™,0,1,shape,1,0,0,0,0,0
+tune,'UEâ€™,0,1,shape,1,0,0,0,0,0
+hdamp,'ME-PSâ€™,0,1,shape,1,0,0,0,0,0
