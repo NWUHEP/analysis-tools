@@ -71,9 +71,7 @@ class FitData(object):
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
         self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
 
-        # parameters
-        self._beta   = [0.108, 0.108, 0.108, 1 - 3*0.108]  # e, mu, tau, h
-        self._tau_br = [0.1783, 0.1741, 0.6476]  # e, mu, h
+        # retrieve parameter configurations
         self._initialize_parameters()
 
     def _initialize_template_data(self, location, target, selection):
@@ -99,6 +97,16 @@ class FitData(object):
         #df_params = df_params.iloc[:4,]
         self._parameters = df_params
 
+        # make a map of each shape n.p. to be considered for each selection and
+        # dataset (and maybe jet bin later, if needed)
+        df_shape = self._parameters.query(f'type == "shape"') 
+        np_dict = dict()
+        for s in self._selections:
+            np_dict[s] = dict()
+            for ds in pt.selection_dataset_dict[s]:
+                np_dict[s][ds] = df_shape.query(f'{ds} == 1 and {s} == 1').index.values 
+        self._np_dict = np_dict
+
     def get_selection_data(self, selection):
         return self._selection_data[selection]
 
@@ -119,16 +127,14 @@ class FitData(object):
             return t_nominal
         else:
             t_new = np.zeros(t_nominal.shape)
-            df_np = self._parameters.query(f'type == "shape" and {dataset_name} == 1 and {selection} == 1') # cache this operation
             #print(df_np.index.values)
-            for pname in df_np.index.values:
+            for pname in self._np_dict[selection][dataset_name]:
                 t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down'] 
                 dt = shape_morphing(pdict[pname], (t_nominal, t_up, t_down)) - t_nominal
                 t_new += dt
             t_new += t_nominal
 
             return t_new
-
 
     def objective(self, params, data, cost_type='poisson', no_shape=False):
         '''
@@ -161,7 +167,6 @@ class FitData(object):
             for b, bdata in sdata.items():
                 if b == 0 and sel in ['e4j', 'mu4j']: 
                     continue
-
 
                 # get the data
                 templates = bdata['templates']

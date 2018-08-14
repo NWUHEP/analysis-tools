@@ -43,6 +43,16 @@ dataset_dict = dict(
                     fakes_ss = ['fakes_ss']
                     )
 
+selection_dataset_dict = dict(
+                              ee    = ['ttbar', 't', 'zjets', 'wjets', 'diboson'],
+                              mumu  = ['ttbar', 't', 'zjets', 'wjets', 'diboson'],
+                              emu   = ['ttbar', 't', 'zjets', 'wjets', 'diboson'],
+                              etau  = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
+                              mutau = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
+                              e4j   = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
+                              mu4j  = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
+                              )
+
 cuts = dict(
             ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 10 \
                      and dilepton1_mass > 12 \
