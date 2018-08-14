@@ -74,7 +74,7 @@ class FitData(object):
         # parameters
         self._beta   = [0.108, 0.108, 0.108, 1 - 3*0.108]  # e, mu, tau, h
         self._tau_br = [0.1783, 0.1741, 0.6476]  # e, mu, h
-        self._initialize_nuisance_parameters()
+        self._initialize_parameters()
 
     def _initialize_template_data(self, location, target, selection):
         '''
@@ -90,33 +90,44 @@ class FitData(object):
         infile.close()
         return data
 
-    def _initialize_nuisance_parameters(self):
+    def _initialize_parameters(self):
         '''
-        Retrieves nuisance parameters (needs development)
+        Gets parameter configuration from a file.
         '''
-        self._nuisance_params = pd.read_csv('data/nuisance_parameters.csv')
+        df_params = pd.read_csv('data/model_parameters_partial.csv')
+        df_params = df_params.set_index('name')
+        #df_params = df_params.iloc[:4,]
+        self._parameters = df_params
 
     def get_selection_data(self, selection):
         return self._selection_data[selection]
 
-    def get_params_init(self):
-        return self._beta
+    def get_params_init(self, as_array=False):
+        if as_array:
+            return self._parameters['val_init'].values
+        else:
+            return self._parameters['val_init']
 
-    def modify_template(self, templates, pdict):
+    def modify_template(self, templates, pdict, dataset_name, selection):
         '''
         Modifies a single template based on all shape nuisance parameters save
-        in templates dataframe. 
+        in templates dataframe.  Only applies variation in the case that there
+        are a sufficient number fo events.
         '''
         t_nominal = templates['val'] 
-        t_new = np.zeros(t_nominal.shape)
-        for pname, pval in pdict.items():
-            t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down'] 
-            dt = shape_morphing(pval, (t_nominal, t_up, t_down)) - t_nominal
-            t_new += dt
+        if templates.shape[1] == 2: # no systematics generated
+            return t_nominal
+        else:
+            t_new = np.zeros(t_nominal.shape)
+            df_np = self._parameters.query(f'type == "shape" and {dataset_name} == 1 and {selection} == 1') # cache this operation
+            #print(df_np.index.values)
+            for pname in df_np.index.values:
+                t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down'] 
+                dt = shape_morphing(pdict[pname], (t_nominal, t_up, t_down)) - t_nominal
+                t_new += dt
+            t_new += t_nominal
 
-        t_new += t_nominal
-
-        return t_new
+            return t_new
 
 
     def objective(self, params, data, cost_type='poisson', no_shape=False):
@@ -134,11 +145,13 @@ class FitData(object):
         mask : an array with same size as the input parameters for indicating parameters to fix
         no_shape : sums over all bins in input templates
         '''
-
+        
         # unpack parameters here
         # branching fractions first
-        beta = params[:4]
-        pdict = dict(zip(self._param_names, params))
+        pnames = self._parameters.index.values
+        beta   = params[:4]
+        br_tau = params[4:7]
+        pdict  = dict(zip(pnames, params))
 
         # calculate per category, per bin costs
         cost = 0
@@ -146,29 +159,35 @@ class FitData(object):
             sdata = self.get_selection_data(sel)
 
             for b, bdata in sdata.items():
-                templates = bdata['templates']
+                if b == 0 and sel in ['e4j', 'mu4j']: 
+                    continue
+
 
                 # get the data
-                f_data, var_data = templates['data']['val'], templates['data']['var']
+                templates = bdata['templates']
+                #f_data, var_data = templates['data']['val'], templates['data']['var']
+                f_data, var_data = data[sel][b], data[sel][b]
 
                 # get simulated background components and apply cross-section nuisance parameters
                 f_zjets, var_zjets     = templates['zjets']['val'], templates['zjets']['var']
                 f_diboson, var_diboson = templates['diboson']['val'], templates['diboson']['var']
                 f_model   = pdict['xs_zjets']*f_zjets + pdict['xs_diboson']*f_diboson
+                #f_model   = f_zjets + f_diboson
                 var_model = var_zjets + var_diboson
 
                 # get the signal components and apply mixing of W decay modes according to beta
-                for sig_label in ['ttbar', 't']:#, 'wjets']:
+                for sig_label in ['ttbar', 't', 'wjets']:
                     template_collection = templates[sig_label]
-                    signal_template     = pd.DataFrame.from_items((dm, modify_template(t[dm], pdict)) for dm, t in templates[sig_label])
-                    f_sig, var_sig      = signal_mixture_model(beta,
-                                                               br_tau   = self._tau_br,
+                    signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, sel)) for dm, t in templates[sig_label].items())
+                    #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in templates[sig_label].items())
+                    f_sig               = signal_mixture_model(beta,
+                                                               br_tau   = br_tau,
                                                                h_temp   = signal_template,
                                                                single_w = (sig_label == 'wjets')
                                                               )
                     # prepare mixture
-                    var_model += var_sig
-                    f_model += pdict[f'xs_{sig_label}']
+                    #var_model += var_sig # figure this out
+                    f_model +=  pdict[f'xs_{sig_label}']*f_sig
 
                 # lepton efficiencies as normalization nuisance parameters
                 # lepton energy scale as morphing parameters
@@ -179,31 +198,31 @@ class FitData(object):
                     f_model *= pdict['trigger_mu']*pdict['trigger_e']
                     f_model *= pdict['eff_e']*pdict['eff_mu']
                 elif sel in 'mumu':
-                    f_model *= trigger_mu**2
-                    f_model *= eff_mu**2
+                    f_model *= pdict['trigger_mu']**2
+                    f_model *= pdict['eff_mu']**2
                 elif sel == 'etau':
-                    f_model *= trigger_e
-                    f_model *= eff_tau*eff_e
+                    f_model *= pdict['trigger_e']
+                    f_model *= pdict['eff_tau']*pdict['eff_e']
                 elif sel == 'mutau':
-                    f_model *= trigger_mu
-                    f_model *= eff_tau*eff_mu
+                    f_model *= pdict['trigger_mu']
+                    f_model *= pdict['eff_tau']*pdict['eff_mu']
                 elif sel == 'e4j':
-                    f_model *= trigger_e
-                    f_model *= eff_e
+                    f_model *= pdict['trigger_e']
+                    f_model *= pdict['eff_e']
                 elif sel == 'mu4j':
-                    f_model *= trigger_mu
-                    f_model *= eff_mu
+                    f_model *= pdict['trigger_mu']
+                    f_model *= pdict['eff_mu']
 
                 # apply overall lumi nuisance parameter
-                f_model *= lumi
+                f_model *= pdict['lumi']
 
                 # get fake background and include normalization nuisance parameters
-                if sel in ['etau', 'mutau', 'mu4j']: 
-                    f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
-                    f_model   += pdict['norm_fakes']*f_fakes
-                    var_model += var_fakes
+                #if sel in ['etau', 'mutau', 'e4j', 'mu4j']: 
+                #    f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
+                #    f_model   += f_fakes #pdict['norm_fakes']*f_fakes
+                #    var_model += var_fakes
 
-                # for testing fit without kinematic fit
+                # for testing parameter estimation without estimating kinematic fit
                 if no_shape:
                     f_data = np.sum(f_data)
                     f_model = np.sum(f_model)
@@ -223,8 +242,9 @@ class FitData(object):
 
         # Add prior terms for nuisance parameters correlated across channels
         # (lumi, cross-sections) luminosity
-        for pname in self._param_names:
-            cost += (pdict[pname] - self._param_init[pname])**2 / (2*self._param_vars[pname])
+        for pname in pnames:
+            cost += (pdict[pname] - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
+        #print(params, cost)
 
         return cost
 
