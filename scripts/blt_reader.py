@@ -105,18 +105,18 @@ def fill_event_vars(tree):
                     n_bjets        = tree.nBJets,
 
                     # jet counting for systematics
-                    n_jets_jes_up       = tree.nJetsJESUp,
-                    n_jets_jes_down     = tree.nJetsJESDown,
-                    n_jets_jer_up       = tree.nJetsJERUp,
-                    n_jets_jer_down     = tree.nJetsJERDown,
-                    n_bjets_jes_up      = tree.nBJetsJESUp,
-                    n_bjets_jes_down    = tree.nBJetsJESDown,
-                    n_bjets_jer_up      = tree.nBJetsJERUp,
-                    n_bjets_jer_down    = tree.nBJetsJERDown,
-                    n_bjets_btag_up     = tree.nBJetsBTagUp,
-                    n_bjets_btag_down   = tree.nBJetsBTagDown,
-                    n_bjets_mistag_up   = tree.nBJetsMistagUp,
-                    n_bjets_mistag_down = tree.nBJetsMistagDown,
+                    #n_jets_jes_up       = tree.nJetsJESUp,
+                    #n_jets_jes_down     = tree.nJetsJESDown,
+                    #n_jets_jer_up       = tree.nJetsJERUp,
+                    #n_jets_jer_down     = tree.nJetsJERDown,
+                    #n_bjets_jes_up      = tree.nBJetsJESUp,
+                    #n_bjets_jes_down    = tree.nBJetsJESDown,
+                    #n_bjets_jer_up      = tree.nBJetsJERUp,
+                    #n_bjets_jer_down    = tree.nBJetsJERDown,
+                    #n_bjets_btag_up     = tree.nBJetsBTagUp,
+                    #n_bjets_btag_down   = tree.nBJetsBTagDown,
+                    #n_bjets_mistag_up   = tree.nBJetsMistagUp,
+                    #n_bjets_mistag_down = tree.nBJetsMistagDown,
  
                     met_mag        = tree.met,
                     met_phi        = tree.metPhi,
@@ -542,7 +542,7 @@ def pickle_ntuple(tree, dataset_name, output_path, selection):
     # get the tree, convert to dataframe, and save df to pickle
     ntuple = fill_ntuple(tree, dataset_name, selection)
     df     = pd.DataFrame(ntuple)
-    #df     = df.query('weight != 0')
+    df     = df.query('weight != 0')
     df.to_pickle(f'{output_path}/ntuple_{dataset_name}.pkl')
 
     print(f'{selection}::{dataset_name} pickled successfully')
@@ -550,18 +550,19 @@ def pickle_ntuple(tree, dataset_name, output_path, selection):
 if __name__ == '__main__':
 
     ### Configuration ###
-    infile      = 'data/bltuples/output_single_lepton.root'
-    output_dir  = 'data/flatuples/e4j_syst'
-    selections  = ['e4j'] #'mu4j', 'mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    do_data     = False
-    do_mc       = False
-    do_syst     = True
+    infile      = 'local_data/bltuples/output_z_cr.root'
+    output_dir  = 'local_data/flatuples/z_cr_alt'
+    selections  = ['mumu', 'ee']#, 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    do_data     = True
+    do_mc       = True
+    do_syst     = False
     period      = 2016
 
     # configure datasets to run over
     dataset_list = []
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['zjets', 'ttbar', 'diboson', 't', 'wjets']
+    #mc_labels    = ['zjets', 'ttbar', 'diboson', 't', 'wjets']
+    mc_labels    = ['zjets', 'ttbar', 'zjets_alt']
     if do_data:
         dataset_list.extend(d for l in data_labels for d in pt.dataset_dict[l])
     if do_mc:
@@ -576,6 +577,8 @@ if __name__ == '__main__':
                         'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
                         #'ttbar_inclusive_herwig'
                         ]
+
+    dataset.append('ttbar_lep')
 
     ### Initialize multiprocessing queue and processes
     processes   = {}

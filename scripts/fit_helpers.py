@@ -224,7 +224,7 @@ class FitData(object):
                 # get fake background and include normalization nuisance parameters
                 #if sel in ['etau', 'mutau', 'e4j', 'mu4j']: 
                 #    f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
-                #    f_model   += f_fakes #pdict['norm_fakes']*f_fakes
+                #    f_model   += pdict['norm_fakes']*f_fakes
                 #    var_model += var_fakes
 
                 # for testing parameter estimation without estimating kinematic fit

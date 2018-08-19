@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
-from itertools import chain
-
-import matplotlib as mpl
-mpl.use('Agg')
-
+import pandas as pd
+from tqdm import tqdm
 import scripts.plot_tools as pt
 
 if __name__ == '__main__':
-
-    pt.set_new_tdr()
 
     # input arguments
     parser = argparse.ArgumentParser(description='Produce data/MC overlays')
@@ -38,7 +33,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['diboson', 'zjets', 't', 'wjets', 'ttbar']
+    model_labels = ['diboson', 'zjets', 'wjets', 't', 'ttbar']
 
     if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
@@ -49,7 +44,7 @@ if __name__ == '__main__':
     features = [
                 #'lepton1_reco_weight', 'lepton2_reco_weight', 'trigger_weight', 
                 #'pileup_weight', 'top_pt_weight', 'event_weight',
-                'gen_cat',
+                #'gen_cat',
 
                 'n_pv', 'n_muons', 'n_electrons', 'n_taus',
                 'n_jets', 'n_fwdjets', 'n_bjets',
@@ -86,12 +81,16 @@ if __name__ == '__main__':
     elif selection == 'emu':
         cut = 'n_jets >= 2 and n_bjets >= 0'
     elif selection in ['etau', 'mutau']:
-        cut = 'n_jets >= 2 and n_bjets >= 1'
+        cut = 'n_jets >= 0 and n_bjets >= 0'
     else:
-        cut = 'n_jets >= 2 and n_bjets == 0'
+        cut = 'n_jets >= 2 and n_bjets >= 0'
     cut += ' and ' + pt.cuts[selection]
+    btag_cuts = ['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']
             
     ### Get dataframes with features for each of the datasets ###
+    output_path = f'plots/overlays/{selection}_{args.period}'
+    pt.make_directory(output_path, clear=True)
+    pt.set_default_style()
     data_manager = pt.DataManager(input_dir     = f'{args.input}/{args.selection}_{args.period}',
                                   dataset_names = [d for l in data_labels+model_labels for d in pt.dataset_dict[l]],
                                   selection     = selection,
@@ -99,20 +98,45 @@ if __name__ == '__main__':
                                   scale         = args.lumi,
                                   cuts          = cut
                                  )
+    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=btag_cuts)
+    table.to_csv(f'{output_path}/yields_{selection}.csv')
 
     ### Loop over features and make the plots ###
-    output_path = f'plots/overlays/{selection}_{args.period}'
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
                                   stack_labels   = model_labels,
-                                  overlay_labels = [],
                                   top_overlay    = False,
                                   output_path    = output_path,
                                   file_ext       = 'png'
                                  )
 
-    pt.make_directory(output_path, clear=True)
-    plot_manager.make_overlays(features, do_ratio=True, overlay_style='errorbar')
+    #plot_manager.make_overlays(features, do_ratio=True, overlay_style='errorbar')
 
-    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=['n_bjets >= 1', 'n_bjets >= 2'])
-    table.to_csv(f'{output_path}/yields_{selection}.csv')
+    ### conditional overlays
+    decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
+    decay_map = decay_map.query(f'{selection} == 1')
+    conditions = [f'gen_cat == {ix}' for ix in decay_map.index.values]
+    else_condition = 'not (' + 'or '.join(conditions) + ')'
+    conditions.append(else_condition)
+
+    bg_labels = ['wjets', 'diboson', 'zjets']
+    if selection in ['mu4j']:#, 'e4j']: 
+        bg_labels = ['fakes'] + bg_labels
+    elif selection in ['mutau', 'etau']:
+        bg_labels = ['fakes_ss'] + bg_labels
+
+    colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
+
+    for i, bcut in enumerate(tqdm(btag_cuts)):
+        if selection in ['e4j', 'mu4j'] and i == 0:
+            continue
+
+        plot_manager.set_output_path(f'{output_path}/cat_{i}')
+        plot_manager.make_conditional_overlays(features, ['ttbar', 't'], conditions,
+                                               cut = bcut,
+                                               legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
+                                               #c_colors   = list(decay_map.colors) + ['gray'],
+                                               c_colors   = colors[:len(conditions) - 1] + ['gray'],
+                                               aux_labels = bg_labels,
+                                               do_ratio   = True
+                                              )

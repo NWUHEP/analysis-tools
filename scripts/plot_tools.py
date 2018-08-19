@@ -25,6 +25,7 @@ dataset_dict = dict(
                     ttbar    = ['ttbar_inclusive'], #'ttbar_lep', 'ttbar_semilep',
                     t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
+                    zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'], 
                     zjets    = ['zjets_m-50',  'zjets_m-10to50', 
                                 'z1jets_m-50', 'z1jets_m-10to50', 
                                 'z2jets_m-50', 'z2jets_m-10to50', 
@@ -176,34 +177,21 @@ def get_data_and_weights(dataframes, feature, labels, condition):
 
     return data, weights
 
-def set_new_tdr():
-    plt.style.use('default')
-    plt.rcParams['font.size']         = 18
-    #plt.rcParams['font.family']       = 'serif'
-    #plt.rcParams['font.serif']        = 'Ubuntu'
-    #plt.rcParams['font.monospace']    = 'Ubuntu Mono'
-    #plt.rcParams['mathtext.fontset']  = 'custom'
-    #plt.rcParams['mathtext.sf']       = 'Ubuntu'
-
-    plt.rcParams['axes.labelsize']    = 20
-    plt.rcParams['xtick.labelsize']   = 18
-    plt.rcParams['ytick.labelsize']   = 18
-    plt.rcParams['figure.titlesize']  = 20
-    plt.rcParams['figure.figsize']    = (10, 10)
-    plt.rcParams['legend.fontsize']   = 20
-    plt.rcParams['legend.numpoints']  = 1
-
 def set_default_style():
     import matplotlib
     np.set_printoptions(precision=3)
     matplotlib.style.use('default')
-    params = {'legend.fontsize': 14,
-              'axes.labelsize': 14,
-              'figure.figsize': (8, 8),
+    params = {
               'axes.facecolor': 'white',
               'axes.titlesize':'x-large',
-              'xtick.labelsize':12,
-              'ytick.labelsize':12,
+              'axes.labelsize'    : 20,
+              'xtick.labelsize'   : 18,
+              'ytick.labelsize'   : 18,
+              'figure.titlesize'  : 20,
+              'figure.figsize'    : (10, 10),
+              'legend.fontsize'   : 20,
+              'legend.numpoints'  : 1,
+              'font.serif': 'Helvetica'
               }
     matplotlib.rcParams.update(params)
 
@@ -307,7 +295,7 @@ class DataManager():
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
 
-                if dataset.split('_')[0] == 'zjets_alt':
+                if label == 'zjets_alt':
                     scale *= df.gen_weight
                     neg_count = self._event_counts[dataset][9]
                     scale /= init_count - 2*neg_count
@@ -396,7 +384,7 @@ class DataManager():
             for dataset in dataset_names:
                 df = dataframes[dataset]
                 if condition != '' and condition != 'preselection':
-                    df = df.query(condition)
+                    df = df.query(condition).copy()
 
                 if mc_scale:
                     n     = df.weight.sum()
@@ -442,14 +430,20 @@ class PlotManager():
                  output_path    = 'plots',
                  file_ext       = 'png'
                  ):
+        # required
         self._dm             = data_manager
         self._features       = features
         self._stack_labels   = [l for l in stack_labels if l in data_manager._dataframes.keys()]
+
+        # optional
         self._overlay_labels = overlay_labels
         self._top_overlay    = top_overlay
         self._output_path    = output_path
         self._file_ext       = file_ext
         self._initialize_colors()
+
+    def set_output_path(self, new_path):
+        self._output_path = new_path
 
     def _initialize_colors(self):
         lut = self._dm._lut_datasets
@@ -518,11 +512,11 @@ class PlotManager():
                                         )
 
                 ### Need to histogram the stack with the square of the weights to get the errors ### 
-                stack_noscale = np.histogram(np.concatenate(stack_data),
-                                             bins    = int(lut_entry.n_bins),
-                                             range   = (lut_entry.xmin, lut_entry.xmax),
-                                             weights = np.concatenate(stack_weights)**2
-                                            )[0] 
+                stack_noscale, _ = np.histogram(np.concatenate(stack_data),
+                                                bins    = int(lut_entry.n_bins),
+                                                range   = (lut_entry.xmin, lut_entry.xmax),
+                                                weights = np.concatenate(stack_weights)**2
+                                               )
                 stack_sum = stack[-1] if len(stack_data) > 1 else stack
                 stack_x   = (bins[1:] + bins[:-1])/2.
                 stack_err = np.sqrt(stack_noscale)
@@ -740,57 +734,101 @@ class PlotManager():
             plt.close()
 
 
-    def make_conditional_overlays(self, labels, features, conditions, 
-                                  bg_labels   = None, 
-                                  legend      = None,
-                                  do_data     = False,
-                                  do_cms_text = True,
-                                  do_stacked  = False
+    def make_conditional_overlays(self, features, labels, conditions, legend, c_colors,     
+                                  cut = '', 
+                                  aux_labels  = [], 
+                                  do_data     = True,
+                                  do_ratio    = True,
+                                  do_stacked  = True,
+                                  do_cms_text = False
                                  ):
+        '''
+        Make overlays while combining and redividing samples based on
+        conditional input.  For example, two samples can be combined into a
+        single sample that can be successively split based on a list of
+        conditions.
+        '''
 
-        ### get the samples to be split conditionally ###
-        df_combined = self._dm.get_dataframes(labels, concat=True)
-        df_split    = [df_combined.query(c) for c in conditions]
+        # start with auxiliary samples
+        df_model = [self._dm.get_dataframe(l, cut) for l in aux_labels]
 
-        ### get the background data ###
-        if bg_labels is not None:
-            df_split.append(self._dm.get_dataframes(bg_labels, concat=True))
-            df_split = df_split[::-1]
+        # combine target datasets and split on conditions
+        df_combined = self._dm.get_dataframes(labels, concat=True, condition=cut)
+        df_combined = [df_combined.query(c) for c in conditions]
+        sort_ix = np.argsort([df.shape[0] for df in df_combined])
+        df_model.extend([df_combined[ix] for ix in sort_ix])
 
         if do_data:
-            df_data = self._dm.get_dataframe('data')
+            df_data = self._dm.get_dataframe('data', condition=cut)
+
+        # initialize legend text
+        legend_text = [self._dm._lut_datasets.loc[l].text for l in aux_labels]
+        legend_text.extend([legend[ix] for ix in sort_ix])
+
+        # get colors
+        colors = [self._dm._lut_datasets.loc[l].color for l in aux_labels]
+        colors.extend([c_colors[ix] for ix in sort_ix])
 
         for feature in tqdm(features, 
-                            desc       = 'Plotting',
+                            desc       = 'plotting...',
                             unit_scale = True,
                             ncols      = 75,
-                            total      = len(features
-                           )):
+                            total      = len(features)
+                            ):
             if feature not in self._features:
                 print('{0} not in features.')
                 continue
 
-            fig, ax   = plt.subplots(1, 1)
+            ### initialize figure ###
+            if do_ratio:
+                fig, axes = plt.subplots(2, 1, figsize=(10, 10), sharex=True, gridspec_kw={'height_ratios':[3,1]})
+                fig.subplots_adjust(hspace=0)
+                ax = axes[0]
+            else:
+                fig, ax   = plt.subplots(1, 1, figsize=(10, 7))
+
             lut_entry = self._dm._lut_features.loc[feature]
-            data      = [df[feature].values for df in df_split]
-            weights   = [df['weight'].values for df in df_split]
-            hist, bins, _ = ax.hist(data,
-                                    bins      = lut_entry.n_bins,
+            hist_data = [df[feature].values for df in df_model]
+            weights   = [df['weight'].values for df in df_model]
+            hist, bins, _ = ax.hist(hist_data,
+                                    bins      = int(lut_entry.n_bins),
                                     range     = (lut_entry.xmin, lut_entry.xmax),
-                                    #color     = ['k', 'r'],
+                                    color     = colors,
                                     alpha     = 0.9,
                                     histtype  = 'stepfilled' if do_stacked else 'step',
                                     linewidth = 2.,
                                     weights   = weights,
-                                    normed    = not do_stacked,
-                                    stacked   = do_stacked
+                                    stacked   = True
                                    )
+
+            # calculate statisitical variance for each bin
+            hvar, _ = np.histogram(np.concatenate(hist_data),
+                                   bins    = int(lut_entry.n_bins),
+                                   range   = (lut_entry.xmin, lut_entry.xmax),
+                                   weights = np.concatenate(weights)**2
+                                  ) 
+            x = (bins[1:] + bins[:-1])/2.
+            herr = np.sqrt(hvar)
+            eb = ax.errorbar(x, hist[-1], yerr=herr, 
+                             fmt        = 'none',
+                             ecolor     = 'k',
+                             capsize    = 0,
+                             elinewidth = 10,
+                             label = '_nolegend_',
+                             alpha      = 0.25
+                            )
+
+            if do_ratio:
+                denominator = (x, hist[-1], herr)
 
             if do_data:
                 x, y, yerr = hist_to_errorbar(df_data[feature], 
                                               nbins = lut_entry.n_bins,
                                               xlim  = (lut_entry.xmin, lut_entry.xmax)
                                              )
+                if do_ratio:
+                    numerator = (x, y, yerr)
+
                 x, y, yerr = x[y>0], y[y>0], yerr[y>0]
                 eb = ax.errorbar(x, y, yerr=yerr, 
                               fmt        = 'ko',
@@ -798,33 +836,49 @@ class PlotManager():
                               elinewidth = 2
                              )
 
-
             ### make the legend ###
             #legend_text = cuts # Need to do something with this
-            if legend == None:
-                legend_text = conditions
-            else:
-                legend_text = legend
-            ax.legend(legend_text[::-1] + ['data'])
+            ax.legend(legend_text[::-1] + ['data'], loc=1)
 
             ### labels and x limits ###
-            ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
             ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
             ax.grid()
+
+            ### labels and x limits ###
+            if do_ratio and do_data:
+                ### calculate ratios 
+                mask = (numerator[1] > 0) & (denominator[1] > 0)
+                 
+                ratio = numerator[1][mask]/denominator[1][mask]
+                error = ratio*np.sqrt(numerator[2][mask]**2/numerator[1][mask]**2 + denominator[2][mask]**2/denominator[1][mask]**2)
+                axes[1].errorbar(numerator[0][mask], ratio, yerr=error,
+                                 fmt = 'ko',
+                                 capsize = 0,
+                                 elinewidth = 2
+                                )
+                axes[1].plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
+                axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
+                axes[1].set_ylabel(r'Data/MC')
+                axes[1].set_ylim((0.5, 1.49))
+                axes[1].grid()
+
+            else:
+                ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
+
 
             ### Add lumi text ###
             #add_lumi_text(ax)
 
             ### Make output directory if it does not exist ###
-            make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
-            make_directory('{0}/log/{1}'.format(self._output_path, lut_entry.category), False)
+            make_directory(f'{self._output_path}/linear/{lut_entry.category}', False)
+            make_directory(f'{self._output_path}/log/{lut_entry.category}', False)
 
-            plt.tight_layout()
             ### Save output plot ###
+            plt.tight_layout()
             ### linear scale ###
             y_max = np.max(hist)
-            ax.set_ylim((0., 1.3*y_max))
+            ax.set_ylim((0., 1.5*y_max))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 
                                                         feature, 
@@ -833,7 +887,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim((0.1*np.min(hist), 10.*y_max))
+            ax.set_ylim((0.05, 10.*y_max))
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 
