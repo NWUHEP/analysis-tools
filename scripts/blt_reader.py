@@ -125,10 +125,10 @@ def fill_event_vars(tree, dataset):
                    )
 
     out_dict['gen_weight'] = tree.genWeight
-    if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
-        out_dict['weight'] = 0.
-    else:
-        out_dict['weight'] = tree.eventWeight
+    #if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
+    #    out_dict['weight'] = 0.
+    #else:
+    #    out_dict['weight'] = tree.eventWeight
 
     if dataset == 'ttbar_inclusive':
         out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
@@ -516,8 +516,8 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
 
     for i in tqdm(entries, 
                   position     = job_id[0],
+                  dynamic_ncols = True,
                   desc         = f'[{selection}|{dataset}] {job_id[1]+1}/{job_id[2]} |'
-                  dyname_ncols = True
                   ):
         tree.GetEntry(i)
         entry = {}

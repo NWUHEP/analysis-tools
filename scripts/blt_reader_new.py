@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     ### Configuration ###
     selections  = ['mumu', 'ee']#, 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    do_data     = True
+    do_data     = False
     do_mc       = True
     do_syst     = False
     period      = 2016
@@ -84,7 +84,11 @@ if __name__ == '__main__':
                         #'ttbar_inclusive_herwig'
                         ]
 
-    dataset_list.append('ttbar_lep')
+    #dataset_list.append('ttbar_lep')
+    dataset_list = ['zjets_m-50_alt', 
+                    'zjets_m-50', 'z1jets_m-50', 'z2jets_m-50', 'z3jets_m-50', 'z4jets_m-50',
+                    'muon_2016H'
+                    ]
 
     ### Initialize multiprocessing queue and processes
     pool = Pool(processes = min(12, args.nprocesses))
@@ -108,7 +112,7 @@ if __name__ == '__main__':
 
             # start pool process
             event_ranges = [i for i in range(0, n_entries, args.nevents)]
-            event_ranges[-1] = n_entries
+            event_ranges.append(n_entries)
             tmp_path = f'{output_path}/{dataset}'
             pt.make_directory(tmp_path, clear=True)
             for i, ievt in enumerate(event_ranges[:-1]):
@@ -125,7 +129,9 @@ if __name__ == '__main__':
 
     # concatenate pickle files when everything is done
     print('Concatenating output files')
-    for selection, dataset in tqdm(product(selections, dataset_list)):
+    for selection, dataset in tqdm(product(selections, dataset_list), 
+                                   total = len(selections)*len(dataset_list)
+                                   ):
         input_path = f'{args.output}/{selection}_{period}/{dataset}'
         file_list = os.listdir(input_path)
         if len(file_list) == 0: 
