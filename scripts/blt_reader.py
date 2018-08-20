@@ -15,13 +15,6 @@ import scripts.plot_tools as pt
 Script for getting blt data out of ROOT files and into CSV format.
 '''
 
-def make_directory(filePath, clear=True):
-    if not os.path.exists(filePath):
-        os.system('mkdir -p '+filePath)
-
-    if clear and len(os.listdir(filePath)) != 0:
-        os.system('rm '+filePath+'/*')
-
 def calculate_cos_theta(ref_p4, boost_p4, target_p4):
     '''
     !!! THIS NEED TO BE FIXED SO THAT THE INPUTS ARE NOT MODIFIED !!!
@@ -87,7 +80,7 @@ def calculate_zeta_vars(lep1_p4, lep2_p4, met_p2):
     
     return p_vis_zeta, p_miss_zeta
 
-def fill_event_vars(tree):
+def fill_event_vars(tree, dataset):
 
     out_dict = dict(
                     run_number     = tree.runNumber,
@@ -515,12 +508,20 @@ def fill_lepton4j_vars(tree):
 
     return out_dict
 
-def fill_ntuple(tree, name, selection):
-    n = tree.GetEntriesFast()
-    for i in range(n,):
+def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
+    if type(event_range) == None:
+        entries = range(tree.GetEntriesFast())
+    else:
+        entries = range(event_range[0], event_range[-1])
+
+    for i in tqdm(entries, 
+                  position     = job_id[0],
+                  desc         = f'[{selection}|{dataset}] {job_id[1]+1}/{job_id[2]} |'
+                  dyname_ncols = True
+                  ):
         tree.GetEntry(i)
         entry = {}
-        entry.update(fill_event_vars(tree))
+        entry.update(fill_event_vars(tree, dataset))
 
         if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau']:
             entry.update(fill_jet_vars(tree))
@@ -537,22 +538,20 @@ def fill_ntuple(tree, name, selection):
 
         yield entry
 
-def pickle_ntuple(tree, dataset_name, output_path, selection):
+def pickle_ntuple(tree, dataset, output_path, selection):
 
     # get the tree, convert to dataframe, and save df to pickle
-    ntuple = fill_ntuple(tree, dataset_name, selection)
+    ntuple = fill_ntuple(tree, dataset, selection)
     df     = pd.DataFrame(ntuple)
     df     = df.query('weight != 0')
     df.to_pickle(f'{output_path}/ntuple_{dataset_name}.pkl')
-
-    print(f'{selection}::{dataset_name} pickled successfully')
 
 if __name__ == '__main__':
 
     ### Configuration ###
     infile      = 'local_data/bltuples/output_z_cr.root'
-    output_dir  = 'local_data/flatuples/z_cr_alt'
-    selections  = ['mumu', 'ee']#, 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    output_dir  = 'local_data/flatuples/z_cr'
+    selections  = ['mumu']#, 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     do_data     = True
     do_mc       = True
     do_syst     = False
@@ -560,9 +559,9 @@ if __name__ == '__main__':
 
     # configure datasets to run over
     dataset_list = []
-    data_labels  = ['muon', 'electron']
+    data_labels  = ['muon']#, 'electron']
     #mc_labels    = ['zjets', 'ttbar', 'diboson', 't', 'wjets']
-    mc_labels    = ['zjets', 'ttbar', 'zjets_alt']
+    mc_labels    = ['zjets', 'zjets_alt']
     if do_data:
         dataset_list.extend(d for l in data_labels for d in pt.dataset_dict[l])
     if do_mc:
@@ -578,7 +577,7 @@ if __name__ == '__main__':
                         #'ttbar_inclusive_herwig'
                         ]
 
-    dataset.append('ttbar_lep')
+    dataset_list.append('ttbar_lep')
 
     ### Initialize multiprocessing queue and processes
     processes   = {}
@@ -586,22 +585,22 @@ if __name__ == '__main__':
     event_count = {}
     for selection in selections:
         output_path = f'{output_dir}/{selection}_{period}'
-        make_directory(output_path, clear=True)
+        pt.make_directory(output_path, clear=True)
         for dataset in dataset_list:
 
-            froot = r.TFile(infile)
-            files_list.append(froot)
+            root_file = r.TFile(infile)
+            files_list.append(root_file)
 
-            #ecount = froot.Get(f'{selection}/TotalEvents_{selection}_{dataset}')
-            ecount = froot.Get(f'TotalEvents_{dataset}')
+            #ecount = root_file.Get(f'{selection}/TotalEvents_{selection}_{dataset}')
+            ecount = root_file.Get(f'TotalEvents_{dataset}')
             if ecount:
                 event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
             else:
                 print(f'Could not find dataset {dataset} in root file...')
                 continue
 
-            #tree = froot.Get(f'{selection}/bltTree_{dataset}')
-            tree = froot.Get(f'{selection}/bltTree_{dataset}')
+            #tree = root_file.Get(f'{selection}/bltTree_{dataset}')
+            tree = root_file.Get(f'{selection}/bltTree_{dataset}')
             p = mp.Process(target=pickle_ntuple, args=(tree, dataset, output_path, selection))
             p.start()
             processes[f'{dataset}_{selection}'] = p
@@ -610,13 +609,13 @@ if __name__ == '__main__':
         if selection in ['mutau', 'mu4j', 'etau', 'e4j'] and do_data:
             for dataset in [d for l in data_labels for d in pt.dataset_dict[l]]:
 
-                froot = r.TFile(infile)
-                files_list.append(froot)
+                root_file = r.TFile(infile)
+                files_list.append(root_file)
 
                 event_count[f'{dataset}_fakes'] = 10*[1.,]
 
-                #tree = froot.Get(f'{selection}/bltTree_{dataset}')
-                tree = froot.Get(f'{selection}_fakes/bltTree_{dataset}')
+                #tree = root_file.Get(f'{selection}/bltTree_{dataset}')
+                tree = root_file.Get(f'{selection}_fakes/bltTree_{dataset}')
                 p = mp.Process(target=pickle_ntuple, 
                                args=(tree, f'{dataset}_fakes', output_path, selection))
                 p.start()
