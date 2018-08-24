@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['diboson', 'zjets', 'wjets', 't', 'ttbar']
+    model_labels = ['diboson', 'zjets_alt', 'wjets', 't', 'ttbar']
 
     if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
@@ -119,15 +119,19 @@ if __name__ == '__main__':
     else_condition = 'not (' + 'or '.join(conditions) + ')'
     conditions.append(else_condition)
 
-    bg_labels = ['wjets', 'diboson', 'zjets']
-    if selection in ['mu4j']:#, 'e4j']: 
+    bg_labels = ['wjets', 'diboson', 'zjets_alt']
+    if selection in ['mu4j', 'e4j']: 
         bg_labels = ['fakes'] + bg_labels
     elif selection in ['mutau', 'etau']:
         bg_labels = ['fakes_ss'] + bg_labels
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
 
-    for i, bcut in enumerate(tqdm(btag_cuts)):
+    for i, bcut in enumerate(tqdm(btag_cuts,
+                             desc       = 'plotting jet categories...',
+                             unit_scale = True,
+                             ncols      = 75,
+                             )):
         if selection in ['e4j', 'mu4j'] and i == 0:
             continue
 

@@ -40,6 +40,9 @@ dataset_dict = dict(
                     fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes', 
                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes', 
                                 'muon_2016H_fakes'
+                                'electron_2016B_fakes', 'electron_2016C_fakes', 'electron_2016D_fakes', 
+                                'electron_2016E_fakes', 'electron_2016F_fakes', 'electron_2016G_fakes', 
+                                'electron_2016H_fakes'
                                 ],
                     fakes_ss = ['fakes_ss']
                     )
@@ -71,6 +74,15 @@ cuts = dict(
             mu4j  = 'lepton1_pt > 25',
             )
 
+# WIP
+categories = dict(
+                  'cat_1': ('n_jets >= 2 and n_bjets == 1', ['etau', 'mutau']),
+                  'cat_2': ('n_jets == 1 and n_bjets == 0', ['etau', 'mutau']),
+                  'cat_3': ('n_jets == 1 and n_bjets == 1', ['etau', 'mutau']),
+                  'cat_4': ('n_jets == 1 and n_bjets >= 2', ['etau', 'mutau']),
+                  'cat_5': ('n_jets == 2 and n_bjets >= 2', ['etau', 'mutau']),
+                  )
+
 def make_directory(file_path, clear=True):
     if not os.path.exists(file_path):
         os.system('mkdir -p '+file_path)
@@ -101,17 +113,16 @@ def calculate_efficiency(num, den, bins, alpha=0.317):
     
     return x, eff, x_err, eff_err
 
-def hist_to_errorbar(data, nbins, xlim, normed=False):
+def hist_to_errorbar(data, bins, normed=False):
     '''
     Wrapper for converting a histogram to data for drawing markers with errorbars.
 
     Parameters:
     ===========
     data: data to be histogrammed
-    nbins: number of bins
-    xlim: tuple specifying minimum and maximum values of x axis
+    bins: histogram binning
     '''
-    y, bins = np.histogram(data, bins=int(nbins), range=xlim)
+    y, _ = np.histogram(data, bins=bins)
     x = (bins[1:] + bins[:-1])/2.
     yerr = np.sqrt(y)
 
@@ -184,12 +195,12 @@ def set_default_style():
     params = {
               'axes.facecolor': 'white',
               'axes.titlesize':'x-large',
-              'axes.labelsize'    : 20,
-              'xtick.labelsize'   : 18,
-              'ytick.labelsize'   : 18,
+              'axes.labelsize'    : 19,
+              'xtick.labelsize'   : 16,
+              'ytick.labelsize'   : 16,
               'figure.titlesize'  : 20,
-              'figure.figsize'    : (10, 10),
-              'legend.fontsize'   : 20,
+              'figure.figsize'    : (8, 8),
+              'legend.fontsize'   : 18,
               'legend.numpoints'  : 1,
               'font.serif': 'Helvetica'
               }
@@ -564,10 +575,8 @@ class PlotManager():
                         y_max = hists.max()
                     #legend_handles.append(p)
                 elif overlay_style == 'errorbar':
-                    x, y, yerr = hist_to_errorbar(overlay_data,
-                                                  nbins = lut_entry.n_bins,
-                                                  xlim  = (lut_entry.xmin, lut_entry.xmax)
-                                                 )
+                    bins = np.arange(lut_entry.xmin, lut_entry.xmax, (lut_entry.xmax - lut_entry.xmin)/lut_entry.n_bins)
+                    x, y, yerr = hist_to_errorbar(overlay_data, bins)
                     if do_ratio:
                         numerator = (x, y, yerr)
 
@@ -582,10 +591,8 @@ class PlotManager():
             ### datapoints plus errors
             if plot_data:
                 data, _ = get_data_and_weights(dataframes, feature, ['data'], lut_entry.condition)
-                x, y, yerr = hist_to_errorbar(data, 
-                                              nbins = lut_entry.n_bins,
-                                              xlim  = (lut_entry.xmin, lut_entry.xmax)
-                                             )
+                bins = np.arange(lut_entry.xmin, lut_entry.xmax, (lut_entry.xmax - lut_entry.xmin)/lut_entry.n_bins)
+                x, y, yerr = hist_to_errorbar(data, bins)
                 if do_ratio:
                     numerator = (x, y, yerr)
 
@@ -779,6 +786,7 @@ class PlotManager():
                 print('{0} not in features.')
                 continue
 
+
             ### initialize figure ###
             if do_ratio:
                 fig, axes = plt.subplots(2, 1, figsize=(10, 10), sharex=True, gridspec_kw={'height_ratios':[3,1]})
@@ -803,8 +811,7 @@ class PlotManager():
 
             # calculate statisitical variance for each bin
             hvar, _ = np.histogram(np.concatenate(hist_data),
-                                   bins    = int(lut_entry.n_bins),
-                                   range   = (lut_entry.xmin, lut_entry.xmax),
+                                   bins    = bins,
                                    weights = np.concatenate(weights)**2
                                   ) 
             x = (bins[1:] + bins[:-1])/2.
@@ -822,10 +829,7 @@ class PlotManager():
                 denominator = (x, hist[-1], herr)
 
             if do_data:
-                x, y, yerr = hist_to_errorbar(df_data[feature], 
-                                              nbins = lut_entry.n_bins,
-                                              xlim  = (lut_entry.xmin, lut_entry.xmax)
-                                             )
+                x, y, yerr = hist_to_errorbar(df_data[feature], bins)
                 if do_ratio:
                     numerator = (x, y, yerr)
 
@@ -876,6 +880,7 @@ class PlotManager():
 
             ### Save output plot ###
             plt.tight_layout()
+
             ### linear scale ###
             y_max = np.max(hist)
             ax.set_ylim((0., 1.5*y_max))

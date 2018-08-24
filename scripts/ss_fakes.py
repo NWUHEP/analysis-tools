@@ -11,7 +11,7 @@ import scripts.plot_tools as pt
 
 if __name__ == '__main__':
 
-    pt.set_new_tdr()
+    pt.set_default_style()
 
     # input arguments
     parser = argparse.ArgumentParser(description='Produce data/MC overlays')
@@ -21,7 +21,7 @@ if __name__ == '__main__':
                         )
     parser.add_argument('-s', '--selection',
                         help = 'selection type',
-                        default = 'mumu',
+                        default = 'mutau',
                         type = str
                         )
     parser.add_argument('-p', '--period',
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    sim_labels = ['diboson', 'wjets', 'zjets', 't', 'ttbar']
+    sim_labels = ['diboson', 'wjets', 'zjets_alt', 't', 'ttbar']
 
     ### Get dataframes with features for each of the datasets ###
     input_dir = f'{args.input}/{args.selection}_{args.period}'

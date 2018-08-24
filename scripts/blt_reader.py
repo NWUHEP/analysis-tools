@@ -98,18 +98,18 @@ def fill_event_vars(tree, dataset):
                     n_bjets        = tree.nBJets,
 
                     # jet counting for systematics
-                    #n_jets_jes_up       = tree.nJetsJESUp,
-                    #n_jets_jes_down     = tree.nJetsJESDown,
-                    #n_jets_jer_up       = tree.nJetsJERUp,
-                    #n_jets_jer_down     = tree.nJetsJERDown,
-                    #n_bjets_jes_up      = tree.nBJetsJESUp,
-                    #n_bjets_jes_down    = tree.nBJetsJESDown,
-                    #n_bjets_jer_up      = tree.nBJetsJERUp,
-                    #n_bjets_jer_down    = tree.nBJetsJERDown,
-                    #n_bjets_btag_up     = tree.nBJetsBTagUp,
-                    #n_bjets_btag_down   = tree.nBJetsBTagDown,
-                    #n_bjets_mistag_up   = tree.nBJetsMistagUp,
-                    #n_bjets_mistag_down = tree.nBJetsMistagDown,
+                    n_jets_jes_up       = tree.nJetsJESUp,
+                    n_jets_jes_down     = tree.nJetsJESDown,
+                    n_jets_jer_up       = tree.nJetsJERUp,
+                    n_jets_jer_down     = tree.nJetsJERDown,
+                    n_bjets_jes_up      = tree.nBJetsJESUp,
+                    n_bjets_jes_down    = tree.nBJetsJESDown,
+                    n_bjets_jer_up      = tree.nBJetsJERUp,
+                    n_bjets_jer_down    = tree.nBJetsJERDown,
+                    n_bjets_btag_up     = tree.nBJetsBTagUp,
+                    n_bjets_btag_down   = tree.nBJetsBTagDown,
+                    n_bjets_mistag_up   = tree.nBJetsMistagUp,
+                    n_bjets_mistag_down = tree.nBJetsMistagDown,
  
                     met_mag        = tree.met,
                     met_phi        = tree.metPhi,
@@ -125,10 +125,11 @@ def fill_event_vars(tree, dataset):
                    )
 
     out_dict['gen_weight'] = tree.genWeight
-    #if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
-    #    out_dict['weight'] = 0.
-    #else:
-    #    out_dict['weight'] = tree.eventWeight
+    out_dict['n_partons']  = tree.nPartons
+    if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
+        out_dict['weight'] = 0.
+    else:
+        out_dict['weight'] = tree.eventWeight
 
     if dataset == 'ttbar_inclusive':
         out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
@@ -509,15 +510,18 @@ def fill_lepton4j_vars(tree):
     return out_dict
 
 def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
+
     if type(event_range) == None:
-        entries = range(tree.GetEntriesFast())
+        entries = range(0, tree.GetEntriesFast())
     else:
-        entries = range(event_range[0], event_range[-1])
+        entries = range(event_range[0], event_range[1], 1)
 
     for i in tqdm(entries, 
-                  position     = job_id[0],
-                  dynamic_ncols = True,
-                  desc         = f'[{selection}|{dataset}] {job_id[1]+1}/{job_id[2]} |'
+                  position = job_id[0],
+                  desc     = f'[{selection}|{dataset}] {job_id[1]+1}/{job_id[2]} |',
+                  ncols    = 0,
+                  ascii    = True,
+                  #leave    = True
                   ):
         tree.GetEntry(i)
         entry = {}
@@ -535,7 +539,6 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
             entry.update(fill_lepton4j_vars(tree))
 
         entry.update(fill_gen_particle_vars(tree))
-
         yield entry
 
 def pickle_ntuple(tree, dataset, output_path, selection):

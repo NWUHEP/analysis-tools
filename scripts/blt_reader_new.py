@@ -23,13 +23,18 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
     root_file = r.TFile(input_file)
     tree = root_file.Get(tree_name)
     selection, dataset = tree_name.replace('bltTree_', '').split('/')
-    ntuple = br.fill_ntuple(tree, selection, dataset, event_range, 
+    if '_fakes' in selection:
+        selection = selection.replace('_fakes', '')
+
+    ntuple = br.fill_ntuple(tree, selection, dataset, 
+                            event_range = event_range, 
                             job_id = (process._identity[0], ix[0], ix[1])
                             )
-    df     = pd.DataFrame(ntuple)
-    df     = df.query('weight != 0') # remove deadweight
-    df.to_pickle(f'{output_path}/{dataset}_{ix[0]}.pkl')
-    del df
+
+    df = pd.DataFrame(ntuple)
+    df = df.query('weight != 0') # remove deadweight
+    if df.shape[0] > 0:
+        df.to_pickle(f'{output_path}/{dataset}_{ix[0]}.pkl')
     root_file.Close()
 
 if __name__ == '__main__':
@@ -45,30 +50,41 @@ if __name__ == '__main__':
                         type=str
                         )
     parser.add_argument('-p', '--nprocesses',
-                        help='number of concurrent processes (will be less than number of available cores)',
-                        default=8,
-                        type=int
+                        help    = 'number of concurrent processes (will be less than number of available cores)',
+                        default = 8,
+                        type    = int
                         )
     parser.add_argument('-n', '--nevents',
-                        help='number of events to run per process',
-                        default=100000,
-                        type=int
+                        help    = 'number of events to run per process',
+                        default = 100000,
+                        type    = int
+                        )
+    parser.add_argument('-m', '--nmax',
+                        help    = 'maximum number of events to be processed',
+                        default = sys.maxsize,
+                        type    = int
+                        )
+    parser.add_argument('-a', '--append',
+                        help    = 'Run in append mode (existing datasets will be overwritten)',
+                        default = True,
+                        type    = bool
                         )
     args = parser.parse_args()
 
 
     ### Configuration ###
-    selections  = ['mumu', 'ee']#, 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    do_data     = False
+    selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    #selections  = ['etau']
+    do_data     = True
     do_mc       = True
     do_syst     = False
     period      = 2016
 
     # configure datasets to run over
+    data_labels  = ['muon', 'electron']
+    mc_labels    = ['zjets_alt', 'ttbar', 'diboson', 't', 'wjets']
+
     dataset_list = []
-    data_labels  = ['muon']#, 'electron']
-    #mc_labels    = ['zjets', 'ttbar', 'diboson', 't', 'wjets']
-    mc_labels    = ['zjets_alt', 'zjets']
     if do_data:
         dataset_list.extend(d for l in data_labels for d in pt.dataset_dict[l])
     if do_mc:
@@ -84,59 +100,122 @@ if __name__ == '__main__':
                         #'ttbar_inclusive_herwig'
                         ]
 
-    #dataset_list.append('ttbar_lep')
-    dataset_list = ['zjets_m-50_alt', 
-                    'zjets_m-50', 'z1jets_m-50', 'z2jets_m-50', 'z3jets_m-50', 'z4jets_m-50',
-                    'muon_2016H'
-                    ]
+    #dataset_list = [
+    #                #'zjets_m-50_alt', 'zjets_m-50', 
+    #                #'z1jets_m-50', 'z2jets_m-50', 'z3jets_m-50', 'z4jets_m-50',
+    #                #'ttbar_lep', 
+    #                #'muon_2016H'
+    #                ]
 
     ### Initialize multiprocessing queue and processes
     pool = Pool(processes = min(12, args.nprocesses))
     for selection in selections:
         output_path = f'{args.output}/{selection}_{period}'
-        pt.make_directory(output_path, clear=True)
+        pt.make_directory(output_path, clear=(not args.append))
         event_count = {}
         for dataset in dataset_list:
+
+            # get the root file and check that the tree exists
             root_file = r.TFile(args.input)
+            if not root_file.Get(selection).GetListOfKeys().Contains(f'bltTree_{dataset}'):
+                continue
+
+            # get the tree and make sure that it's not empty
             tree_name = f'{selection}/bltTree_{dataset}'
             tree      = root_file.Get(f'{selection}/bltTree_{dataset}')
             n_entries  = tree.GetEntriesFast()
+            if n_entries == 0: 
+                continue
 
-            ecount    = root_file.Get(f'TotalEvents_{dataset}')
+            # get event counts
+            ecount = root_file.Get(f'TotalEvents_{dataset}')
             if ecount:
                 event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
+                event_count[dataset][4] = n_entries
             else:
                 print(f'Could not find dataset {dataset} in root file...')
                 continue
             root_file.Close()
 
+            # split dataset up according to configuration
+            if dataset.split('_')[0] not in ['electron', 'muon']:
+                max_event = min(n_entries, args.nmax)
+            else:
+                max_event = n_entries
+
+            event_ranges = [i for i in range(0, max_event, args.nevents)]
+            if event_ranges[-1] < max_event:
+                event_ranges.append(max_event)
+
             # start pool process
-            event_ranges = [i for i in range(0, n_entries, args.nevents)]
-            event_ranges.append(n_entries)
             tmp_path = f'{output_path}/{dataset}'
             pt.make_directory(tmp_path, clear=True)
             for i, ievt in enumerate(event_ranges[:-1]):
                 result = pool.apply_async(pickle_ntuple, 
-                              args=(args.input, tree_name, tmp_path, (ievt, event_ranges[i+1]), (i, len(event_ranges)-1))
+                                          args = (args.input, tree_name, tmp_path, 
+                                                  (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
+                                                 )
                                           )
             #print(result.get(timeout=1))
-            
-        df = pd.DataFrame(event_count)
-        df.to_csv(f'{output_path}/event_counts.csv')
+
+        # special case: fakes
+        if selection in ['mutau', 'mu4j', 'etau', 'e4j'] and do_data:
+            for dataset in [d for l in data_labels for d in pt.dataset_dict[l]]:
+                root_file = r.TFile(args.input)
+                tree_name = f'{selection}_fakes/bltTree_{dataset}'
+                tree      = root_file.Get(tree_name)
+                n_entries  = tree.GetEntriesFast()
+                event_count[f'{dataset}_fakes'] = 10*[1.,]
+                root_file.Close()
+
+                # split dataset up according to configuration
+                if dataset.split('_')[0] not in ['electron', 'muon']:
+                    max_event = min(n_entries, args.nmax)
+                else:
+                    max_event = n_entries
+
+                event_ranges = [i for i in range(0, max_event, args.nevents)]
+                if event_ranges[-1] < max_event:
+                    event_ranges.append(max_event)
+
+                # start pool process
+                tmp_path = f'{output_path}/{dataset}_fakes'
+                pt.make_directory(tmp_path, clear=True)
+                for i, ievt in enumerate(event_ranges[:-1]):
+                    result = pool.apply_async(pickle_ntuple, 
+                                              args = (args.input, tree_name, tmp_path, 
+                                                      (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
+                                                     )
+                                              )
+
+        df_ecounts = pd.DataFrame(event_count)
+        file_name = f'{output_path}/event_counts.csv'
+        if args.append and os.path.isfile(file_name):
+            df_ecounts_old = pd.read_csv(file_name)
+            df_ecounts_old = df_ecounts_old.drop([c for c in df_ecounts_old.columns if c in df_ecounts.columns], axis=1)
+            df_ecounts = pd.concat([df_ecounts, df_ecounts_old], axis=1)
+            df_ecounts.to_csv(file_name)
+        else:
+            df_ecounts.to_csv(file_name)
 
     pool.close()
     pool.join()
 
     # concatenate pickle files when everything is done
-    print('Concatenating output files')
-    for selection, dataset in tqdm(product(selections, dataset_list), 
-                                   total = len(selections)*len(dataset_list)
-                                   ):
-        input_path = f'{args.output}/{selection}_{period}/{dataset}'
-        file_list = os.listdir(input_path)
-        if len(file_list) == 0: 
-            continue
-        df_concat = pd.concat([pd.read_pickle(f'{input_path}/{filename}') for filename in file_list])
-        df_concat.to_pickle(f'{args.output}/{selection}_{period}/ntuple_{dataset}.pkl')
+    for selection in tqdm(selections, 
+                          desc     = 'concatenating input files...',
+                          total    = len(selections)*len(dataset_list),
+                          position = args.nprocesses+1
+                          ):
+        input_path = f'{args.output}/{selection}_{period}'
+        for dataset in os.listdir(input_path):
+            dataset_path = f'{input_path}/{dataset}'
+            if not os.path.isdir(dataset_path):
+                continue
+
+            file_list = os.listdir(dataset_path)
+            if len(file_list) > 0: 
+                df_concat = pd.concat([pd.read_pickle(f'{dataset_path}/{filename}') for filename in file_list])
+                df_concat.to_pickle(f'{input_path}/ntuple_{dataset}.pkl')
         
-        shutil.rmtree(input_path) 
+            shutil.rmtree(dataset_path) 

@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
         # category specific parameters
         labels = ['ttbar', 't', 'wjets', 'zjets', 'diboson']
-        if selection == 'mu4j':# or selection == 'e4j':
+        if selection == 'mu4j' or selection == 'e4j':
             dataset_names = datasets + pt.dataset_dict['fakes']
             labels += ['fakes']
         elif selection == 'etau' or selection == 'mutau':
