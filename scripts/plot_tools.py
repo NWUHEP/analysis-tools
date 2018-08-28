@@ -3,7 +3,7 @@
 '''
 
 import os
-from collections import OrderedDict
+from collections import namedtuple
 
 import numpy as np
 import pandas as pd
@@ -59,28 +59,37 @@ selection_dataset_dict = dict(
 
 cuts = dict(
             ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 10 \
-                     and dilepton1_mass > 12 \
-                     and (dilepton1_mass > 101 or dilepton1_mass < 81)',
+                     and dilepton1_mass > 12', 
             mumu  = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
-                     and dilepton1_mass > 12 \
-                     and (dilepton1_mass > 101 or dilepton1_mass < 81)',
+                     and dilepton1_mass > 12',
             emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 10 \
                      and dilepton1_mass > 12',
-            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 18 \
+            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 18 \
+            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
             e4j   = 'lepton1_pt > 30',
             mu4j  = 'lepton1_pt > 25',
             )
 
 # WIP
+tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 \
+               and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
+ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
+Category = namedtuple('Category', ['cut', 'selections', 'label'], verbose=False)
 categories = dict(
-                  'cat_1': ('n_jets >= 2 and n_bjets == 1', ['etau', 'mutau']),
-                  'cat_2': ('n_jets == 1 and n_bjets == 0', ['etau', 'mutau']),
-                  'cat_3': ('n_jets == 1 and n_bjets == 1', ['etau', 'mutau']),
-                  'cat_4': ('n_jets == 1 and n_bjets >= 2', ['etau', 'mutau']),
-                  'cat_5': ('n_jets == 2 and n_bjets >= 2', ['etau', 'mutau']),
+                  cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau' , ' mutau'], '$N_{j} = 0, N_{b} = 0$, W veto'),
+                  cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau' , ' mutau'], '$N_{j} = 1, N_{b} = 0$, W veto'),
+                  cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau' , ' mutau','ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$'),
+                  cat_eq1_eq1   = Category('n_jets == 1 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$'),
+                  cat_eq2_eq1   = Category('n_jets == 2 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$'),
+                  cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
+                  cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} = 2, N_{b} = 1$, Z veto'),
+                  cat_gt3_eq1   = Category('n_jets >= 3 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$'),
+                  cat_eq2_gt2   = Category('n_jets == 2 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$'),
+                  cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
+                  cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
+                  cat_gt3_gt2   = Category('n_jets >= 3 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$'),
                   )
 
 def make_directory(file_path, clear=True):
@@ -127,6 +136,17 @@ def hist_to_errorbar(data, bins, normed=False):
     yerr = np.sqrt(y)
 
     return x, y, yerr
+
+def ebar_wrapper(data, ax, bins, limits, style):
+    x, y, err = pt.hist_to_errorbar(data, bins, limits)
+    mask = y > 0.
+    x, y, err = x[mask], y[mask], err[mask]
+    ax.errorbar(x, y, yerr=err,
+                capsize = 0,
+                fmt = style,
+                elinewidth = 2,
+                markersize = 5
+                )
 
 
 def ratio_errors(num, sig_num, den, sig_den):
@@ -202,7 +222,7 @@ def set_default_style():
               'figure.figsize'    : (8, 8),
               'legend.fontsize'   : 18,
               'legend.numpoints'  : 1,
-              'font.serif': 'Helvetica'
+              'font.serif': 'Arial'
               }
     matplotlib.rcParams.update(params)
 
@@ -383,15 +403,15 @@ class DataManager():
         '''
 
         # print header
-        table = OrderedDict()
+        table = dict()
         dataset_names = [dn for dn in dataset_names if dn in self._dataframes.keys()]
-        dataframes = self.get_dataframes(dataset_names)
         for i, condition in enumerate(conditions):
             table[f'condition_{i+1}'] = []
             if not do_string:
                 table[f'error_{i+1}'] = []
 
             bg_total = [0., 0.]
+            dataframes = self.get_dataframes(dataset_names, condition = condition)
             for dataset in dataset_names:
                 df = dataframes[dataset]
                 if condition != '' and condition != 'preselection':
@@ -809,20 +829,18 @@ class PlotManager():
                                     stacked   = True
                                    )
 
-            # calculate statisitical variance for each bin
+            # calculate variance for each bin
             hvar, _ = np.histogram(np.concatenate(hist_data),
                                    bins    = bins,
                                    weights = np.concatenate(weights)**2
                                   ) 
-            x = (bins[1:] + bins[:-1])/2.
+            x = bins[:-1]
             herr = np.sqrt(hvar)
-            eb = ax.errorbar(x, hist[-1], yerr=herr, 
-                             fmt        = 'none',
-                             ecolor     = 'k',
-                             capsize    = 0,
-                             elinewidth = 10,
-                             label = '_nolegend_',
-                             alpha      = 0.25
+            ax.fill_between(x, hist[-1]-herr, hist[-1]+herr,
+                            color = 'k',
+                            step = 'post',
+                            alpha = 0.25,
+                            label = 'MC error',
                             )
 
             if do_ratio:
@@ -892,7 +910,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim((0.05, 10.*y_max))
+            ax.set_ylim((0.1*np.min(hist), 15.*y_max))
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 

@@ -1,4 +1,5 @@
 
+
 import pickle
 import numpy as np
 import pandas as pd
@@ -102,14 +103,14 @@ def theory_systematics(df_nominal, dm, feature, bins, sys_type, cut):
     return h_up, h_down
 
 class SystematicTemplateGenerator():
-    def __init__(self, selection, label, feature, binning, h_nominal, cut, icut):
+    def __init__(self, selection, label, feature, binning, h_nominal, cut, cut_name):
         self._selection = selection
         self._label     = label
         self._feature   = feature
         self._binning   = binning
         self._h         = h_nominal
         self._cut       = cut
-        self._icut      = icut
+        self._cut_name  = cut_name
         self._df_sys    = pd.DataFrame(dict(bins=binning[:-1]))
 
     def get_syst_dataframe(self):
@@ -283,7 +284,7 @@ class SystematicTemplateGenerator():
         #ax.set_yscale('linear')
 
         plt.tight_layout()
-        plt.savefig(f'{output_path}/{systematic}_{self._icut}.pdf')
-        plt.savefig(f'{output_path}/{systematic}_{self._icut}.png')
+        plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.pdf')
+        plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.png')
         plt.close()
 

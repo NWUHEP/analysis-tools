@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 'n_jets', 'n_fwdjets', 'n_bjets',
                 'met_mag', 'met_phi', 'ht_mag', 'ht_phi',
 
-                'lepton1_pt', 'lepton1_eta', 'lepton1_phi', #'lepton1_mt', 
+                'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_mt', 
                 'lepton1_iso', 'lepton1_reliso', 
                 #'jet1_pt', 'jet1_eta', 'jet1_phi',
                 #'jet2_pt', 'jet2_eta', 'jet2_phi',
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     else:
         cut = 'n_jets >= 2 and n_bjets >= 0'
     cut += ' and ' + pt.cuts[selection]
-    btag_cuts = ['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']
+    btag_cuts = ['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2', 'n_bjets >= 1']
             
     ### Get dataframes with features for each of the datasets ###
     output_path = f'plots/overlays/{selection}_{args.period}'
@@ -99,7 +99,7 @@ if __name__ == '__main__':
                                   cuts          = cut
                                  )
     table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=btag_cuts)
-    table.to_csv(f'{output_path}/yields_{selection}.csv')
+    table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
 
     ### Loop over features and make the plots ###
     plot_manager = pt.PlotManager(data_manager,
@@ -127,20 +127,19 @@ if __name__ == '__main__':
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
 
-    for i, bcut in enumerate(tqdm(btag_cuts,
+    for i, (category, cat_items) in enumerate(tqdm(pt.categories.items(),
                              desc       = 'plotting jet categories...',
                              unit_scale = True,
                              ncols      = 75,
                              )):
-        if selection in ['e4j', 'mu4j'] and i == 0:
-            continue
 
-        plot_manager.set_output_path(f'{output_path}/cat_{i}')
-        plot_manager.make_conditional_overlays(features, ['ttbar', 't'], conditions,
-                                               cut = bcut,
-                                               legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
-                                               #c_colors   = list(decay_map.colors) + ['gray'],
-                                               c_colors   = colors[:len(conditions) - 1] + ['gray'],
-                                               aux_labels = bg_labels,
-                                               do_ratio   = True
-                                              )
+        if selection in cat_items.selections:
+            plot_manager.set_output_path(f'{output_path}/{category}')
+            plot_manager.make_conditional_overlays(features, ['ttbar', 't'], conditions,
+                                                   cut        = cat_items.cut,
+                                                   legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
+                                                   #c_colors   = list(decay_map.colors) + ['gray'],
+                                                   c_colors   = colors[:len(conditions) - 1] + ['gray'],
+                                                   aux_labels = bg_labels,
+                                                   do_ratio   = True
+                                                  )

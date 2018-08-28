@@ -31,18 +31,6 @@ fancy_labels['etau']  = (r'$\sf p_{T,\tau}$', r'$\sf e\tau$')
 fancy_labels['mu4j']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$')
 fancy_labels['e4j']   = (r'$\sf p_{T,e}$', r'$\sf e+jets$')
 
-
-def ebar_wrapper(data, ax, bins, limits, style):
-    x, y, err = pt.hist_to_errorbar(data, bins, limits)
-    mask = y > 0.
-    x, y, err = x[mask], y[mask], err[mask]
-    ax.errorbar(x, y, yerr=err,
-                capsize = 0,
-                fmt = style,
-                elinewidth = 2,
-                markersize = 5
-                )
-
 def shape_morphing(f, templates, order='quadratic'):
     '''
     Efficiency shape morphing for nuisance parameters.  

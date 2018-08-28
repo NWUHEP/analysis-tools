@@ -1,21 +1,34 @@
 import pickle
+import argparse
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from skhep.modeling import bayesian_blocks
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 import scripts.systematic_tools as st
 
-
 if __name__ == '__main__':
 
-    do_bb_binning = True
-    output_path   = f'local_data/templates/bjet_binned'
-    data_labels  = ['muon', 'electron']
-    model_labels = ['wjets', 'zjets', 't', 'ttbar', 'diboson']
-    datasets = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]]
+    # input arguments
+    parser = argparse.ArgumentParser(description='Produce data/MC overlays')
+    parser.add_argument('input',
+                        help = 'specify input directory',
+                        type = str
+                        )
+    parser.add_argument('output',
+                        help = 'specify output directory',
+                        type = str
+                        )
+    parser.add_argument('-b', '--bayesian-block',
+                        help    = 'use Bayesian Block binning',
+                        type    = bool,
+                        default = True
+                        )
+    args = parser.parse_args()
+    ##########################
 
     datasets_ttbar_syst = [
                            'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
@@ -29,28 +42,25 @@ if __name__ == '__main__':
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    pt.make_directory(f'{output_path}')
+    pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
         feature    = fh.features[selection]
-        ntuple_dir = f'local_data/flatuples/single_lepton/{selection}_2016'
-        outfile    = open(f'{output_path}/{selection}_templates.pkl', 'wb')
+        ntuple_dir = f'local_data/flatuples/test/{selection}_2016'
+        outfile    = open(f'{args.output}/{selection}_templates.pkl', 'wb')
 
-        # category specific parameters
-        labels = ['ttbar', 't', 'wjets', 'zjets', 'diboson']
-        if selection == 'mu4j' or selection == 'e4j':
-            dataset_names = datasets + pt.dataset_dict['fakes']
-            labels += ['fakes']
-        elif selection == 'etau' or selection == 'mutau':
-            dataset_names = datasets + pt.dataset_dict['fakes_ss']
-            labels += ['fakes_ss']
-        else:
-            dataset_names = datasets
 
-        #labels =['ttbar']
+        if selection in ['ee', 'etau', 'e4j']:
+            data_labels = ['electron']
+        elif selection in ['mumu', 'mutau', 'mu4j']:
+            data_labels = ['muon']
+        elif selection == 'emu':
+            data_labels = ['electron', 'muon']
+        labels = pt.selection_dataset_dict[selection]
+        datasets = [d for l in data_labels + labels for d in pt.dataset_dict[l] ]
 
         dm = pt.DataManager(input_dir     = ntuple_dir,
-                            dataset_names = dataset_names,
+                            dataset_names = datasets,
                             selection     = selection,
                             scale         = 35.9e3,
                             cuts          = pt.cuts[selection],
@@ -97,24 +107,20 @@ if __name__ == '__main__':
             k_theory[l] = df_syst.weight.sum()/n_nominal
 
         data = dict()
-        for i, bcut in enumerate(['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2']):
-            if selection in ['mu4j', 'e4j'] and bcut == 'n_bjets == 0': 
+        for i, (category, cat_items) in enumerate(tqdm(pt.categories.items(),
+                                                       desc       = 'plotting jet categories...',
+                                                       unit_scale = True,
+                                                       ncols      = 75,
+                                                       )):
+            if selection not in cat_items.selections:
                 continue
 
-            if selection in ['e4j', 'mu4j']:
-                jet_cut = 'n_jets >= 4'
-            else:
-                jet_cut = 'n_jets >= 2'
-            full_cut = f'{jet_cut} and {bcut}'
-            print(f'Applying selection "{full_cut}".')
-
-
             ### calculate binning based on data sample
-            df_data = dm.get_dataframe('data', full_cut)
+            df_data = dm.get_dataframe('data', cat_items.cut)
             if df_data.shape[0] == 0: continue
 
             x = df_data[feature].values 
-            if do_bb_binning:
+            if args.bayesian_block:
                 print('Calculating Bayesian block binning...')
                 binning = bayesian_blocks(x[:30000], p0=0.00001)
 
@@ -140,7 +146,7 @@ if __name__ == '__main__':
                 bin_range = (hist_lut.xmin, hist_lut.xmax)
 
             # generate the data template
-            df_data = dm.get_dataframe('data', full_cut)
+            df_data = dm.get_dataframe('data', cat_items.cut)
             h, b = np.histogram(df_data[feature],
                                 bins  = binning,
                                 range = bin_range,
@@ -161,8 +167,8 @@ if __name__ == '__main__':
                         if label == 'wjets' and (idecay < 16): 
                             continue
 
-                        x = dm.get_dataframe(label, f'{full_cut} and {c}')[feature].values
-                        w = dm.get_dataframe(label, f'{full_cut} and {c}')['weight'].values
+                        x = dm.get_dataframe(label, f'{cat_items.cut} and {c}')[feature].values
+                        w = dm.get_dataframe(label, f'{cat_items.cut} and {c}')['weight'].values
                         h, _ = np.histogram(x,
                                             bins    = binning,
                                             range   = bin_range,
@@ -193,25 +199,26 @@ if __name__ == '__main__':
                                 df = dm.get_dataframe(label, c)
                                 syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{n}', 
                                                                           feature, binning, 
-                                                                          h, full_cut, i)
+                                                                          h, cat_items.cut, category)
                                 syst_gen.jet_shape_systematics(df) # don't apply jet cut for jet syst.
 
-                                df = df.query(full_cut)
+                                df = df.query(cat_items.cut)
                                 syst_gen.reco_shape_systematics(df)
                                 if label == 'ttbar':
-                                    syst_gen.theory_shape_systematics(df, dm_syst, f'{full_cut} and {c}', k_theory)
+                                    syst_gen.theory_shape_systematics(df, dm_syst, f'{cat_items.cut} and {c}', k_theory)
 
                                 df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
-
-                                #df = df.query(full_cut)
 
                         mode_dict[n] = df_temp
 
                     templates[label] = mode_dict
 
                 else: # 1 template per background
-                    x = dm.get_dataframe(label, full_cut)[feature].values
-                    w = dm.get_dataframe(label, full_cut)['weight'].values
+                    if label not in dm._dataframes.keys():
+                        continue
+
+                    x = dm.get_dataframe(label, cat_items[0])[feature].values
+                    w = dm.get_dataframe(label, cat_items[0])['weight'].values
 
                     h, _ = np.histogram(x,
                                         bins    = binning,
@@ -233,7 +240,7 @@ if __name__ == '__main__':
                         label = 'fakes'
                     templates[label] = dict(val = h, var = hvar)
 
-            data[i] = dict(bins = binning, templates = templates)
+            data[category] = dict(bins = binning, templates = templates)
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)
