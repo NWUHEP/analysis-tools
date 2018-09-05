@@ -141,5 +141,6 @@ if __name__ == '__main__':
                                                    #c_colors   = list(decay_map.colors) + ['gray'],
                                                    c_colors   = colors[:len(conditions) - 1] + ['gray'],
                                                    aux_labels = bg_labels,
-                                                   do_ratio   = True
+                                                   do_ratio   = True,
+                                                   do_cms_text = True
                                                   )

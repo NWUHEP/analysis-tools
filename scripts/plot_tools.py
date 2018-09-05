@@ -890,7 +890,8 @@ class PlotManager():
 
 
             ### Add lumi text ###
-            #add_lumi_text(ax)
+            if do_cms_text:
+                add_lumi_text(ax, self._dm._scale, self._dm._period)
 
             ### Make output directory if it does not exist ###
             make_directory(f'{self._output_path}/linear/{lut_entry.category}', False)

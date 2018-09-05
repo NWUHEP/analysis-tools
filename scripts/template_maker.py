@@ -41,7 +41,8 @@ if __name__ == '__main__':
     decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
-    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['mutau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -121,7 +122,7 @@ if __name__ == '__main__':
 
             x = df_data[feature].values 
             if args.bayesian_block:
-                print('Calculating Bayesian block binning...')
+                #print('Calculating Bayesian block binning...')
                 binning = bayesian_blocks(x[:30000], p0=0.00001)
 
                 if feature == 'dilepton1_pt_asym':
@@ -136,11 +137,10 @@ if __name__ == '__main__':
                 if feature != 'dilepton1_pt_asym':
                     binning = np.around(binning[mask])
 
-                print('Done!')
-                #print(f'bins for {feature}: {binning}')
+                #print('Done!')
                 bin_range = None
             else:
-                print('Using user-defined binning...')
+                #print('Using user-defined binning...')
                 hist_lut  = dm._lut_features.loc[feature]
                 binning   = hist_lut.n_bins
                 bin_range = (hist_lut.xmin, hist_lut.xmax)
