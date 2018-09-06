@@ -48,13 +48,13 @@ dataset_dict = dict(
                     )
 
 selection_dataset_dict = dict(
-                              ee    = ['ttbar', 't', 'zjets', 'wjets', 'diboson'],
-                              mumu  = ['ttbar', 't', 'zjets', 'wjets', 'diboson'],
-                              emu   = ['ttbar', 't', 'zjets', 'wjets', 'diboson'],
-                              etau  = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
-                              mutau = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
-                              e4j   = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
-                              mu4j  = ['ttbar', 't', 'zjets', 'wjets', 'diboson', 'fakes'],
+                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
+                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
+                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
+                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
+                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
+                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
+                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
                               )
 
 cuts = dict(
@@ -78,13 +78,13 @@ tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 \
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
 Category = namedtuple('Category', ['cut', 'selections', 'label'], verbose=False)
 categories = dict(
-                  cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau' , ' mutau'], '$N_{j} = 0, N_{b} = 0$, W veto'),
-                  cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau' , ' mutau'], '$N_{j} = 1, N_{b} = 0$, W veto'),
-                  cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau' , ' mutau','ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$'),
+                  cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto'),
+                  cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto'),
+                  cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$'),
                   cat_eq1_eq1   = Category('n_jets == 1 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$'),
                   cat_eq2_eq1   = Category('n_jets == 2 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$'),
                   cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
-                  cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} = 2, N_{b} = 1$, Z veto'),
+                  cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
                   cat_gt3_eq1   = Category('n_jets >= 3 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$'),
                   cat_eq2_gt2   = Category('n_jets == 2 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$'),
                   cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),

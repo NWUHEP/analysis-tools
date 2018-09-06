@@ -78,14 +78,11 @@ if __name__ == '__main__':
     ### Cuts ###
     if selection in ['e4j', 'mu4j']:
         cut = 'n_jets >= 4 and n_bjets >= 1'
-    elif selection == 'emu':
-        cut = 'n_jets >= 2 and n_bjets >= 0'
     elif selection in ['etau', 'mutau']:
         cut = 'n_jets >= 0 and n_bjets >= 0'
     else:
         cut = 'n_jets >= 2 and n_bjets >= 0'
     cut += ' and ' + pt.cuts[selection]
-    btag_cuts = ['n_bjets == 0', 'n_bjets == 1', 'n_bjets >= 2', 'n_bjets >= 1']
             
     ### Get dataframes with features for each of the datasets ###
     output_path = f'plots/overlays/{selection}_{args.period}'
@@ -98,7 +95,8 @@ if __name__ == '__main__':
                                   scale         = args.lumi,
                                   cuts          = cut
                                  )
-    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=btag_cuts)
+    jet_cuts = [cat_items.cut for cat, cat_items in pt.categories.items() if selection in cat_items.selections]
+    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=jet_cuts)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
 
     ### Loop over features and make the plots ###
