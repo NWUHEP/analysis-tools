@@ -1,10 +1,12 @@
 import pickle
+from multiprocessing import Process, Queue, Pool
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-#from functools import partial
 import numdifftools as nd
+
+#from functools import partial
 #from scipy.integrate import quad
 #from lmfit import Parameters
 
@@ -53,13 +55,14 @@ def shape_morphing(f, templates, order='quadratic'):
     return t_eff
 
 class FitData(object):
-    def __init__(self, path, selections, feature_map):
+    def __init__(self, path, selections, feature_map, nprocesses=8):
         self._selections     = selections
         self._n_selections   = len(selections)
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
         self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
 
         # retrieve parameter configurations
+        #self._pool = Pool(processes = min(16, nprocesses))
         self._initialize_parameters()
 
     def _initialize_template_data(self, location, target, selection):
@@ -124,6 +127,91 @@ class FitData(object):
 
             return t_new
 
+    def sub_objective(self, pdict, selection, category, cat_data, cost_type='poisson', no_shape=False):
+        '''
+
+        '''
+
+        beta   = np.array([pdict['beta_e'], pdict['beta_mu'], pdict['beta_tau'], pdict['beta_h']])
+        br_tau = np.array([pdict['beta_e'], pdict['beta_mu'], pdict['beta_tau'], pdict['beta_h']])
+        cost = 0
+
+        # get the data
+        templates = cat_data['templates']
+        f_data, var_data = templates['data']['val'], templates['data']['var']
+        #f_data, var_data = data[selection][category], data[selection][category]
+
+        # get simulated background components and apply cross-section nuisance parameters
+        f_zjets, var_zjets     = templates['zjets_alt']['val'], templates['zjets_alt']['var']
+        f_diboson, var_diboson = templates['diboson']['val'], templates['diboson']['var']
+        f_model   = pdict['xs_zjets']*f_zjets + pdict['xs_diboson']*f_diboson
+        #f_model   = f_zjets + f_diboson
+        var_model = var_zjets + var_diboson
+
+        # get the signal components and apply mixing of W decay modes according to beta
+        for sig_label in ['ttbar', 't', 'wjets']:
+            template_collection = templates[sig_label]
+            signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in templates[sig_label].items())
+            #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in templates[sig_label].items())
+            f_sig               = signal_mixture_model(beta,
+                                                       br_tau   = br_tau,
+                                                       h_temp   = signal_template,
+                                                       single_w = (sig_label == 'wjets')
+                                                      )
+            # prepare mixture
+            #var_model += var_sig # figure this out
+            f_model +=  pdict[f'xs_{sig_label}']*f_sig
+
+        # lepton efficiencies as normalization nuisance parameters
+        # lepton energy scale as morphing parameters
+        if selection in 'ee':
+            f_model *= pdict['trigger_e']**2
+            f_model *= pdict['eff_e']**2
+        elif selection in 'emu':
+            f_model *= pdict['trigger_mu']*pdict['trigger_e']
+            f_model *= pdict['eff_e']*pdict['eff_mu']
+        elif selection in 'mumu':
+            f_model *= pdict['trigger_mu']**2
+            f_model *= pdict['eff_mu']**2
+        elif selection == 'etau':
+            f_model *= pdict['trigger_e']
+            f_model *= pdict['eff_tau']*pdict['eff_e']
+        elif selection == 'mutau':
+            f_model *= pdict['trigger_mu']
+            f_model *= pdict['eff_tau']*pdict['eff_mu']
+        elif selection == 'e4j':
+            f_model *= pdict['trigger_e']
+            f_model *= pdict['eff_e']
+        elif selection == 'mu4j':
+            f_model *= pdict['trigger_mu']
+            f_model *= pdict['eff_mu']
+
+        # apply overall lumi nuisance parameter
+        f_model *= pdict['lumi']
+
+        # get fake background and include normalization nuisance parameters
+        if selection in ['etau', 'e4j', 'mutau', 'mu4j']: 
+            f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
+            f_model   += pdict['norm_fakes']*f_fakes
+            var_model += var_fakes
+
+        # for testing parameter estimation without estimating kinematic fit
+        if no_shape:
+            f_data = np.sum(f_data)
+            f_model = np.sum(f_model)
+
+        # calculate the cost
+        if cost_type == 'chi2':
+            mask = var_data + var_model > 0
+            nll = (f_data - f_model)**2 / (var_data + var_model)
+            nll = nll[mask]
+        elif cost_type == 'poisson':
+            mask = f_model > 0
+            nll = -f_data[mask]*np.log(f_model[mask]) + f_model[mask]
+        cost = np.sum(nll)
+
+        return cost
+
     def objective(self, params, data, cost_type='poisson', no_shape=False):
         '''
         Cost function for MC data model.  This version has no background
@@ -141,102 +229,40 @@ class FitData(object):
         '''
         
         # unpack parameters here
-        # branching fractions first
-        pnames = self._parameters.index.values
-        beta   = params[:4]
-        br_tau = params[4:7]
-        pdict  = dict(zip(pnames, params))
+        pdict  = dict(zip(self._parameters.index.values, params))
+
+        # initialize the worker pool
+        pool = Pool(processes = 16)
 
         # calculate per category, per bin costs
-        cost = 0
-        for sel in self._selections:
-            sdata = self.get_selection_data(sel)
+        results = []
+        for selection in self._selections:
+            sdata = self.get_selection_data(selection)
+            for category, cat_data in sdata.items():
 
-            for b, bdata in sdata.items():
-                if b == 0 and sel in ['e4j', 'mu4j']: 
-                    continue
+                result = pool.apply_async(self.sub_objective, 
+                                          args = (pdict, selection, category, cat_data, 
+                                                  cost_type, no_shape
+                                                  )
+                                          )
+                results.append(result)
 
-                # get the data
-                templates = bdata['templates']
-                #f_data, var_data = templates['data']['val'], templates['data']['var']
-                f_data, var_data = data[sel][b], data[sel][b]
+        pool.close()
+        pool.join()
 
-                # get simulated background components and apply cross-section nuisance parameters
-                f_zjets, var_zjets     = templates['zjets']['val'], templates['zjets']['var']
-                f_diboson, var_diboson = templates['diboson']['val'], templates['diboson']['var']
-                f_model   = pdict['xs_zjets']*f_zjets + pdict['xs_diboson']*f_diboson
-                #f_model   = f_zjets + f_diboson
-                var_model = var_zjets + var_diboson
-
-                # get the signal components and apply mixing of W decay modes according to beta
-                for sig_label in ['ttbar', 't', 'wjets']:
-                    template_collection = templates[sig_label]
-                    signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, sel)) for dm, t in templates[sig_label].items())
-                    #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in templates[sig_label].items())
-                    f_sig               = signal_mixture_model(beta,
-                                                               br_tau   = br_tau,
-                                                               h_temp   = signal_template,
-                                                               single_w = (sig_label == 'wjets')
-                                                              )
-                    # prepare mixture
-                    #var_model += var_sig # figure this out
-                    f_model +=  pdict[f'xs_{sig_label}']*f_sig
-
-                # lepton efficiencies as normalization nuisance parameters
-                # lepton energy scale as morphing parameters
-                if sel in 'ee':
-                    f_model *= pdict['trigger_e']**2
-                    f_model *= pdict['eff_e']**2
-                elif sel in 'emu':
-                    f_model *= pdict['trigger_mu']*pdict['trigger_e']
-                    f_model *= pdict['eff_e']*pdict['eff_mu']
-                elif sel in 'mumu':
-                    f_model *= pdict['trigger_mu']**2
-                    f_model *= pdict['eff_mu']**2
-                elif sel == 'etau':
-                    f_model *= pdict['trigger_e']
-                    f_model *= pdict['eff_tau']*pdict['eff_e']
-                elif sel == 'mutau':
-                    f_model *= pdict['trigger_mu']
-                    f_model *= pdict['eff_tau']*pdict['eff_mu']
-                elif sel == 'e4j':
-                    f_model *= pdict['trigger_e']
-                    f_model *= pdict['eff_e']
-                elif sel == 'mu4j':
-                    f_model *= pdict['trigger_mu']
-                    f_model *= pdict['eff_mu']
-
-                # apply overall lumi nuisance parameter
-                f_model *= pdict['lumi']
-
-                # get fake background and include normalization nuisance parameters
-                #if sel in ['etau', 'mutau', 'e4j', 'mu4j']: 
-                #    f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
-                #    f_model   += pdict['norm_fakes']*f_fakes
-                #    var_model += var_fakes
-
-                # for testing parameter estimation without estimating kinematic fit
-                if no_shape:
-                    f_data = np.sum(f_data)
-                    f_model = np.sum(f_model)
-
-                # calculate the cost
-                if cost_type == 'chi2':
-                    mask = var_data + var_model > 0
-                    nll = (f_data - f_model)**2 / (var_data + var_model)
-                    nll = nll[mask]
-                elif cost_type == 'poisson':
-                    mask = f_model > 0
-                    nll = -f_data[mask]*np.log(f_model[mask]) + f_model[mask]
-                cost += np.sum(nll)
+        # retrieve the likelihoods
+        costs = [r.get() for r in results]
+        cost = np.sum(costs)
+        #cost = 0
 
         # require that the branching fractions sum to 1
+        beta  = np.array([pdict['beta_e'], pdict['beta_mu'], pdict['beta_tau'], pdict['beta_h']])
         cost += (1 - np.sum(beta))**2/(2*0.000001**2)  
 
         # Add prior terms for nuisance parameters correlated across channels
         # (lumi, cross-sections) luminosity
-        for pname in pnames:
-            cost += (pdict[pname] - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
+        for pname, p in pdict.items():
+            cost += (p - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
         #print(params, cost)
 
         return cost
