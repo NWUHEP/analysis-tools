@@ -78,6 +78,11 @@ tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 \
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
 Category = namedtuple('Category', ['cut', 'selections', 'label'], verbose=False)
 categories = dict(
+                  #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
+                  #cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
+                  #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
+                  #cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
+
                   cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto'),
                   cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto'),
                   cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$'),

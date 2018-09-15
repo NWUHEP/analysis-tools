@@ -124,6 +124,14 @@ if __name__ == '__main__':
         bg_labels = ['fakes_ss'] + bg_labels
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
+    plot_manager.set_output_path(f'{output_path}/inclusive')
+    plot_manager.make_conditional_overlays(features, ['ttbar', 't'], conditions,
+                                           legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
+                                           c_colors    = colors[:len(conditions) - 1] + ['gray'],
+                                           aux_labels  = bg_labels,
+                                           do_ratio    = True,
+                                           do_cms_text = True
+                                          )
 
     for i, (category, cat_items) in enumerate(tqdm(pt.categories.items(),
                              desc       = 'plotting jet categories...',

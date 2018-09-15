@@ -33,6 +33,12 @@ fancy_labels['etau']  = (r'$\sf p_{T,\tau}$', r'$\sf e\tau$')
 fancy_labels['mu4j']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$')
 fancy_labels['e4j']   = (r'$\sf p_{T,e}$', r'$\sf e+jets$')
 
+def reduced_objective(p, mask, p_init):
+    masked_p = p_init.copy()
+    masked_p[mask] = p
+    return fit_data.objective(masked_p, data=toy_data, cost_type=cost_type)
+
+
 def shape_morphing(f, templates, order='quadratic'):
     '''
     Efficiency shape morphing for nuisance parameters.  
@@ -80,10 +86,10 @@ def signal_amplitudes(beta, br_tau, single_w = False):
                                beta[2]*beta[2]*br_tau[0]**2,  # tau_e, tau_e
                                beta[2]*beta[2]*br_tau[1]**2,  # tau_mu, tau_mu
                                2*beta[2]*beta[2]*br_tau[0]*br_tau[1],  # tau_e, tau_m
-                               2*beta[2]*beta[2]*br_tau[0]*br_tau[2],  # tau_e, tau_
+                               2*beta[2]*beta[2]*br_tau[0]*br_tau[2],  # tau_e, tau_h
                                2*beta[2]*beta[2]*br_tau[1]*br_tau[2],  # tau_mu, tau_h
-                               2*beta[0]*beta[2]*br_tau[0],  # e, tau_e
                                beta[2]*beta[2]*br_tau[2]*br_tau[2],  # tau_h, tau_h
+                               2*beta[0]*beta[2]*br_tau[0],  # e, tau_e
                                2*beta[0]*beta[2]*br_tau[1],  # e, tau_mu
                                2*beta[0]*beta[2]*br_tau[2],  # e, tau_h
                                2*beta[1]*beta[2]*br_tau[0],  # mu, tau_e
@@ -94,7 +100,7 @@ def signal_amplitudes(beta, br_tau, single_w = False):
                                2*beta[2]*beta[3]*br_tau[0],  # tau_e, h
                                2*beta[2]*beta[3]*br_tau[1],  # tau_mu, h
                                2*beta[2]*beta[3]*br_tau[2],  # tau_h, h
-                               beta[3]*beta[3],  # tau_h, h
+                               beta[3]*beta[3],  # h, h
                                ])
 
     return amplitudes
@@ -147,7 +153,7 @@ def calculate_covariance(f, x0):
 
     hcalc = nd.Hessian(f,
                        step        = 1e-3,
-                       method      = 'central',
+                       method      = 'forward',
                        full_output = True
                        )
 
@@ -424,6 +430,7 @@ class FitData(object):
         # unpack W and tau branching fractions
         beta   = np.array([pdict['beta_e'], pdict['beta_mu'], pdict['beta_tau'], pdict['beta_h']])
         br_tau = np.array([pdict['br_tau_e'], pdict['br_tau_mu'], pdict['br_tau_h']])
+        #br_tau = np.array([0.1783, 0.1741, 0.6476])
 
         # get the data
         templates = cat_data['templates']
@@ -431,25 +438,36 @@ class FitData(object):
         f_data, var_data = data[selection][category], data[selection][category]
 
         # get simulated background components and apply cross-section nuisance parameters
-        f_zjets, var_zjets     = templates['zjets_alt']['val'], templates['zjets_alt']['var']
-        f_diboson, var_diboson = templates['diboson']['val'], templates['diboson']['var']
-        f_model = pdict['xs_zjets']*f_zjets + pdict['xs_diboson']*f_diboson
-        #f_model   = f_zjets + f_diboson
-        var_model = var_zjets + var_diboson
+        f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
+
+        # Drell-Yan
+        #f_model   += templates['zjets_alt']['val']
+        #var_model += templates['zjets_alt']['var']
+        f_model   += pdict['xs_zjets']*templates['zjets_alt']['val']
+        var_model += pdict['xs_zjets']*templates['zjets_alt']['var']
+        #print(f_model)
+
+        # Diboson
+        #f_model   += templates['diboson']['val']
+        #var_model += templates['diboson']['var']
+        f_model   += pdict['xs_diboson']*templates['diboson']['val']
+        var_model += pdict['xs_diboson']*templates['diboson']['var']
+        #print(f_model)
 
         # get the signal components and apply mixing of W decay modes according to beta
         for sig_label in ['ttbar', 't', 'wjets']:
             template_collection = templates[sig_label]
-            signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in templates[sig_label].items())
-            #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in templates[sig_label].items())
-            f_sig               = signal_mixture_model(beta,
-                                                       br_tau   = br_tau,
+            #signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in template_collection.items())
+            signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in template_collection.items())
+            f_sig               = signal_mixture_model(beta, br_tau,
                                                        h_temp   = signal_template,
                                                        single_w = (sig_label == 'wjets')
                                                       )
             # prepare mixture
+            #f_model   += f_sig
             #var_model += var_sig # figure this out
-            f_model +=  pdict[f'xs_{sig_label}']*f_sig
+            f_model += pdict[f'xs_{sig_label}']*f_sig
+            #f_model += pdict[f'xs_{sig_label}']*var_sig
 
         # lepton efficiencies as normalization nuisance parameters
         # lepton energy scale as morphing parameters
@@ -480,30 +498,34 @@ class FitData(object):
 
         # get fake background and include normalization nuisance parameters
         if selection in ['etau', 'e4j']:
-            f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
-            f_model   += pdict['e_fakes']*f_fakes
-            var_model += var_fakes
+            #f_model   += templates['fakes']['val']
+            f_model   += pdict['e_fakes']*templates['fakes']['val']
+            var_model += templates['fakes']['var']
 
         if selection in ['mutau', 'mu4j']:
-            f_fakes, var_fakes = templates['fakes']['val'], templates['fakes']['var']
-            f_model   += pdict['mu_fakes']*f_fakes
-            var_model += var_fakes
+            #f_model   += templates['fakes']['val']
+            f_model   += pdict['mu_fakes']*templates['fakes']['val']
+            var_model += templates['fakes']['var']
 
         # for testing parameter estimation without estimating kinematic fit
         if no_shape:
-            f_data = np.sum(f_data)
-            f_model = np.sum(f_model)
+            f_data    = np.sum(f_data)
+            var_data  = np.sum(var_data)
+            f_model   = np.sum(f_model)
+            var_model = np.sum(var_model)
 
         # calculate the cost
-        cost = 0
         if cost_type == 'chi2':
-            mask = var_data + var_model > 0
-            nll = (f_data - f_model)**2 / (var_data + var_model)
-            nll = nll[mask]
+            mask = var_data > 0 # + var_model > 0
+            nll = (f_data[mask] - f_model[mask])**2 / (2*var_data[mask])# + var_model)
         elif cost_type == 'poisson':
             mask = f_model > 0
             nll = -f_data[mask]*np.log(f_model[mask]) + f_model[mask]
-        cost = np.sum(nll)
+
+            #print(-f_data[mask].sum()*np.log(f_model[mask].sum()) + f_model[mask].sum())
+            #print(nll.sum())
+
+        cost = nll.sum()
 
         return cost
 
@@ -524,24 +546,26 @@ class FitData(object):
         '''
         
         # unpack parameters here
-        pdict  = dict(zip(self._parameters.index.values, params))
+        pdict = dict(zip(self._parameters.index.values, params))
 
-        # calculate per category, per bin costs
-        results = []
+        # calculate per category, per selection costs
+        cost = 0
         for selection in self._selections:
             sdata = self.get_selection_data(selection)
             for category, cat_data in sdata.items():
-                result = self.sub_objective(pdict, selection, category, cat_data, data)
-                results.append(result)
-
-        cost = np.sum(results)
-
-        # require that the branching fractions sum to 1
-        beta  = np.array([pdict['beta_e'], pdict['beta_mu'], pdict['beta_tau'], pdict['beta_h']])
-        cost += (1 - np.sum(beta))**2/(2*1e-9**2)  
+                cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)
 
         # Add prior terms for nuisance parameters 
         for pname, p in pdict.items():
-            cost += (p - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
+            #if pname in ['beta_e', 'beta_mu', 'beta_tau', 'beta_h']:
+            #    continue
+
+            p_chi2 = (p - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
+            cost += p_chi2
+
+        # require that the branching fractions sum to 1
+        beta  = params[:4]
+        cost += (1 - np.sum(beta))**2/(2e-9)  
 
         return cost
+

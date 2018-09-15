@@ -129,7 +129,6 @@ class SystematicTemplateGenerator():
 
         for syst_type in ['jes', 'jer', 'btag', 'mistag']:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
-            #h_up, h_down = h_up/self._h, h_down/self._h
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
             self.template_overlays(h_up, h_down, syst_type)
 
