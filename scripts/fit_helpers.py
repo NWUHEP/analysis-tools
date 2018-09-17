@@ -467,7 +467,7 @@ class FitData(object):
             #f_model   += f_sig
             #var_model += var_sig # figure this out
             f_model += pdict[f'xs_{sig_label}']*f_sig
-            #f_model += pdict[f'xs_{sig_label}']*var_sig
+            #var_model += pdict[f'xs_{sig_label}']*var_sig
 
         # lepton efficiencies as normalization nuisance parameters
         # lepton energy scale as morphing parameters
