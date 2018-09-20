@@ -164,7 +164,7 @@ if __name__ == '__main__':
                 root_file = r.TFile(args.input)
                 tree_name = f'{selection}_fakes/bltTree_{dataset}'
                 tree      = root_file.Get(tree_name)
-                n_entries  = tree.GetEntriesFast()
+                n_entries = tree.GetEntriesFast()
                 event_count[f'{dataset}_fakes'] = 10*[1.,]
                 root_file.Close()
 

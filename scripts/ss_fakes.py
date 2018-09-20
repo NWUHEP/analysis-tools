@@ -14,7 +14,7 @@ if __name__ == '__main__':
     pt.set_default_style()
 
     # input arguments
-    parser = argparse.ArgumentParser(description='Produce data/MC overlays')
+    parser = argparse.ArgumentParser(description='Produce same sign fake (qcd) estimates for mutau and etau selections.')
     parser.add_argument('input',
                         help = 'specify input directory',
                         type = str

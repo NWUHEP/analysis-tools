@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
@@ -43,7 +44,8 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
     '''
     Jet systematics are treated as shape systematics, but mostly vary depending
     on the jet/b tag multiplicity.  Nonetheless, it's easier to account for
-    them as a shape systematic.
+    them as a shape systematic.  N.B.: this variation is averaged over all bins
+    in a distribution to avoid overconstraining.
     '''
 
     # systematic up/down
@@ -61,7 +63,7 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
                              bins=bins, 
                              weights=df.query(down_condition).weight
                              )
-
+    
     return h_up, h_down
 
 def theory_systematics(df_nominal, dm, feature, bins, sys_type, cut):

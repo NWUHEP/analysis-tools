@@ -38,7 +38,6 @@ def reduced_objective(p, mask, p_init):
     masked_p[mask] = p
     return fit_data.objective(masked_p, data=toy_data, cost_type=cost_type)
 
-
 def shape_morphing(f, templates, order='quadratic'):
     '''
     Efficiency shape morphing for nuisance parameters.  
@@ -457,8 +456,8 @@ class FitData(object):
         # get the signal components and apply mixing of W decay modes according to beta
         for sig_label in ['ttbar', 't', 'wjets']:
             template_collection = templates[sig_label]
-            #signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in template_collection.items())
-            signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in template_collection.items())
+            signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in template_collection.items())
+            #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in template_collection.items())
             f_sig               = signal_mixture_model(beta, br_tau,
                                                        h_temp   = signal_template,
                                                        single_w = (sig_label == 'wjets')
