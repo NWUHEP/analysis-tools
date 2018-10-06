@@ -8,6 +8,7 @@ import statsmodels.api as sm
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
+from scripts.blt_reader import jec_source_names
 
 def pileup_morph(df, feature, bins):
     '''
@@ -55,6 +56,11 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
         up_condition   = up_condition.replace('n_jets', f'n_jets_{sys_type}_up')
         down_condition = down_condition.replace('n_jets', f'n_jets_{sys_type}_down')
 
+    h_nominal, _ = np.histogram(df.query(jet_condition)[feature], 
+                                bins=bins, 
+                                weights=df.query(jet_condition).weight
+                                )
+
     h_up, _   = np.histogram(df.query(up_condition)[feature], 
                              bins=bins, 
                              weights=df.query(up_condition).weight
@@ -63,6 +69,10 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
                              bins=bins, 
                              weights=df.query(down_condition).weight
                              )
+
+    # average over bin-by-bin variations for now
+    h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
+    h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
     
     return h_up, h_down
 
@@ -129,7 +139,9 @@ class SystematicTemplateGenerator():
         df: dataframe for target dataset without the jet cuts applied
         '''
 
-        for syst_type in ['jes', 'jer', 'btag', 'mistag']:
+        jet_syst_list = [f'jes_{n}' for n in jec_source_names]
+        jet_syst_list += ['jer', 'btag', 'mistag']
+        for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
             self.template_overlays(h_up, h_down, syst_type)

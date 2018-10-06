@@ -865,7 +865,7 @@ class PlotManager():
 
             ### make the legend ###
             #legend_text = cuts # Need to do something with this
-            ax.legend(legend_text[::-1] + ['data'], loc=1)
+            ax.legend(legend_text[::-1] + ['MC error', 'data'], loc=1)
 
             ### labels and x limits ###
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
@@ -904,6 +904,7 @@ class PlotManager():
 
             ### Save output plot ###
             plt.tight_layout()
+            fig.subplots_adjust(top=0.94)
 
             ### linear scale ###
             y_max = np.max(hist)

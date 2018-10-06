@@ -453,15 +453,44 @@ class FitData(object):
         var_model += pdict['xs_diboson']*templates['diboson']['var']
         #print(f_model)
 
+        if selection in ['etau', 'mutau']:
+            f_model *= pdict['eff_tau']
+
         # get the signal components and apply mixing of W decay modes according to beta
         for sig_label in ['ttbar', 't', 'wjets']:
             template_collection = templates[sig_label]
             signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in template_collection.items())
             #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in template_collection.items())
-            f_sig               = signal_mixture_model(beta, br_tau,
-                                                       h_temp   = signal_template,
-                                                       single_w = (sig_label == 'wjets')
-                                                      )
+
+            if selection in ['etau', 'mutau'] and sig_label != 'wjets': # split real and misID taus
+                mask = np.zeros(21).astype(bool)
+
+                # real tau component (indices taken from decay_map.csv)
+                mask[[6,7,8,11,14]] = True
+                f_real = signal_mixture_model(beta, br_tau,
+                                              h_temp   = signal_template,
+                                              mask     = mask,
+                                              single_w = (sig_label == 'wjets'),
+                                             )
+
+                # apply misID nuisance parameter for "fake" taus
+                mask = np.invert(mask)
+                f_fake = signal_mixture_model(beta, br_tau,
+                                              h_temp   = signal_template,
+                                              mask     = mask,
+                                              single_w = (sig_label == 'wjets')
+                                             )
+
+                f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
+            else:
+                f_sig = signal_mixture_model(beta, br_tau,
+                                             h_temp   = signal_template,
+                                             single_w = (sig_label == 'wjets')
+                                            )
+
+                if selection in ['etau', 'mutau'] and sig_label == 'wjets': 
+                    f_sig *= pdict['misid_tau_h']
+
             # prepare mixture
             #f_model   += f_sig
             #var_model += var_sig # figure this out
@@ -470,21 +499,21 @@ class FitData(object):
 
         # lepton efficiencies as normalization nuisance parameters
         # lepton energy scale as morphing parameters
-        if selection in 'ee':
+        if selection == 'ee':
             f_model *= pdict['trigger_e']**2
             f_model *= pdict['eff_e']**2
-        elif selection in 'emu':
+        elif selection == 'emu':
             f_model *= pdict['trigger_mu']*pdict['trigger_e']
             f_model *= pdict['eff_e']*pdict['eff_mu']
-        elif selection in 'mumu':
+        elif selection == 'mumu':
             f_model *= pdict['trigger_mu']**2
             f_model *= pdict['eff_mu']**2
         elif selection == 'etau':
             f_model *= pdict['trigger_e']
-            f_model *= pdict['eff_tau']*pdict['eff_e']
+            f_model *= pdict['eff_e']
         elif selection == 'mutau':
             f_model *= pdict['trigger_mu']
-            f_model *= pdict['eff_tau']*pdict['eff_mu']
+            f_model *= pdict['eff_mu']
         elif selection == 'e4j':
             f_model *= pdict['trigger_e']
             f_model *= pdict['eff_e']

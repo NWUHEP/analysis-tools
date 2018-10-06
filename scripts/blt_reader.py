@@ -15,6 +15,18 @@ import scripts.plot_tools as pt
 Script for getting blt data out of ROOT files and into CSV format.
 '''
 
+jec_source_names = [
+                    "abs_scale", "abs_stat",
+                    "fragmentation", "abs_mpf_bias", 
+                    "pileup_data_mc", "pileup_pt_bb", "pileup_pt_ec1", "pileup_pt_ref",
+                    "relative_bal", "relative_jer_ec1",
+                    "relative_pt_bb","relative_pt_ec1",
+                    "relative_stat_fsr", "relative_stat_ec",
+                    "single_pion_ecal", "single_pion_hcal",
+                    "time_pt_eta", "flavor_qcd",
+                    "total"
+                   ]
+
 def calculate_cos_theta(ref_p4, boost_p4, target_p4):
     '''
     !!! THIS NEED TO BE FIXED SO THAT THE INPUTS ARE NOT MODIFIED !!!
@@ -96,25 +108,21 @@ def fill_event_vars(tree, dataset):
                     n_jets         = tree.nJets,
                     n_fwdjets      = tree.nFwdJets,
                     n_bjets        = tree.nBJets,
+ 
+                    met_mag        = tree.met,
+                    met_phi        = tree.metPhi,
+                    ht_mag         = tree.ht,
+                    ht_phi         = tree.htPhi,
 
                     # jet counting for systematics
-                    n_jets_jes_up       = tree.nJetsJESUp,
-                    n_jets_jes_down     = tree.nJetsJESDown,
                     n_jets_jer_up       = tree.nJetsJERUp,
                     n_jets_jer_down     = tree.nJetsJERDown,
-                    n_bjets_jes_up      = tree.nBJetsJESUp,
-                    n_bjets_jes_down    = tree.nBJetsJESDown,
                     n_bjets_jer_up      = tree.nBJetsJERUp,
                     n_bjets_jer_down    = tree.nBJetsJERDown,
                     n_bjets_btag_up     = tree.nBJetsBTagUp,
                     n_bjets_btag_down   = tree.nBJetsBTagDown,
                     n_bjets_mistag_up   = tree.nBJetsMistagUp,
                     n_bjets_mistag_down = tree.nBJetsMistagDown,
- 
-                    met_mag        = tree.met,
-                    met_phi        = tree.metPhi,
-                    ht_mag         = tree.ht,
-                    ht_phi         = tree.htPhi,
  
                     lepton1_reco_weight = tree.leptonOneRecoWeight,
                     lepton2_reco_weight = tree.leptonTwoRecoWeight,
@@ -124,25 +132,35 @@ def fill_event_vars(tree, dataset):
                     event_weight        = tree.eventWeight
                    )
 
-    out_dict['gen_weight'] = tree.genWeight
-    out_dict['n_partons']  = tree.nPartons
     if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
         out_dict['weight'] = 0.
     else:
         out_dict['weight'] = tree.eventWeight
 
-    if dataset == 'ttbar_inclusive':
-        out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
-        out_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
-        out_dict['qcd_weight_nom_down']  = tree.qcdWeights[2]
-        out_dict['qcd_weight_up_nom']    = tree.qcdWeights[3]
-        out_dict['qcd_weight_up_up']     = tree.qcdWeights[4]
-        out_dict['qcd_weight_up_down']   = tree.qcdWeights[5]
-        out_dict['qcd_weight_down_nom']  = tree.qcdWeights[6]
-        out_dict['qcd_weight_down_up']   = tree.qcdWeights[7]
-        out_dict['qcd_weight_down_down'] = tree.qcdWeights[8]
-        out_dict['pdf_var']              = tree.pdfWeight 
-        out_dict['alpha_s_err']          = tree.alphaS
+    # factorized JEC systematic
+    if tree.runNumber == 1: # checks if dataset is real data or MC
+
+        for i, n in enumerate(jec_source_names):
+            out_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
+            out_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
+            out_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
+            out_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
+
+        # generator weights and systematics
+        out_dict['gen_weight'] = tree.genWeight
+        out_dict['n_partons']  = tree.nPartons
+        if dataset == 'ttbar_inclusive':
+            out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
+            out_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
+            out_dict['qcd_weight_nom_down']  = tree.qcdWeights[2]
+            out_dict['qcd_weight_up_nom']    = tree.qcdWeights[3]
+            out_dict['qcd_weight_up_up']     = tree.qcdWeights[4]
+            out_dict['qcd_weight_up_down']   = tree.qcdWeights[5]
+            out_dict['qcd_weight_down_nom']  = tree.qcdWeights[6]
+            out_dict['qcd_weight_down_up']   = tree.qcdWeights[7]
+            out_dict['qcd_weight_down_down'] = tree.qcdWeights[8]
+            out_dict['pdf_var']              = tree.pdfWeight 
+            out_dict['alpha_s_err']          = tree.alphaS
 
     return out_dict
 

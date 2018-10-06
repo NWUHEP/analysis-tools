@@ -46,7 +46,7 @@ if __name__ == '__main__':
     for selection in selections:
         print(f'Running over category {selection}...')
         feature    = fh.features[selection]
-        ntuple_dir = f'local_data/flatuples/test/{selection}_2016'
+        ntuple_dir = f'local_data/flatuples/{args.input}/{selection}_2016'
         outfile    = open(f'{args.output}/{selection}_templates.pkl', 'wb')
 
 

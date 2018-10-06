@@ -23,6 +23,8 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
     root_file = r.TFile(input_file)
     tree = root_file.Get(tree_name)
     selection, dataset = tree_name.replace('bltTree_', '').split('/')
+
+    # strip 'fakes' suffix
     if '_fakes' in selection:
         selection = selection.replace('_fakes', '')
 
@@ -36,6 +38,8 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
     if df.shape[0] > 0:
         df.to_pickle(f'{output_path}/{dataset}_{ix[0]}.pkl')
     root_file.Close()
+
+    return
 
 if __name__ == '__main__':
 
@@ -82,7 +86,7 @@ if __name__ == '__main__':
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['zjets_alt', 'ttbar', 'diboson', 't', 'wjets']
+    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 't', 'wjets']
 
     dataset_list = []
     if do_data:
@@ -166,6 +170,8 @@ if __name__ == '__main__':
                 tree      = root_file.Get(tree_name)
                 n_entries = tree.GetEntriesFast()
                 event_count[f'{dataset}_fakes'] = 10*[1.,]
+                if n_entries == 0: 
+                    continue
                 root_file.Close()
 
                 # split dataset up according to configuration
@@ -204,7 +210,7 @@ if __name__ == '__main__':
     # concatenate pickle files when everything is done
     for selection in tqdm(selections, 
                           desc     = 'concatenating input files...',
-                          total    = len(selections)*len(dataset_list),
+                          total    = len(selections),
                           position = args.nprocesses+1
                           ):
         input_path = f'{args.output}/{selection}_{period}'
