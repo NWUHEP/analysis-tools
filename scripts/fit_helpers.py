@@ -429,7 +429,6 @@ class FitData(object):
         # unpack W and tau branching fractions
         beta   = np.array([pdict['beta_e'], pdict['beta_mu'], pdict['beta_tau'], pdict['beta_h']])
         br_tau = np.array([pdict['br_tau_e'], pdict['br_tau_mu'], pdict['br_tau_h']])
-        #br_tau = np.array([0.1783, 0.1741, 0.6476])
 
         # get the data
         templates = cat_data['templates']
@@ -440,29 +439,23 @@ class FitData(object):
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
         # Drell-Yan
-        #f_model   += templates['zjets_alt']['val']
-        #var_model += templates['zjets_alt']['var']
-        f_model   += pdict['xs_zjets']*templates['zjets_alt']['val']
+        f_model   += pdict['xs_zjets']*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection)
         var_model += pdict['xs_zjets']*templates['zjets_alt']['var']
-        #print(f_model)
 
         # Diboson
-        #f_model   += templates['diboson']['val']
-        #var_model += templates['diboson']['var']
         f_model   += pdict['xs_diboson']*templates['diboson']['val']
         var_model += pdict['xs_diboson']*templates['diboson']['var']
-        #print(f_model)
 
         if selection in ['etau', 'mutau']:
             f_model *= pdict['eff_tau']
 
         # get the signal components and apply mixing of W decay modes according to beta
-        for sig_label in ['ttbar', 't', 'wjets']:
-            template_collection = templates[sig_label]
-            signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, sig_label, selection)) for dm, t in template_collection.items())
+        for label in ['ttbar', 't', 'wjets']:
+            template_collection = templates[label]
+            signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, label, selection)) for dm, t in template_collection.items())
             #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in template_collection.items())
 
-            if selection in ['etau', 'mutau'] and sig_label != 'wjets': # split real and misID taus
+            if selection in ['etau', 'mutau'] and label != 'wjets': # split real and misID taus
                 mask = np.zeros(21).astype(bool)
 
                 # real tau component (indices taken from decay_map.csv)
@@ -470,7 +463,7 @@ class FitData(object):
                 f_real = signal_mixture_model(beta, br_tau,
                                               h_temp   = signal_template,
                                               mask     = mask,
-                                              single_w = (sig_label == 'wjets'),
+                                              single_w = (label == 'wjets'),
                                              )
 
                 # apply misID nuisance parameter for "fake" taus
@@ -478,24 +471,24 @@ class FitData(object):
                 f_fake = signal_mixture_model(beta, br_tau,
                                               h_temp   = signal_template,
                                               mask     = mask,
-                                              single_w = (sig_label == 'wjets')
+                                              single_w = (label == 'wjets')
                                              )
 
                 f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
             else:
                 f_sig = signal_mixture_model(beta, br_tau,
                                              h_temp   = signal_template,
-                                             single_w = (sig_label == 'wjets')
+                                             single_w = (label == 'wjets')
                                             )
 
-                if selection in ['etau', 'mutau'] and sig_label == 'wjets': 
+                if selection in ['etau', 'mutau'] and label == 'wjets': 
                     f_sig *= pdict['misid_tau_h']
 
             # prepare mixture
             #f_model   += f_sig
             #var_model += var_sig # figure this out
-            f_model += pdict[f'xs_{sig_label}']*f_sig
-            #var_model += pdict[f'xs_{sig_label}']*var_sig
+            f_model += pdict[f'xs_{label}']*f_sig
+            #var_model += pdict[f'xs_{label}']*templates[label]['var']
 
         # lepton efficiencies as normalization nuisance parameters
         # lepton energy scale as morphing parameters
@@ -594,6 +587,9 @@ class FitData(object):
         # require that the branching fractions sum to 1
         beta  = params[:4]
         cost += (1 - np.sum(beta))**2/(2e-9)  
+
+        print(params)
+        print(cost)
 
         return cost
 

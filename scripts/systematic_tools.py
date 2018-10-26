@@ -219,7 +219,7 @@ class SystematicTemplateGenerator():
 
         return
 
-    def theory_shape_systematics(self, df, dm_syst, cut, renorm):
+    def theory_shape_systematics(self, df, cut, renorm, dm_syst=None):
         '''
         Generates templates for theory systematics:
            * QCD scale
@@ -231,12 +231,12 @@ class SystematicTemplateGenerator():
         Parameters:
         ===========
         df: dataframe for target dataset 
-        dm_syst: data manager with dedicated ttbar samples for non-weight based systematics
         cut: jet and W decay category cut
         renorm: dict of renormalization factors to remove normalization changes due to pdf and QCD changes
+        dm_syst: data manager with dedicated ttbar samples for non-weight based systematics
         '''
 
-        for syst_type in ['mur', 'muf', 'mur_muf', 'pdf', 'isr', 'fsr']:#, 'hdamp', 'tune']:
+        for syst_type in ['mur', 'muf', 'mur_muf', 'pdf']:#, 'isr', 'fsr', 'hdamp', 'tune']:
             h_up, h_down = theory_systematics(df, dm_syst, self._feature, self._binning, syst_type, cut)
             if syst_type in ['mur', 'muf', 'mur_muf', 'pdf']:
                 h_up   /= renorm[f'{syst_type}_up']
@@ -246,6 +246,19 @@ class SystematicTemplateGenerator():
 
         return
 
+    def top_pt_systematics(self, df):
+        '''
+        Variation from reweighting the top quark pt spectrum in ttbar events
+        (https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting).  The
+        nominal case is with the weights, down variation is no weight, up
+        variation is twice the nominal weight.
+
+        Parameters:
+        ===========
+        df: dataframe for dataset
+        cut: jet category
+        '''
+
 
     def template_overlays(self, h_up, h_down, systematic):
         '''
@@ -253,6 +266,7 @@ class SystematicTemplateGenerator():
         '''
 
         output_path = f'plots/systematics/{self._selection}/{self._label}'
+        pt.set_default_style()
         pt.make_directory(output_path, clear=False)
         fig, axes = plt.subplots(2, 1, figsize=(6, 6), facecolor='white', sharex=False, gridspec_kw={'height_ratios':[3,1]})
         fig.subplots_adjust(hspace=0)

@@ -233,8 +233,8 @@ def set_default_style():
 
 
 def add_lumi_text(ax, lumi, period):
-    #ax.text(0.04, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
-    #ax.text(0.20, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
+    ax.text(0.04, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
+    ax.text(0.20, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
 
     if period == 2012:
         ax.text(0.60, 1.01, 

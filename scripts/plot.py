@@ -123,13 +123,15 @@ if __name__ == '__main__':
     elif selection in ['mutau', 'etau']:
         bg_labels = ['fakes_ss'] + bg_labels
 
-    inclusive_cut = 'n_bjets >= 1'
-    #if selection == 'emu':
-    #    inclusive_cut = 'n_jets >= 2'
-    #elif selection in ['ee', 'mumu']:
-    #    inclusive_cut = 'n_jets >= 2 and n_bjets >= 1 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
-    #else:
-    #    inclusive_cut = 'n_jets >= 2 and n_bjets >= 1'
+    #inclusive_cut = 'n_bjets >= 1'
+    if selection == 'emu':
+        inclusive_cut = 'n_jets >= 2'
+    elif selection in ['ee', 'mumu']:
+        inclusive_cut = 'n_jets >= 2 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
+    elif selection in ['etau', 'mutau']:
+        inclusive_cut = 'n_jets >= 2'
+    else:
+        inclusive_cut = 'n_jets >= 2 and n_bjets >= 1'
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
     plot_manager.set_output_path(f'{output_path}/inclusive')
@@ -138,7 +140,7 @@ if __name__ == '__main__':
                                            legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
                                            c_colors    = colors[:len(conditions) - 1] + ['gray'],
                                            aux_labels  = bg_labels,
-                                           do_ratio    = False,
+                                           do_ratio    = True,
                                            do_cms_text = True
                                           )
 
