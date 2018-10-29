@@ -259,7 +259,7 @@ if __name__ == '__main__':
 
                     templates[label] = df_temp
 
-            data[category] = dict(bins = binning, templates = templates)
+            data[category] = templates
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)
