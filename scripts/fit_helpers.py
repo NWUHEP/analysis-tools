@@ -392,22 +392,22 @@ class FitData(object):
         in templates dataframe.  Only applies variation in the case that there
         are a sufficient number fo events.
         '''
-        t_nominal = templates['val'] 
+        t_nominal = templates['val']
         if templates.shape[1] == 2: # no systematics generated
             return t_nominal
         else:
             t_new = np.zeros(t_nominal.shape)
             #print(df_np.index.values)
             for pname in self._np_dict[selection][dataset_name]:
-                t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down'] 
+                t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down']
                 dt = shape_morphing(pdict[pname], (t_nominal, t_up, t_down)) - t_nominal
                 t_new += dt
             t_new += t_nominal
 
             return t_new
 
-    def sub_objective(self, pdict, selection, category, cat_data, data, 
-                      cost_type='poisson', 
+    def sub_objective(self, pdict, selection, category, cat_data, data,
+                      cost_type='poisson',
                       no_shape=False
                       ):
         '''
@@ -452,8 +452,8 @@ class FitData(object):
         # get the signal components and apply mixing of W decay modes according to beta
         for label in ['ttbar', 't', 'wjets']:
             template_collection = templates[label]
-            signal_template     = pd.DataFrame.from_items((dm, self.modify_template(t, pdict, label, selection)) for dm, t in template_collection.items())
-            #signal_template     = pd.DataFrame.from_items((dm, t['val']) for dm, t in template_collection.items())
+            signal_template     = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection) for dm, t in template_collection.items()})
+            #signal_template     = pd.DataFrame.from_dict({dm: t['val'] for dm, t in template_collection.items()})
 
             if selection in ['etau', 'mutau'] and label != 'wjets': # split real and misID taus
                 mask = np.zeros(21).astype(bool)
@@ -588,8 +588,8 @@ class FitData(object):
         beta  = params[:4]
         cost += (1 - np.sum(beta))**2/(2e-9)  
 
-        print(params)
-        print(cost)
+        #print(params)
+        #print(cost)
 
         return cost
 

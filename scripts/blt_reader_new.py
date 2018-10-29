@@ -77,11 +77,11 @@ if __name__ == '__main__':
 
 
     ### Configuration ###
-    selections  = ['mumu', 'ee', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     #selections  = ['etau']
-    do_data     = True
-    do_mc       = True
-    do_syst     = False
+    do_data     = False
+    do_mc       = False
+    do_syst     = True
     period      = 2016
 
     # configure datasets to run over
