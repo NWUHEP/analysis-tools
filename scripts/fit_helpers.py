@@ -372,6 +372,7 @@ class FitData(object):
         # make a map of each shape n.p. to be considered for each selection and
         # dataset (and maybe jet bin later, if needed)
         df_shape = self._parameters.query(f'type == "shape"') 
+        self._shape_mask = np.array(self._parameters.type == 'shape')
         np_dict = dict()
         for s in self._selections:
             np_dict[s] = dict()
@@ -432,23 +433,44 @@ class FitData(object):
         else:
             return self._parameters['val_init']
 
-    def modify_template(self, templates, pdict, dataset_name, selection):
+    def modify_template(self, templates, pdict, dataset, selection, category, sub_ds=None):
         '''
         Modifies a single template based on all shape nuisance parameters save
         in templates dataframe.  Only applies variation in the case that there
         are a sufficient number fo events.
         '''
-        t_nominal = templates['val']
+        nominal_template = templates['val'].values
         if templates.shape[1] == 2: # no systematics generated
-            return t_nominal
+            return nominal_template
         else:
-            t_new = np.zeros(t_nominal.shape)
-            #print(df_np.index.values)
-            for pname in self._np_dict[selection][dataset_name]:
-                t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down']
-                dt = shape_morphing(pdict[pname], (t_nominal, t_up, t_down)) - t_nominal
-                t_new += dt
-            t_new += t_nominal
+            if isinstance(sub_ds, type(None)):
+                morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset] 
+            else:
+                morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset][sub_ds] 
+
+            # get coefficients for quadratic morphing
+            sp = np.array(list(pdict.values()))
+            sp = sp[self._shape_mask]
+            coeff_up      = sp*(sp + 1)/2
+            coeff_down    = sp*(sp - 1)/2
+            coeff_nominal = (sp - 1)*(sp + 1)
+
+            nominal_template = np.repeat(nominal_template, sp.size, axis=0)
+            nominal_template = nominal_template.reshape(morphing_templates[0].T.shape).T
+            
+            t_up   = coeff_up[:,None]*morphing_templates[0]
+            t_down = coeff_down[:,None]*morphing_templates[1]
+            t_nom  = coeff_nominal[:,None]*nominal_template
+            dt  = (t_up + t_down - t_nom) - nominal_template
+            t_new = nominal_template[0] + dt.sum(axis=0)
+
+            # old method
+            #t_new = np.zeros(t_nominal.shape)
+            #for pname in self._np_dict[selection][dataset]:
+            #    t_up, t_down = templates[f'{pname}_up'], templates[f'{pname}_down']
+            #    dt = shape_morphing(pdict[pname], (t_nominal, t_up, t_down)) - t_nominal
+            #    t_new += dt
+            #t_new += t_nominal
 
             return t_new
 
@@ -485,7 +507,7 @@ class FitData(object):
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
         # Drell-Yan
-        f_model   += pdict['xs_zjets']*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection)
+        f_model   += pdict['xs_zjets']*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
         var_model += pdict['xs_zjets']*templates['zjets_alt']['var']
 
         # Diboson
@@ -498,7 +520,7 @@ class FitData(object):
         # get the signal components and apply mixing of W decay modes according to beta
         for label in ['ttbar', 't', 'wjets']:
             template_collection = templates[label]
-            signal_template     = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection) for dm, t in template_collection.items()})
+            signal_template     = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
             #signal_template     = pd.DataFrame.from_dict({dm: t['val'] for dm, t in template_collection.items()})
 
             if selection in ['etau', 'mutau'] and label != 'wjets': # split real and misID taus

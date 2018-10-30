@@ -101,11 +101,11 @@ if __name__ == '__main__':
         k_theory['pdf_up']       = np.sum(w_nominal*(1 + np.sqrt(df_ttbar.pdf_var)/np.sqrt(100)))/n_nominal
         k_theory['pdf_down']     = np.sum(w_nominal*(1 - np.sqrt(df_ttbar.pdf_var)/np.sqrt(100)))/n_nominal
 
-        for ds in datasets_ttbar_syst:
-            ds = ds.replace('_inclusive', '')
-            df_syst  = dm_syst.get_dataframe(ds)
-            l = ds.split('_')[-1]
-            k_theory[l] = df_syst.weight.sum()/n_nominal
+        #for ds in datasets_ttbar_syst:
+        #    ds = ds.replace('_inclusive', '')
+        #    df_syst  = dm_syst.get_dataframe(ds)
+        #    l = ds.split('_')[-1]
+        #    k_theory[l] = df_syst.weight.sum()/n_nominal
 
         data = dict()
         for i, (category, cat_items) in enumerate(tqdm(pt.categories.items(),
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 
                     templates[label] = df_temp
 
-            data[category] = templates
+            data[category] = dict(bins = binning, templates = templates)
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)
