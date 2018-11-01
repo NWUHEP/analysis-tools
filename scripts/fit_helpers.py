@@ -423,8 +423,8 @@ class FitData(object):
                                     var_up.append(sub_template[f'{pname}_up'].values)
                                     var_down.append(sub_template[f'{pname}_down'].values)
                                 else:
-                                    var_up.append(template['val'].values)
-                                    var_down.append(template['val'].values)
+                                    var_up.append(sub_template['val'].values)
+                                    var_down.append(sub_template['val'].values)
 
                             var_up, var_down = np.vstack(var_up), np.vstack(var_down)
                             if var_up.sum() > 0:
@@ -449,23 +449,19 @@ class FitData(object):
         if templates.shape[1] == 2: # no systematics generated
             return nominal_template
         else:
-            print(dataset, selection)
-            t_new = np.zeros(nominal_template.shape)
-            for pname in self._np_dict[selection][dataset]:
-                t_up, t_down = templates[f'{pname}_up'].values, templates[f'{pname}_down'].values 
-                dt = shape_morphing(pdict[pname], (nominal_template, t_up, t_down)) - nominal_template
-                print(pname, dt)
-                t_new += dt
-            t_new += nominal_template
-            #print(t_new)
+
+            #t_new = np.zeros(nominal_template.shape)
+            #for pname in self._np_dict[selection][dataset]:
+            #    t_up, t_down = templates[f'{pname}_up'].values, templates[f'{pname}_down'].values 
+            #    dt = shape_morphing(pdict[pname], (nominal_template, t_up, t_down)) - nominal_template
+            #    #print(pname, dt)
+            #    t_new += dt
+            #t_new += nominal_template
 
             if isinstance(sub_ds, type(None)):
                 morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset] 
             else:
                 morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset][sub_ds] 
-
-            #print(morphing_templates[0])
-            #print(nominal_template)
 
             # get coefficients for quadratic morphing
             sp = np.array(list(pdict.values()))
@@ -473,9 +469,6 @@ class FitData(object):
             coeff_up      = sp*(sp + 1)/2
             coeff_down    = sp*(sp - 1)/2
             coeff_nominal = (sp - 1)*(sp + 1)
-            #print(coeff_down)
-            #print(coeff_nominal)
-            #print(coeff_up)
 
             # generate nominal template "replica" array
             nominal_matrix = np.repeat(nominal_template, sp.size, axis=0)
@@ -486,10 +479,7 @@ class FitData(object):
             t_down = coeff_down[:,None]*morphing_templates[1]
             t_nom  = coeff_nominal[:,None]*nominal_matrix
             dt  = (t_up + t_down - t_nom) - nominal_matrix
-            print(dt)
-            t_new_alt = nominal_template + dt.sum(axis=0)
-
-            #print(t_new_alt)
+            t_new = nominal_template + dt.sum(axis=0)
 
             return t_new
 
