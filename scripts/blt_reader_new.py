@@ -80,8 +80,8 @@ if __name__ == '__main__':
     selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     #selections  = ['etau']
     do_data     = False
-    do_mc       = False
-    do_syst     = True
+    do_mc       = True
+    do_syst     = False
     period      = 2016
 
     # configure datasets to run over

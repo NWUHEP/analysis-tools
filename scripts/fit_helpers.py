@@ -347,6 +347,7 @@ class FitData(object):
         #self._pool = Pool(processes = min(16, nprocesses))
         self._initialize_parameters()
         self._initialize_morphing_templates()
+        self._cost_init = 0
 
     def _initialize_template_data(self, location, target, selection):
         '''
@@ -439,6 +440,12 @@ class FitData(object):
         else:
             return self._parameters['val_init']
 
+    def get_errs_init(self, as_array=False):
+        if as_array:
+            return self._parameters['err_init'].values
+        else:
+            return self._parameters['err_init']
+
     def modify_template(self, templates, pdict, dataset, selection, category, sub_ds=None):
         '''
         Modifies a single template based on all shape nuisance parameters save
@@ -517,6 +524,7 @@ class FitData(object):
 
         # Drell-Yan
         f_model   += pdict['xs_zjets']*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
+        #f_model   += pdict['xs_zjets']*templates['zjets_alt']['val']
         var_model += pdict['xs_zjets']*templates['zjets_alt']['var']
 
         # Diboson
@@ -595,14 +603,24 @@ class FitData(object):
         f_model *= pdict['lumi']
 
         # get fake background and include normalization nuisance parameters
-        if selection in ['etau', 'e4j']:
+        if selection == 'e4j':
             #f_model   += templates['fakes']['val']
             f_model   += pdict['e_fakes']*templates['fakes']['val']
             var_model += templates['fakes']['var']
 
-        if selection in ['mutau', 'mu4j']:
+        if selection == 'mu4j':
             #f_model   += templates['fakes']['val']
             f_model   += pdict['mu_fakes']*templates['fakes']['val']
+            var_model += templates['fakes']['var']
+
+        if selection == 'etau':
+            #f_model   += templates['fakes']['val']
+            f_model   += pdict['e_fakes_ss']*templates['fakes']['val']
+            var_model += templates['fakes']['var']
+
+        if selection == 'mutau':
+            #f_model   += templates['fakes']['val']
+            f_model   += pdict['mu_fakes_ss']*templates['fakes']['val']
             var_model += templates['fakes']['var']
 
         # for testing parameter estimation without estimating kinematic fit
@@ -664,6 +682,9 @@ class FitData(object):
         # require that the branching fractions sum to 1
         beta  = params[:4]
         cost += (1 - np.sum(beta))**2/(2e-9)  
+
+        # testing if this helps with precision
+        cost -= self._cost_init
 
         #print(params)
         #print(cost)

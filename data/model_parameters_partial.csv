@@ -12,14 +12,16 @@ xs_diboson,$\sigma_{VV}$,1,0.1,norm,0,0,0,0,0,1,0,1,1,1,1,1,1,1
 xs_ttbar,$\sigma_{t\bar{t}}$,1,0.05,norm,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_t,$\sigma_{tW}$,1,0.1,norm,0,1,0,0,0,0,0,1,1,1,1,1,1,1
 xs_wjets,$\sigma_{W}$,1,0.05,norm,0,0,0,0,1,0,0,1,1,1,1,1,1,1
-e_fakes,QCD (e),1,0.25,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
-mu_fakes,QCD ($\mu$),1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
+e_fakes,"QCD norm (e, iso)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,0,1,0
+mu_fakes,"QCD norm ($\mu$, iso)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,0,0,1
+e_fakes_ss,"QCD norm (e, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
+mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
 trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
 eff_e,$\epsilon_{e}$,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
-eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
-misid_tau_h,$\tau$ mis-ID,1,0.05,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
+eff_tau,$\epsilon_{\tau}$,1,0.1,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
+misid_tau_h,$\tau$ mis-ID,1,0.1,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
 pileup,pileup,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 escale_mu,$\mu$ ES,0,1,shape,1,1,1,0,1,0,0,0,1,1,0,0,0,1
