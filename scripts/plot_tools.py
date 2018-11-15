@@ -58,11 +58,11 @@ selection_dataset_dict = dict(
                               )
 
 cuts = dict(
-            ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 10 \
+            ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12', 
             mumu  = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
                      and dilepton1_mass > 12',
-            emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 10 \
+            emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
             etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
