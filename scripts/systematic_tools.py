@@ -10,6 +10,19 @@ import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 from scripts.blt_reader import jec_source_names
 
+def conditional_scaling(df, bins, scale, mask, feature):
+    '''
+    Generates morphing templates based on systematic assigned to subset of the data.
+    '''
+
+    df.loc[mask, feature] *= 1 + scale
+    h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
+    df.loc[mask, feature] *= (1 - scale)/(1 + scale)
+    h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
+    df.loc[mask, feature] /= (1 - scale)
+
+    return h_up, h_down
+
 def pileup_morph(df, feature, bins):
     '''
     Generates templates for morphing of distributions due to pileup variance.
@@ -50,9 +63,14 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
     '''
 
     # systematic up/down
-    up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
-    down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
-    if sys_type not in ['btag', 'mistag']:
+    if sys_type == 'ctag':
+        up_condition   = jet_condition.replace('n_bjets', f'n_cjets_{sys_type}_up')
+        down_condition = jet_condition.replace('n_bjets', f'n_cjets_{sys_type}_down')
+    else:
+        up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
+        down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
+
+    if sys_type not in ['btag', 'ctag', 'mistag']:
         up_condition   = up_condition.replace('n_jets', f'n_jets_{sys_type}_up')
         down_condition = down_condition.replace('n_jets', f'n_jets_{sys_type}_down')
 
@@ -140,11 +158,78 @@ class SystematicTemplateGenerator():
         '''
 
         jet_syst_list = [f'jes_{n}' for n in jec_source_names]
-        jet_syst_list += ['jer', 'btag', 'mistag']
+        jet_syst_list += ['jer', 'btag', 'ctag', 'mistag']
         for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
-            self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
             self.template_overlays(h_up, h_down, syst_type)
+            self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up - self._h, h_down - self._h
+
+    def electron_reco_systematics(self, df):
+        '''
+        Generates shape templates for electron id and reco efficiency scale factors.
+        '''
+        bins = self._binning
+        feature = self._feature
+
+        if self._selection == 'ee':
+
+            ## reco scale factor
+            w_nominal = df.weight/(df['lepton1_reco_weight']*df['lepton2_reco_weight'])
+            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] + np.sqrt(df['lepton2_reco_var']))
+            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] - np.sqrt(df['lepton2_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'reco_e')
+            self._df_sys['reco_e_up'], self._df_sys['reco_e_down'] = h_up - self._h, h_down - self._h
+
+            ## id/iso scale factor
+            w_nominal = df.weight/(df['lepton1_id_weight']*df['lepton2_id_weight'])
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'id_e')
+            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up - self._h, h_down - self._h
+
+        elif self._selection in ['etau', 'e4j']:
+
+            ## reco scale factor
+            w_nominal = df.weight/df['lepton1_reco_weight']
+            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))
+            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'reco_e')
+            self._df_sys['reco_e_up'], self._df_sys['reco_e_down'] = h_up - self._h, h_down - self._h
+
+            ## id/iso scale factor
+            w_nominal = df.weight/df['lepton1_id_weight']
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'id_e')
+            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up, h_down
+
+        elif self._selection == 'emu':
+
+            ## reco scale factor
+            w_nominal = df.weight/df['lepton2_reco_weight']
+            w_up      = w_nominal*(df['lepton2_reco_weight'] + np.sqrt(df['lepton2_reco_var']))
+            w_down    = w_nominal*(df['lepton2_reco_weight'] - np.sqrt(df['lepton2_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'reco_e')
+            self._df_sys['reco_e_up'], self._df_sys['reco_e_down'] = h_up, h_down
+
+            ## id/iso scale factor
+            w_nominal = df.weight/df['lepton2_id_weight']
+            w_up      = w_nominal*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
+            w_down    = w_nominal*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'id_e')
+            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up, h_down
 
     def reco_shape_systematics(self, df):
         '''
@@ -164,56 +249,40 @@ class SystematicTemplateGenerator():
         self.template_overlays(h_up, h_down, 'pileup')
         self._df_sys['pileup_up'], self._df_sys['pileup_down'] = h_up, h_down
 
-        # lepton energy scale
-        ## muon scale
         if self._selection in ['mumu', 'mu4j']:
+            ## muon energy scale
             scale = 0.002 # need reference
             h_up, _      = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
             h_down, _    = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
             self.template_overlays(h_up, h_down, 'escale_mu')
             self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
 
-        ## electron scale
         if self._selection in ['ee', 'e4j']:
+
+            ## electron energy scale
             scale = 0.005 # need reference
             h_up, _      = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
             h_down, _    = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
             self.template_overlays(h_up, h_down, 'escale_e')
             self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
 
-        ## tau scale
         if self._selection in ['etau', 'mutau']:
+            ## tau energy scale
             scale = 0.012 # https://twiki.cern.ch/twiki/bin/viewauth/CMS/TauIDRecommendation13TeV#Tau_energy_scale
-            h_up, _      = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
-            h_down, _    = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
-            self.template_overlays(h_up, h_down, 'escale_tau')
-            self._df_sys['escale_tau_up'], self._df_sys['escale_tau_down'] = h_up, h_down
+            for decay_mode in [0, 1, 10]:
+                h_up, h_down = conditional_scaling(df, bins, 0.012, df.tau_decay_mode == decay_mode, 'lepton2_pt')
+                self.template_overlays(h_up, h_down, f'escale_tau_{decay_mode}')
+                self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up, h_down
 
-        ## emu channel needs to be treated separately
         if self._selection == 'emu':
-            ### not great... scale up, then down, then down, then up
 
-            ### electron scale
-            scale = 0.005 # need reference
-            mask = abs(df.trailing_lepton_flavor) == 11
-            df.loc[mask, 'trailing_lepton_pt'] *= 1 + scale
-            h_up, _   = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            df.loc[mask, 'trailing_lepton_pt'] *= (1 - scale)/(1 + scale)
-            h_down, _ = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
-
+            ### electron energy scale
+            h_up, h_down = conditional_scaling(df, bins,0.005, abs(df.trailing_lepton_flavor) == 11, 'trailing_lepton_pt')
             self.template_overlays(h_up, h_down, 'escale_e')
             self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
 
-            ### muon scale
-            scale = 0.002 # need reference
-            mask = abs(df.trailing_lepton_flavor) == 13
-            df.loc[mask, 'trailing_lepton_pt'] *= 1 + scale
-            h_up, _   = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            df.loc[mask, 'trailing_lepton_pt'] *= (1 - scale)/(1 + scale)
-            h_down, _ = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
-
+            ### muon energy scale
+            h_up, h_down = conditional_scaling(df, bins, 0.002, abs(df.trailing_lepton_flavor) == 13, 'trailing_lepton_pt')
             self.template_overlays(h_up, h_down, 'escale_mu')
             self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
 

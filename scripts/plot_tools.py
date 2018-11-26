@@ -13,8 +13,7 @@ import matplotlib.pyplot as plt
 plt.ioff()
 
 from tqdm import tqdm
-tqdm.monitor_interval = 0
-
+tqdm.monitor_interval = 0 
 dataset_dict = dict(
                     muon     = ['muon_2016B', 'muon_2016C', 'muon_2016D', 
                                 'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'],

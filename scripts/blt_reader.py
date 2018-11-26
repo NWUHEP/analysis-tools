@@ -121,15 +121,24 @@ def fill_event_vars(tree, dataset):
                     n_bjets_jer_down    = tree.nBJetsJERDown,
                     n_bjets_btag_up     = tree.nBJetsBTagUp,
                     n_bjets_btag_down   = tree.nBJetsBTagDown,
+                    n_bjets_ctag_up     = tree.nBJetsCTagUp,
+                    n_bjets_ctag_down   = tree.nBJetsCTagDown,
                     n_bjets_mistag_up   = tree.nBJetsMistagUp,
                     n_bjets_mistag_down = tree.nBJetsMistagDown,
  
                     lepton1_reco_weight = tree.leptonOneRecoWeight,
                     lepton2_reco_weight = tree.leptonTwoRecoWeight,
+                    lepton1_id_weight   = tree.leptonOneIDWeight,
+                    lepton2_id_weight   = tree.leptonTwoIDWeight,
                     trigger_weight      = tree.triggerWeight,
                     pileup_weight       = tree.puWeight,
                     top_pt_weight       = tree.topPtWeight,
-                    event_weight        = tree.eventWeight
+                    event_weight        = tree.eventWeight,
+
+                    lepton1_reco_var = tree.leptonOneRecoVar,
+                    lepton2_reco_var = tree.leptonTwoRecoVar,
+                    lepton1_id_var   = tree.leptonOneIDVar,
+                    lepton2_id_var   = tree.leptonTwoIDVar,
                    )
 
     if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:

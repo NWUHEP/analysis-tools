@@ -579,22 +579,19 @@ class FitData(object):
         # lepton energy scale as morphing parameters
         if selection == 'ee':
             f_model *= pdict['trigger_e']**2
-            f_model *= pdict['eff_e']**2
         elif selection == 'emu':
             f_model *= pdict['trigger_mu']*pdict['trigger_e']
-            f_model *= pdict['eff_e']*pdict['eff_mu']
+            f_model *= pdict['eff_mu']
         elif selection == 'mumu':
             f_model *= pdict['trigger_mu']**2
             f_model *= pdict['eff_mu']**2
         elif selection == 'etau':
             f_model *= pdict['trigger_e']
-            f_model *= pdict['eff_e']
         elif selection == 'mutau':
             f_model *= pdict['trigger_mu']
             f_model *= pdict['eff_mu']
         elif selection == 'e4j':
             f_model *= pdict['trigger_e']
-            f_model *= pdict['eff_e']
         elif selection == 'mu4j':
             f_model *= pdict['trigger_mu']
             f_model *= pdict['eff_mu']

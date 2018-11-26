@@ -18,18 +18,22 @@ e_fakes_ss,"QCD norm (e, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
 mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
 trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
-eff_e,$\epsilon_{e}$,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
-eff_tau,$\epsilon_{\tau}$,1,0.1,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
+eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
 misid_tau_h,$\tau$ mis-ID,1,0.1,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
 pileup,pileup,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
+eff_reco_e,"$\epsilon_{e,id}$",1,1,shape,1,1,1,1,1,1,0,1,1,0,1,0,1,0
+eff_id_e,"$\epsilon_{e,reco}$",1,1,shape,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 escale_mu,$\mu$ ES,0,1,shape,1,1,1,0,1,0,0,0,1,1,0,0,0,1
-escale_tau,$\tau$ ES,0,1,shape,1,1,1,0,0,0,0,0,0,0,1,1,0,0
+escale_tau_0,$\tau\rightarrow\pi$ ES ,0,1,shape,1,1,1,0,0,0,0,0,0,0,1,1,0,0
+escale_tau_1,$\tau\rightarrow\pi\pi^{0}$ ES,0,1,shape,1,1,1,0,0,0,0,0,0,0,1,1,0,0
+escale_tau_10,$\tau\rightarrow\pi\pi\pi^{0}$ ES,0,1,shape,1,1,1,0,0,0,0,0,0,0,1,1,0,0
 mur,$\mu_{r}$,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 muf,$\mu_{f}$,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 pdf,PDF,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 btag,btag,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
+ctag,ctag,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 mistag,mistag,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 jer,JER,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 jes_abs_scale,JES: absolute scale,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
