@@ -209,7 +209,7 @@ class SystematicTemplateGenerator():
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self.template_overlays(h_up, h_down, 'id_e')
-            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up, h_down
+            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up - self._h, h_down - self._h
 
         elif self._selection == 'emu':
 
@@ -220,7 +220,7 @@ class SystematicTemplateGenerator():
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self.template_overlays(h_up, h_down, 'reco_e')
-            self._df_sys['reco_e_up'], self._df_sys['reco_e_down'] = h_up, h_down
+            self._df_sys['reco_e_up'], self._df_sys['reco_e_down'] = h_up - self._h, h_down - self._h
 
             ## id/iso scale factor
             w_nominal = df.weight/df['lepton2_id_weight']
@@ -229,7 +229,7 @@ class SystematicTemplateGenerator():
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self.template_overlays(h_up, h_down, 'id_e')
-            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up, h_down
+            self._df_sys['id_e_up'], self._df_sys['id_e_down'] = h_up - self._h, h_down - self._h
 
     def reco_shape_systematics(self, df):
         '''
@@ -247,7 +247,7 @@ class SystematicTemplateGenerator():
         # pileup
         h_up, h_down = pileup_morph(df, feature, bins)
         self.template_overlays(h_up, h_down, 'pileup')
-        self._df_sys['pileup_up'], self._df_sys['pileup_down'] = h_up, h_down
+        self._df_sys['pileup_up'], self._df_sys['pileup_down'] = h_up - self._h, h_down - self._h
 
         if self._selection in ['mumu', 'mu4j']:
             ## muon energy scale
@@ -255,7 +255,7 @@ class SystematicTemplateGenerator():
             h_up, _      = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
             h_down, _    = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
             self.template_overlays(h_up, h_down, 'escale_mu')
-            self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
+            self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up - self._h, h_down - self._h
 
         if self._selection in ['ee', 'e4j']:
 
@@ -264,7 +264,7 @@ class SystematicTemplateGenerator():
             h_up, _      = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
             h_down, _    = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
             self.template_overlays(h_up, h_down, 'escale_e')
-            self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
+            self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up - self._h, h_down - self._h
 
         if self._selection in ['etau', 'mutau']:
             ## tau energy scale
@@ -272,19 +272,19 @@ class SystematicTemplateGenerator():
             for decay_mode in [0, 1, 10]:
                 h_up, h_down = conditional_scaling(df, bins, 0.012, df.tau_decay_mode == decay_mode, 'lepton2_pt')
                 self.template_overlays(h_up, h_down, f'escale_tau_{decay_mode}')
-                self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up, h_down
+                self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up - self._h, h_down - self._h
 
         if self._selection == 'emu':
 
             ### electron energy scale
             h_up, h_down = conditional_scaling(df, bins,0.005, abs(df.trailing_lepton_flavor) == 11, 'trailing_lepton_pt')
             self.template_overlays(h_up, h_down, 'escale_e')
-            self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
+            self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up - self._h, h_down - self._h
 
             ### muon energy scale
             h_up, h_down = conditional_scaling(df, bins, 0.002, abs(df.trailing_lepton_flavor) == 13, 'trailing_lepton_pt')
             self.template_overlays(h_up, h_down, 'escale_mu')
-            self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
+            self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up - self._h, h_down - self._h
 
         return
 
@@ -310,8 +310,8 @@ class SystematicTemplateGenerator():
             if syst_type in ['mur', 'muf', 'mur_muf', 'pdf']:
                 h_up   /= renorm[f'{syst_type}_up']
                 h_down /= renorm[f'{syst_type}_down']
-            self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
             self.template_overlays(h_up, h_down, syst_type)
+            self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up - self._h, h_down - self._h
 
         return
 
@@ -325,9 +325,15 @@ class SystematicTemplateGenerator():
         Parameters:
         ===========
         df: dataframe for dataset
-        cut: jet category
         '''
 
+        w_down    = df.weight/df['top_pt_weight']
+        w_up      = df.weight + (df['top_pt_weight'] - np.ones(df.shape[0]))
+        h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+        h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+        self.template_overlays(h_up, h_down, 'reco_e')
+        self._df_sys['reco_e_up'], self._df_sys['reco_e_down'] = h_up - self._h, h_down - self._h
+        
 
     def template_overlays(self, h_up, h_down, systematic):
         '''
