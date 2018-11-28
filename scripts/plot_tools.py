@@ -39,6 +39,7 @@ dataset_dict = dict(
                     fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes', 
                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes', 
                                 'muon_2016H_fakes'
+
                                 'electron_2016B_fakes', 'electron_2016C_fakes', 'electron_2016D_fakes', 
                                 'electron_2016E_fakes', 'electron_2016F_fakes', 'electron_2016G_fakes', 
                                 'electron_2016H_fakes'
@@ -50,8 +51,8 @@ selection_dataset_dict = dict(
                               ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
                               mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
                               emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
-                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
-                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
+                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes_ss'],
+                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes_ss'],
                               e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
                               mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
                               )
@@ -72,9 +73,10 @@ cuts = dict(
             )
 
 # WIP
-tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 \
+tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90 \
                and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
+#ll_dy_veto = '(dilepton1_mass < 101 and dilepton1_mass > 81)'
 Category = namedtuple('Category', ['cut', 'selections', 'label'])
 categories = dict(
                   #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
@@ -94,6 +96,7 @@ categories = dict(
                   cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
                   cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
                   cat_gt3_gt2   = Category('n_jets >= 3 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$'),
+                  #cat_dy_ctrl   = Category('(75 < dilepton1_mass < 106)',                    ['ee', 'mumu'], 'Z'),
                   )
 
 def make_directory(file_path, clear=True):
@@ -373,7 +376,7 @@ class DataManager():
                 dataframes[dataset] = df.query(condition)
 
         if concat:
-            df = pd.concat(list(dataframes.values()))
+            df = pd.concat(list(dataframes.values()), sort=False)
             return df
         else:
             return dataframes

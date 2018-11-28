@@ -42,9 +42,14 @@ if __name__ == '__main__':
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['etau']
+    #selections = ['etau', 'mutau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
+
+        # create/clear output directory for plots
+        #output_path = f'plots/systematics/{selection}'
+        #pt.make_directory(output_path, clear=True)
+
         print(f'Running over category {selection}...')
         feature    = fh.features[selection]
         ntuple_dir = f'{args.input}/{selection}_2016'
@@ -194,7 +199,7 @@ if __name__ == '__main__':
                          
                         ### produce morphing templates for shape systematics
                         if np.any(h != 0):
-                            if np.sqrt(np.sum(hvar))/np.sum(h) < 0.1: # only consider systematics if sigma_N/N < 10%
+                            if np.sqrt(np.sum(hvar))/x.size < 0.1: # only consider systematics if sigma_N/N < 10% and if they are more than 1% of events
 
                                 df = dm.get_dataframe(label, c)
                                 syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{n}', 
@@ -247,7 +252,7 @@ if __name__ == '__main__':
 
                     ### produce morphing templates for shape systematics
                     if label == 'zjets_alt' and np.any(h != 0):
-                        if np.sqrt(np.sum(hvar))/np.sum(h) < 0.1: # only consider systematics if sigma_N/N < 10%
+                        if np.sqrt(np.sum(hvar))/x.size < 0.1: # only consider systematics if sigma_N/N < 10% and if they are more than 1% of events
 
                             df = dm.get_dataframe(label)
                             syst_gen = st.SystematicTemplateGenerator(selection, f'{label}', 

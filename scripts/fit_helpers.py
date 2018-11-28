@@ -381,6 +381,7 @@ class FitData(object):
         for s in self._selections:
             np_dict[s] = dict()
             for ds in pt.selection_dataset_dict[s]:
+                if ds == 'fakes_ss': ds = 'fakes'
                 np_dict[s][ds] = df_shape.query(f'{ds} == 1 and {s} == 1').index.values 
         self._np_dict = np_dict
 
@@ -452,23 +453,15 @@ class FitData(object):
         in templates dataframe.  Only applies variation in the case that there
         are a sufficient number fo events.
         '''
-        nominal_template = templates['val'].values
+        t_nominal = templates['val'].values
         if templates.shape[1] == 2: # no systematics generated
-            return nominal_template
+            return t_nominal
         else:
 
-            #t_new = np.zeros(nominal_template.shape)
-            #for pname in self._np_dict[selection][dataset]:
-            #    t_up, t_down = templates[f'{pname}_up'].values, templates[f'{pname}_down'].values 
-            #    dt = shape_morphing(pdict[pname], (nominal_template, t_up, t_down)) - nominal_template
-            #    #print(pname, dt)
-            #    t_new += dt
-            #t_new += nominal_template
-
             if isinstance(sub_ds, type(None)):
-                morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset] 
+                t_morph = self._selection_data[selection][category]['np_shapes'][dataset]
             else:
-                morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset][sub_ds] 
+                t_morph = self._selection_data[selection][category]['np_shapes'][dataset][sub_ds]
 
             # get coefficients for quadratic morphing
             sp = np.array(list(pdict.values()))
@@ -478,15 +471,27 @@ class FitData(object):
             coeff_nominal = (sp - 1)*(sp + 1)
 
             # generate nominal template "replica" array
-            nominal_matrix = np.repeat(nominal_template, sp.size, axis=0)
-            nominal_matrix = nominal_matrix.reshape(morphing_templates[0].T.shape).T
+            nominal_matrix = np.repeat(t_nominal, sp.size, axis=0)
+            nominal_matrix = nominal_matrix.reshape(t_morph[0].T.shape).T
             
             # calculate variation terms for the morphed template
-            t_up   = coeff_up[:,None]*morphing_templates[0]
-            t_down = coeff_down[:,None]*morphing_templates[1]
+            t_up   = coeff_up[:,None]*t_morph[0]
+            t_down = coeff_down[:,None]*t_morph[1]
             t_nom  = coeff_nominal[:,None]*nominal_matrix
             dt  = (t_up + t_down - t_nom) - nominal_matrix
-            t_new = nominal_template + dt.sum(axis=0)
+            t_new = t_nominal + dt.sum(axis=0)
+
+            # get shape n.p. array
+            #sp = np.array(list(pdict.values()))
+            #sp = sp[self._shape_mask]
+
+            ## rewrite Conway eq. 7 in terms of polynomial degrees of f
+            #A = t_morph[0] + t_morph[1] # quadratic coefficient
+            #B = t_morph[0] - t_morph[1] # linear coefficient
+            #
+            ## calculate variation terms for the morphed template
+            #dt    = np.dot(sp**2, A) + np.dot(sp, B)
+            #t_new = t_nominal + 0.5*dt
 
             return t_new
 
