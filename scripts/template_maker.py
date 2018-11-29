@@ -42,7 +42,7 @@ if __name__ == '__main__':
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['mutau']
+    #selections = ['etau', 'mutau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         elif selection == 'emu':
             data_labels = ['electron', 'muon']
         labels = pt.selection_dataset_dict[selection]
-        datasets = [d for l in data_labels + labels for d in pt.dataset_dict[l] ]
+        datasets = [d for l in data_labels + labels for d in pt.dataset_dict[l]]
 
         dm = pt.DataManager(input_dir     = ntuple_dir,
                             dataset_names = datasets,
@@ -204,6 +204,7 @@ if __name__ == '__main__':
 
                                 df = df.query(cat_items.cut)
                                 syst_gen.reco_shape_systematics(df)
+                                syst_gen.electron_reco_systematics(df)
                                 if label == 'ttbar':
                                     syst_gen.theory_shape_systematics(df, f'{cat_items.cut} and {c}', k_theory)
 
@@ -256,6 +257,7 @@ if __name__ == '__main__':
 
                             df = df.query(cat_items.cut)
                             syst_gen.reco_shape_systematics(df)
+                            syst_gen.electron_reco_systematics(df)
                             df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
 
                     templates[label] = df_temp

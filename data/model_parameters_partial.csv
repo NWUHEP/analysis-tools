@@ -18,11 +18,11 @@ e_fakes_ss,"QCD norm (e, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
 mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
 trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
-eff_e,$\epsilon_{e}$,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
-eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
-eff_tau,$\epsilon_{\tau}$,1,0.1,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
-misid_tau_h,$\tau$ mis-ID,1,0.1,norm,1,1,1,1,1,1,0,0,0,0,0,1,0,0
-pileup,pileup,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
+eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,0,0,0,1,1,0,1,0,1
+eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,0,1,0,0
+misid_tau_h,$\tau$ mis-ID,1,0.2,norm,1,1,1,1,1,0,0,0,0,0,0,1,0,0
+eff_id_e,"$\epsilon_{e,id}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
+eff_reco_e,"$\epsilon_{e,reco}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
 escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 escale_mu,$\mu$ ES,0,1,shape,1,1,1,0,1,0,0,0,1,1,0,0,0,1
 escale_tau,$\tau$ ES,0,1,shape,1,1,1,0,0,0,0,0,0,0,1,1,0,0
@@ -50,3 +50,4 @@ jes_single_pion_ecal,JES: $\pi$ (ECAL),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 jes_single_pion_hcal,JES: $\pi$ (HCAL),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 jes_time_pt_eta,JES: time $p_{T}/\eta$,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
 jes_flavor_qcd,JES: flavor,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
+pileup,pileup,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1

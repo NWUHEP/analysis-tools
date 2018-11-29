@@ -63,7 +63,7 @@ if __name__ == '__main__':
         df_qcd.loc[:,'lepton2_q'] = -1*df_qcd['lepton1_q']
 
         # save output and update event counts
-        df_qcd.to_pickle(f'{input_dir}/ntuple_fakes_ss.pkl')
+        df_qcd.to_pickle(f'{input_dir}/ntuple_fakes.pkl')
 
         ec = pd.read_csv(f'{input_dir}/event_counts.csv')
         ec['fakes_ss'] = 10*[1., ]

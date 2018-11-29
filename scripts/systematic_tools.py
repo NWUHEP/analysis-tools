@@ -146,6 +146,91 @@ class SystematicTemplateGenerator():
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
             self.template_overlays(h_up, h_down, syst_type)
 
+    def electron_reco_systematics(self, df):
+        '''
+        Generates shape templates for electron id and reco efficiency scale factors.
+        '''
+        bins = self._binning
+        feature = self._feature
+
+        if self._selection == 'ee':
+
+            ## reco scale factor
+            w_nominal = df.weight/(df['lepton1_reco_weight']*df['lepton2_reco_weight'])
+            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] + np.sqrt(df['lepton2_reco_var']))
+            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] - np.sqrt(df['lepton2_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'reco_e')
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
+            self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
+
+            ## id/iso scale factor
+            w_nominal = df.weight/(df['lepton1_id_weight']*df['lepton2_id_weight'])
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'id_e')
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
+            self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
+
+        elif self._selection in ['etau', 'e4j']:
+
+            ## reco scale factor
+            w_nominal = df.weight/df['lepton1_reco_weight']
+            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))
+            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'reco_e')
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
+            self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
+
+            ## id/iso scale factor
+            w_nominal = df.weight/df['lepton1_id_weight']
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'id_e')
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
+            self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
+
+        elif self._selection == 'emu':
+
+            ## reco scale factor
+            w_nominal = df.weight/df['lepton2_reco_weight']
+            w_up      = w_nominal*(df['lepton2_reco_weight'] + np.sqrt(df['lepton2_reco_var']))
+            w_down    = w_nominal*(df['lepton2_reco_weight'] - np.sqrt(df['lepton2_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'reco_e')
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
+            self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
+
+            ## id/iso scale factor
+            w_nominal = df.weight/df['lepton2_id_weight']
+            w_up      = w_nominal*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
+            w_down    = w_nominal*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self.template_overlays(h_up, h_down, 'id_e')
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
+            self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
+
     def reco_shape_systematics(self, df):
         '''
         Generates templates for:
@@ -188,6 +273,32 @@ class SystematicTemplateGenerator():
             h_down, _    = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
             self.template_overlays(h_up, h_down, 'escale_tau')
             self._df_sys['escale_tau_up'], self._df_sys['escale_tau_down'] = h_up, h_down
+
+            ## tau energy scale
+            scale = 0.012
+            h_up, _   = np.histogram((1+scale)*df[feature], bins=bins, weights=df.weight)
+            h_down, _ = np.histogram((1-scale)*df[feature], bins=bins, weights=df.weight)
+
+            ## ugh this shitty hack...
+            h_up[0] = 1.005*self._h[0]
+            h_down[0] = .995*self._h[0]
+
+            #self.template_overlays(h_up, h_down, f'escale_tau')
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys[f'escale_tau_up'], self._df_sys[f'escale_tau_down'] = y_up, y_down
+            self._df_sys[f'escale_tau_up'], self._df_sys[f'escale_tau_down'] = h_up, h_down
+
+            for decay_mode in [0, 1, 10]:
+                h_up, h_down = conditional_scaling(df, bins, 0.012, df.tau_decay_mode == decay_mode, 'lepton2_pt')
+                h_up[0] = 1.0025*self._h[0]
+                h_down[0] = .9975*self._h[0]
+
+                self.template_overlays(h_up, h_down, f'escale_tau_{decay_mode}')
+            #    y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #    self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = y_up, y_down
+                self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up, h_down
+
+
 
         ## emu channel needs to be treated separately
         if self._selection == 'emu':
@@ -311,7 +422,7 @@ class SystematicTemplateGenerator():
         #ax.set_yscale('linear')
 
         plt.tight_layout()
-        plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.pdf')
+        #plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.pdf')
         plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.png')
         plt.close()
 

@@ -381,6 +381,9 @@ class FitData(object):
         for s in self._selections:
             np_dict[s] = dict()
             for ds in pt.selection_dataset_dict[s]:
+                if ds == 'fakes_ss':
+                    ds = 'fakes'
+
                 np_dict[s][ds] = df_shape.query(f'{ds} == 1 and {s} == 1').index.values 
         self._np_dict = np_dict
 
@@ -566,7 +569,7 @@ class FitData(object):
                                              single_w = (label == 'wjets')
                                             )
 
-                if selection in ['etau', 'mutau'] and label == 'wjets': 
+                if selection in ['etau', 'mutau'] and label == 'wjets':
                     f_sig *= pdict['misid_tau_h']
 
             # prepare mixture
@@ -579,22 +582,22 @@ class FitData(object):
         # lepton energy scale as morphing parameters
         if selection == 'ee':
             f_model *= pdict['trigger_e']**2
-            f_model *= pdict['eff_e']**2
+            #f_model *= pdict['eff_e']**2
         elif selection == 'emu':
             f_model *= pdict['trigger_mu']*pdict['trigger_e']
-            f_model *= pdict['eff_e']*pdict['eff_mu']
+            f_model *= pdict['eff_mu']#*pdict['eff_e']
         elif selection == 'mumu':
             f_model *= pdict['trigger_mu']**2
             f_model *= pdict['eff_mu']**2
         elif selection == 'etau':
             f_model *= pdict['trigger_e']
-            f_model *= pdict['eff_e']
+            #f_model *= pdict['eff_e']
         elif selection == 'mutau':
             f_model *= pdict['trigger_mu']
             f_model *= pdict['eff_mu']
         elif selection == 'e4j':
             f_model *= pdict['trigger_e']
-            f_model *= pdict['eff_e']
+            #f_model *= pdict['eff_e']
         elif selection == 'mu4j':
             f_model *= pdict['trigger_mu']
             f_model *= pdict['eff_mu']
