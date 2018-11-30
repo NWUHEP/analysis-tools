@@ -63,9 +63,13 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
     '''
 
     # systematic up/down
-    up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
-    down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
-    if sys_type not in ['btag', 'mistag']:
+    if sys_type == 'ctag': # temporary until this is fixed upstream
+        up_condition   = jet_condition.replace('n_bjets', f'n_cjets_{sys_type}_up')
+        down_condition = jet_condition.replace('n_bjets', f'n_cjets_{sys_type}_down')
+    else:
+        up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
+        down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
+    if sys_type not in ['btag', 'ctag', 'mistag']:
         up_condition   = up_condition.replace('n_jets', f'n_jets_{sys_type}_up')
         down_condition = down_condition.replace('n_jets', f'n_jets_{sys_type}_down')
 
