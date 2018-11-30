@@ -10,6 +10,19 @@ import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 from scripts.blt_reader import jec_source_names
 
+def conditional_scaling(df, bins, scale, mask, feature):
+    '''
+    Generates morphing templates based on systematic assigned to subset of the data.
+    '''
+
+    df.loc[mask, feature] *= 1 + scale
+    h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
+    df.loc[mask, feature] *= (1 - scale)/(1 + scale)
+    h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
+    df.loc[mask, feature] /= (1 - scale)
+
+    return h_up, h_down
+
 def pileup_morph(df, feature, bins):
     '''
     Generates templates for morphing of distributions due to pileup variance.
@@ -140,7 +153,7 @@ class SystematicTemplateGenerator():
         '''
 
         jet_syst_list = [f'jes_{n}' for n in jec_source_names]
-        jet_syst_list += ['jer', 'btag', 'mistag']
+        jet_syst_list += ['jer', 'btag', 'ctag', 'mistag']
         for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
@@ -230,6 +243,8 @@ class SystematicTemplateGenerator():
             #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
             #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
             self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
+
+        return
 
     def reco_shape_systematics(self, df):
         '''
