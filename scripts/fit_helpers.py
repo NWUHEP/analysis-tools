@@ -563,7 +563,7 @@ class FitData(object):
                                              )
 
                 #f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
-                f_sig = pdict['eff_tau']*f_real f_fake
+                f_sig = pdict['eff_tau']*f_real + f_fake
             else:
                 f_sig = signal_mixture_model(beta, br_tau,
                                              h_temp   = signal_template,

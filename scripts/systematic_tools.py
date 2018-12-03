@@ -270,10 +270,11 @@ class SystematicTemplateGenerator():
         '''
         
         pt_bins = [20, 25, 30, 40, 50, 65, np.inf]
-        sigma   = [0.055, 0.046, 0.0434, 0.041, 0.0448, 0.0418]
+        sigma   = [0.055, 0.046, 0.0434, 0.041, 0.0448, 0.0418] # statistical only
+        #sigma   = [0.199, 0.158, 0.19, 0.09, 0.24, 0.31]
         for ipt, pt_bin in enumerate(pt_bins[:-1]):
             mask = (df.lepton2_pt > pt_bin) & (df.lepton2_pt < pt_bins[ipt+1])
-            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, 'lepton2_pt', type='weight')
+            h_up, h_down = conditional_scaling(df, self._binning, 0.5*sigma[ipt], mask, 'lepton2_pt', type='weight')
             self._df_sys[f'misid_tau_{ipt}_up'], self._df_sys[f'misid_tau_{ipt}_down'] = h_up, h_down
 
         return
