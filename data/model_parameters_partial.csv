@@ -13,14 +13,19 @@ xs_ttbar,$\sigma_{t\bar{t}}$,1,0.05,norm,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_t,$\sigma_{tW}$,1,0.1,norm,0,1,0,0,0,0,0,1,1,1,1,1,1,1
 xs_wjets,$\sigma_{W}$,1,0.05,norm,0,0,0,0,1,0,0,1,1,1,1,1,1,1
 e_fakes,"QCD norm (e, iso)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,0,1,0
-mu_fakes,"QCD norm ($\mu$, iso)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,0,0,1
-e_fakes_ss,"QCD norm (e, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
-mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
+mu_fakes,"QCD norm ($\mu$, iso)",1,0.05,norm,0,0,0,0,0,0,1,0,0,0,0,0,0,1
+e_fakes_ss,"QCD norm (e, ss)",1,0.05,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
+mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.05,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
 trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
 eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,0,0,0,1,1,0,1,0,1
-eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,0,1,0,0
-misid_tau_h,$\tau$ mis-ID,1,0.2,norm,1,1,1,1,1,0,0,0,0,0,0,1,0,0
+eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_3,$\sf jet\rightarrow\tau$ ($40 \leq p_{T} < 50$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_4,$\sf jet\rightarrow\tau$ ($50 \leq p_{T} < 65$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_5,$\sf jet\rightarrow\tau$ ($p_{T} \geq 65$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
 eff_id_e,"$\epsilon_{e,id}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
 eff_reco_e,"$\epsilon_{e,reco}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
 escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,0,1,1,0,0,0,1,0

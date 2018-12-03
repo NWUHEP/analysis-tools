@@ -562,15 +562,16 @@ class FitData(object):
                                               single_w = (label == 'wjets')
                                              )
 
-                f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
+                #f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
+                f_sig = pdict['eff_tau']*f_real f_fake
             else:
                 f_sig = signal_mixture_model(beta, br_tau,
                                              h_temp   = signal_template,
                                              single_w = (label == 'wjets')
                                             )
 
-                if selection in ['etau', 'mutau'] and label == 'wjets':
-                    f_sig *= pdict['misid_tau_h']
+                #if selection in ['etau', 'mutau'] and label == 'wjets':
+                #    f_sig *= pdict['misid_tau_h']
 
             # prepare mixture
             #f_model   += f_sig

@@ -10,16 +10,23 @@ import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 from scripts.blt_reader import jec_source_names, btag_source_names
 
-def conditional_scaling(df, bins, scale, mask, feature):
+def conditional_scaling(df, bins, scale, mask, feature, type='var'):
     '''
     Generates morphing templates based on systematic assigned to subset of the data.
     '''
 
-    df.loc[mask, feature] *= 1 + scale
-    h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
-    df.loc[mask, feature] *= (1 - scale)/(1 + scale)
-    h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
-    df.loc[mask, feature] /= (1 - scale)
+    if type == 'var':
+        df.loc[mask, feature] *= 1 + scale
+        h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, feature] *= (1 - scale)/(1 + scale)
+        h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, feature] /= (1 - scale)
+    elif type == 'weight':
+        df.loc[mask, 'weight'] *= 1 + scale
+        h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, 'weight'] *= (1 - scale)/(1 + scale)
+        h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, 'weight'] /= (1 - scale)
 
     return h_up, h_down
 
@@ -188,8 +195,8 @@ class SystematicTemplateGenerator():
 
             ## id/iso scale factor
             w_nominal = df.weight/(df['lepton1_id_weight']*df['lepton2_id_weight'])
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            w_up      = w_nominal*(df['lepton1_id_weight'] + 0.15*np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] + 0.15*np.sqrt(df['lepton2_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - 0.15*np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] - 0.15*np.sqrt(df['lepton2_id_var']))
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self.template_overlays(h_up, h_down, 'id_e')
@@ -214,8 +221,8 @@ class SystematicTemplateGenerator():
 
             ## id/iso scale factor
             w_nominal = df.weight/df['lepton1_id_weight']
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
+            w_up      = w_nominal*(df['lepton1_id_weight'] + 0.15*np.sqrt(df['lepton1_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - 0.15*np.sqrt(df['lepton1_id_var']))
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self.template_overlays(h_up, h_down, 'id_e')
@@ -240,8 +247,8 @@ class SystematicTemplateGenerator():
 
             ## id/iso scale factor
             w_nominal = df.weight/df['lepton2_id_weight']
-            w_up      = w_nominal*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
-            w_down    = w_nominal*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            w_up      = w_nominal*(df['lepton2_id_weight'] + 0.15*np.sqrt(df['lepton2_id_var']))
+            w_down    = w_nominal*(df['lepton2_id_weight'] - 0.15*np.sqrt(df['lepton2_id_var']))
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self.template_overlays(h_up, h_down, 'id_e')
@@ -249,6 +256,25 @@ class SystematicTemplateGenerator():
             #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
             #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
             self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
+
+        return
+
+    def tau_misid_systematics(self, df):
+        '''
+        Generates morphing templates for tau mis ID as a function of tau pt.
+        Binning is {20, 25, 25, 30, 40, 70, inf}.
+
+        Parameters:
+        ===========
+        df: dataframe for target dataset with
+        '''
+        
+        pt_bins = [20, 25, 30, 40, 50, 65, np.inf]
+        sigma   = [0.055, 0.046, 0.0434, 0.041, 0.0448, 0.0418]
+        for ipt, pt_bin in enumerate(pt_bins[:-1]):
+            mask = (df.lepton2_pt > pt_bin) & (df.lepton2_pt < pt_bins[ipt+1])
+            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, 'lepton2_pt', type='weight')
+            self._df_sys[f'misid_tau_{ipt}_up'], self._df_sys[f'misid_tau_{ipt}_down'] = h_up, h_down
 
         return
 

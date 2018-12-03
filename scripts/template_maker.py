@@ -205,6 +205,12 @@ if __name__ == '__main__':
                                 df = df.query(cat_items.cut)
                                 syst_gen.reco_shape_systematics(df)
                                 syst_gen.electron_reco_systematics(df)
+
+                                # tau misid 
+                                if label == 'wjets' or idecay not in [6,7,8,11,14]:
+                                    syst_gen.tau_misid_systematics(df)
+
+                                # theory systematics
                                 if label == 'ttbar':
                                     syst_gen.theory_shape_systematics(df, f'{cat_items.cut} and {c}', k_theory)
 

@@ -53,17 +53,17 @@ if __name__ == '__main__':
     
     # combine ss data with ss simulation
     df_data = data_manager.get_dataframe('data')
-    df_sim  = data_manager.get_dataframes(sim_labels, concat=True, sort=False)
+    df_sim  = data_manager.get_dataframes(sim_labels, concat=True)
 
     if df_data.shape[0] == 0:
         print('No same-sign events in dataset.')
     else:
         df_sim.loc[:,'weight'] *= -1
-        df_qcd = pd.concat([df_data, df_sim])
+        df_qcd = pd.concat([df_data, df_sim], sort=False)
         df_qcd.loc[:,'lepton2_q'] = -1*df_qcd['lepton1_q']
 
         # save output and update event counts
-        df_qcd.to_pickle(f'{input_dir}/ntuple_fakes.pkl')
+        df_qcd.to_pickle(f'{input_dir}/ntuple_fakes_ss.pkl')
 
         ec = pd.read_csv(f'{input_dir}/event_counts.csv')
         ec['fakes_ss'] = 10*[1., ]
