@@ -8,7 +8,7 @@ import statsmodels.api as sm
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
-from scripts.blt_reader import jec_source_names
+from scripts.blt_reader import jec_source_names, btag_source_names
 
 def conditional_scaling(df, bins, scale, mask, feature):
     '''
@@ -64,12 +64,13 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
 
     # systematic up/down
     if sys_type == 'ctag': # temporary until this is fixed upstream
-        up_condition   = jet_condition.replace('n_bjets', f'n_cjets_{sys_type}_up')
-        down_condition = jet_condition.replace('n_bjets', f'n_cjets_{sys_type}_down')
+        up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
+        down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
     else:
         up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
         down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
-    if sys_type not in ['btag', 'ctag', 'mistag']:
+
+    if sys_type not in ['ctag', 'mistag'] and 'btag' not in sys_type:
         up_condition   = up_condition.replace('n_jets', f'n_jets_{sys_type}_up')
         down_condition = down_condition.replace('n_jets', f'n_jets_{sys_type}_down')
 
@@ -157,7 +158,8 @@ class SystematicTemplateGenerator():
         '''
 
         jet_syst_list = [f'jes_{n}' for n in jec_source_names]
-        jet_syst_list += ['jer', 'btag', 'ctag', 'mistag']
+        jet_syst_list = [f'btag_{n}' for n in btag_source_names]
+        jet_syst_list += ['jer', 'ctag', 'mistag']
         for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down

@@ -69,7 +69,7 @@ if __name__ == '__main__':
                         type    = int
                         )
     parser.add_argument('-a', '--append',
-                        help    = 'Run in append mode (existing datasets will be overwritten)',
+                        help    = 'Run in append mode (existing datasets will not be overwritten)',
                         default = True,
                         type    = bool
                         )
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     #selections  = ['etau']
-    do_data     = False
+    do_data     = True
     do_mc       = True
     do_syst     = False
     period      = 2016

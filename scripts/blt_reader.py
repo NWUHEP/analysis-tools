@@ -27,6 +27,15 @@ jec_source_names = [
                     "total"
                    ]
 
+btag_source_names = [
+                     "bfragmentation", "btempcorr", "cb",       
+                     "cfragmentation", "dmux", "gluonsplitting",
+                     "jes", "jetaway", "ksl", "l2c",            
+                     "ltothers", "mudr", 
+                     "mupt", "sampledependence", "pileup",      
+                     "ptrel", "statistic" 
+                    ]
+
 def calculate_cos_theta(ref_p4, boost_p4, target_p4):
     '''
     !!! THIS NEED TO BE FIXED SO THAT THE INPUTS ARE NOT MODIFIED !!!
@@ -108,6 +117,7 @@ def fill_event_vars(tree, dataset):
                     n_jets         = tree.nJets,
                     n_fwdjets      = tree.nFwdJets,
                     n_bjets        = tree.nBJets,
+                    n_bjets_raw    = tree.nBJetsRaw,
  
                     met_mag        = tree.met,
                     met_phi        = tree.metPhi,
@@ -119,17 +129,25 @@ def fill_event_vars(tree, dataset):
                     n_jets_jer_down     = tree.nJetsJERDown,
                     n_bjets_jer_up      = tree.nBJetsJERUp,
                     n_bjets_jer_down    = tree.nBJetsJERDown,
-                    n_bjets_btag_up     = tree.nBJetsBTagUp,
-                    n_bjets_btag_down   = tree.nBJetsBTagDown,
+                    n_bjets_ctag_up     = tree.nBJetsCTagUp,
+                    n_bjets_ctag_down   = tree.nBJetsCTagDown,
                     n_bjets_mistag_up   = tree.nBJetsMistagUp,
                     n_bjets_mistag_down = tree.nBJetsMistagDown,
- 
+
                     lepton1_reco_weight = tree.leptonOneRecoWeight,
                     lepton2_reco_weight = tree.leptonTwoRecoWeight,
+                    lepton1_id_weight   = tree.leptonOneIDWeight,
+                    lepton2_id_weight   = tree.leptonTwoIDWeight,
                     trigger_weight      = tree.triggerWeight,
                     pileup_weight       = tree.puWeight,
                     top_pt_weight       = tree.topPtWeight,
-                    event_weight        = tree.eventWeight
+                    event_weight        = tree.eventWeight,
+
+                    lepton1_reco_var = tree.leptonOneRecoVar,
+                    lepton2_reco_var = tree.leptonTwoRecoVar,
+                    lepton1_id_var   = tree.leptonOneIDVar,
+                    lepton2_id_var   = tree.leptonTwoIDVar,
+
                    )
 
     if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
@@ -145,6 +163,10 @@ def fill_event_vars(tree, dataset):
             out_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
             out_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
             out_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
+
+        for i, n in enumerate(btag_source_names):
+            out_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
+            out_dict[f'n_bjets_btag_{n}_down'] = tree.nBJetsBTagDown[i]
 
         # generator weights and systematics
         out_dict['gen_weight'] = tree.genWeight

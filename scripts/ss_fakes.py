@@ -53,7 +53,7 @@ if __name__ == '__main__':
     
     # combine ss data with ss simulation
     df_data = data_manager.get_dataframe('data')
-    df_sim  = data_manager.get_dataframes(sim_labels, concat=True)
+    df_sim  = data_manager.get_dataframes(sim_labels, concat=True, sort=False)
 
     if df_data.shape[0] == 0:
         print('No same-sign events in dataset.')

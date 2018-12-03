@@ -374,7 +374,7 @@ class DataManager():
                 dataframes[dataset] = df.query(condition)
 
         if concat:
-            df = pd.concat(list(dataframes.values()))
+            df = pd.concat(list(dataframes.values()), sort=False)
             return df
         else:
             return dataframes
