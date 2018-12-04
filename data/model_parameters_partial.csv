@@ -20,19 +20,20 @@ trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
 eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,0,0,0,1,1,0,1,0,1
 eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_3,$\sf jet\rightarrow\tau$ ($40 \leq p_{T} < 50$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_4,$\sf jet\rightarrow\tau$ ($50 \leq p_{T} < 65$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_5,$\sf jet\rightarrow\tau$ ($p_{T} \geq 65$),0,1,shape,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),1,0.2,norm,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+misid_tau_3,$\sf jet\rightarrow\tau$ ($40 \leq p_{T} < 50$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+misid_tau_4,$\sf jet\rightarrow\tau$ ($50 \leq p_{T} < 65$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+misid_tau_5,$\sf jet\rightarrow\tau$ ($p_{T} \geq 65$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
 eff_id_e,"$\epsilon_{e,id}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
 eff_reco_e,"$\epsilon_{e,reco}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
 escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 escale_mu,$\mu$ ES,0,1,shape,1,1,1,0,1,0,0,0,1,1,0,0,0,1
 escale_tau_0,$\tau\rightarrow\pi$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
 escale_tau_1,$\tau\rightarrow\pi\pi^{0}$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
-escale_tau_10,$\tau\rightarrow\pi\pi\pi^{0}$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
+escale_tau_10,$\tau\rightarrow\pi\pi\pi$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
 mur,$\mu_{r}$,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 muf,$\mu_{f}$,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 pdf,PDF,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1

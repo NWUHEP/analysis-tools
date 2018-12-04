@@ -298,14 +298,14 @@ def fill_jet_vars(tree):
                     jet1_phi        = jet1.Phi(),
                     jet1_e          = jet1.E(),
                     jet1_tag        = tree.jetOneTag,
-                    #jet1_flavor     = tree.jetOneFlavor,
+                    jet1_flavor     = tree.jetOneFlavor,
  
                     jet2_pt         = jet2.Pt(),
                     jet2_eta        = jet2.Eta(),
                     jet2_phi        = jet2.Phi(),
                     jet2_e          = jet2.E(),
                     jet2_tag        = tree.jetTwoTag,
-                    #jet2_flavor     = tree.jetTwoFlavor,
+                    jet2_flavor     = tree.jetTwoFlavor,
  
                     jet_delta_eta   = abs(jet1.Eta() - jet2.Eta()),
                     jet_delta_phi   = abs(jet1.DeltaPhi(jet2)),

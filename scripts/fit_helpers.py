@@ -543,35 +543,39 @@ class FitData(object):
             signal_template     = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
             #signal_template     = pd.DataFrame.from_dict({dm: t['val'] for dm, t in template_collection.items()})
 
-            if selection in ['etau', 'mutau'] and label != 'wjets': # split real and misID taus
-                mask = np.zeros(21).astype(bool)
+            if selection in ['etau', 'mutau']: # split real and misID taus
+                if label != 'wjets': 
 
-                # real tau component (indices taken from decay_map.csv)
-                mask[[6,7,8,11,14]] = True
-                f_real = signal_mixture_model(beta, br_tau,
-                                              h_temp   = signal_template,
-                                              mask     = mask,
-                                              single_w = (label == 'wjets'),
-                                             )
+                    # real tau component (indices taken from decay_map.csv)
+                    mask = np.zeros(21).astype(bool)
+                    mask[[6,7,8,11,14]] = True
+                    f_real = signal_mixture_model(beta, br_tau,
+                                                  h_temp   = signal_template,
+                                                  mask     = mask,
+                                                 )
 
-                # apply misID nuisance parameter for "fake" taus
-                mask = np.invert(mask)
-                f_fake = signal_mixture_model(beta, br_tau,
-                                              h_temp   = signal_template,
-                                              mask     = mask,
-                                              single_w = (label == 'wjets')
-                                             )
+                    # apply misID nuisance parameter for jets faking taus
+                    mask = np.zeros(21).astype(bool)
+                    mask[[16, 17, 18, 19, 20, 21]] = True
+                    f_fake = signal_mixture_model(beta, br_tau,
+                                                  h_temp   = signal_template,
+                                                  mask     = mask,
+                                                 )
 
-                #f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
-                f_sig = pdict['eff_tau']*f_real + f_fake
+                    # add e and mu -> tau fakes here
+
+                    f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
+                else:
+                    f_sig = signal_mixture_model(beta, br_tau,
+                                                 h_temp   = signal_template,
+                                                 single_w = True
+                                                )
+                    f_sig *= pdict['misid_tau_h']
             else:
                 f_sig = signal_mixture_model(beta, br_tau,
                                              h_temp   = signal_template,
                                              single_w = (label == 'wjets')
                                             )
-
-                #if selection in ['etau', 'mutau'] and label == 'wjets':
-                #    f_sig *= pdict['misid_tau_h']
 
             # prepare mixture
             #f_model   += f_sig
