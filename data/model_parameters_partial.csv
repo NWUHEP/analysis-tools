@@ -20,6 +20,7 @@ trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
 eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,0,0,0,1,1,0,1,0,1
 eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,1,1,0,0
+misid_tau_e,$\sf e\rightarrow\tau$ ,1,0.3,norm,1,1,0,0,0,0,0,0,0,0,1,1,0,0
 misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),1,0.2,norm,1,1,0,0,1,0,0,0,0,0,1,1,0,0
 misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
 misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0

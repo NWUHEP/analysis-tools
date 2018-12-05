@@ -73,7 +73,7 @@ cuts = dict(
             )
 
 # WIP
-tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 \
+tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90 \
                and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
 Category = namedtuple('Category', ['cut', 'selections', 'label'])

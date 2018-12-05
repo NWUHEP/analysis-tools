@@ -165,7 +165,7 @@ class SystematicTemplateGenerator():
         '''
 
         jet_syst_list = [f'jes_{n}' for n in jec_source_names]
-        jet_syst_list = [f'btag_{n}' for n in btag_source_names]
+        jet_syst_list += [f'btag_{n}' for n in btag_source_names]
         jet_syst_list += ['jer', 'ctag', 'mistag']
         for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)

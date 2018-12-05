@@ -553,18 +553,36 @@ class FitData(object):
                                                   h_temp   = signal_template,
                                                   mask     = mask,
                                                  )
+                    f_real *= pdict['eff_tau']
 
                     # apply misID nuisance parameter for jets faking taus
                     mask = np.zeros(21).astype(bool)
-                    mask[[16, 17, 18, 19, 20, 21]] = True
-                    f_fake = signal_mixture_model(beta, br_tau,
-                                                  h_temp   = signal_template,
-                                                  mask     = mask,
-                                                 )
+                    mask[[15, 16, 17, 18, 19, 20]] = True
+                    f_fake_h = signal_mixture_model(beta, br_tau,
+                                                    h_temp   = signal_template,
+                                                    mask     = mask,
+                                                   )
+                    f_fake_h *= pdict['misid_tau_h']
 
-                    # add e and mu -> tau fakes here
+                    # e faking tau
+                    mask = np.zeros(21).astype(bool)
+                    if selection == 'etau':
+                        mask[[0, 3, 9]] = True
+                        f_fake_e = signal_mixture_model(beta, br_tau,
+                                                      h_temp   = signal_template,
+                                                      mask     = mask,
+                                                     )
+                        f_fake_e *= pdict['misid_tau_e']
 
-                    f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
+                    elif selection == 'mutau':
+                        mask[[2, 5, 12]] = True
+                        f_fake_e = signal_mixture_model(beta, br_tau,
+                                                      h_temp   = signal_template,
+                                                      mask     = mask,
+                                                     )
+                        f_fake_e *= pdict['misid_tau_e']
+
+                    f_sig = f_real + f_fake_h + f_fake_e
                 else:
                     f_sig = signal_mixture_model(beta, br_tau,
                                                  h_temp   = signal_template,

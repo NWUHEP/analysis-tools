@@ -41,8 +41,8 @@ if __name__ == '__main__':
     decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
-    #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['etau', 'mutau']
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    #selections = ['etau', 'mutau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -207,7 +207,7 @@ if __name__ == '__main__':
                                 syst_gen.electron_reco_systematics(df)
 
                                 # tau misid 
-                                if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
+                                if selection in ['etau', 'mutau'] and (label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]):
                                     syst_gen.tau_misid_systematics(df)
 
                                 # theory systematics

@@ -77,9 +77,9 @@ if __name__ == '__main__':
 
 
     ### Configuration ###
-    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['emu']
-    do_data     = False
+    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    #selections  = ['emu']
+    do_data     = True
     do_mc       = True
     do_syst     = False
     period      = 2016
