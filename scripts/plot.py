@@ -96,7 +96,8 @@ if __name__ == '__main__':
                                   cuts          = cut
                                  )
     jet_cuts = [cat_items.cut for cat, cat_items in pt.categories.items() if selection in cat_items.selections]
-    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=jet_cuts)
+    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=jet_cuts, do_string=True)
+    table.transpose().to_latex(f'{output_path}/yields_{selection}.tex', escape=False)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
 
     ### Loop over features and make the plots ###
@@ -129,7 +130,7 @@ if __name__ == '__main__':
     elif selection in ['ee', 'mumu']:
         inclusive_cut = 'n_jets >= 2 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
     elif selection in ['etau', 'mutau']:
-        inclusive_cut = 'n_jets >= 2'
+        inclusive_cut = 'n_jets >= 0'
     else:
         inclusive_cut = 'n_jets >= 2 and n_bjets >= 1'
 

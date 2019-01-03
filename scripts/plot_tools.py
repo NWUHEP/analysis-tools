@@ -392,7 +392,7 @@ class DataManager():
                      conditions = [''],
                      mc_scale   = True,
                      do_string  = False,
-                     fmt        = 'markdown'
+                     output_format = 'csv'
                      ):
         '''
         Prints sum of the weights for the provided datasets
@@ -404,7 +404,7 @@ class DataManager():
         conditions    : list of conditions to apply
         mc_scale      : scale MC according to weights and scale
         do_string     : format of output cells: if True then string else float
-        fmt           : formatting of the table (default:markdown)
+        output_format : formatting of the table (default:markdown)
         '''
 
         # print header
@@ -423,25 +423,29 @@ class DataManager():
                     df = df.query(condition).copy()
 
                 if mc_scale:
-                    n     = df.weight.sum()
-                    n_err = np.sqrt(np.sum(df.weight**2))
+                    n   = df.weight.sum()
+                    var_stat = np.sum(df.weight**2)
+                    sigma_xs = 0.1 if dataset in ['zjets_alt', 'diboson'] else 0.05
+                    var_syst = (sigma_xs**2 + 0.025**2)*n**2
+                    err = np.sqrt(var_stat + var_syst)
+                    
                 else:
-                    n     = df.shape[0]
-                    n_err = np.sqrt(n)
+                    n   = df.shape[0]
+                    err = np.sqrt(n)
 
                 # calculate sum of bg events
                 if dataset not in exclude and dataset != 'data':
                     bg_total[0] += n
-                    bg_total[1] += n_err**2
+                    bg_total[1] += err**2
 
                 if do_string:
                     if dataset == 'data':
                         table[f'condition_{i+1}'].append('${0}$'.format(int(n)))
                     else:
-                        table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(n, n_err))
+                        table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(n, err))
                 else:
                     table[f'condition_{i+1}'].append(n)
-                    table[f'error_{i+1}'].append(n_err)
+                    table[f'error_{i+1}'].append(err)
 
                 dataframes[dataset] = df  # update dataframes so cuts are applied sequentially
 
@@ -455,6 +459,7 @@ class DataManager():
             labels = [self._lut_datasets.loc[d].text for d in dataset_names]
         else:
             labels = dataset_names
+
         table = pd.DataFrame(table, index=labels+['background'])
         return table
 
