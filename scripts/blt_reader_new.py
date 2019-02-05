@@ -79,14 +79,14 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     #selections  = ['emu']
-    do_data     = True
+    do_data     = False
     do_mc       = True
     do_syst     = False
     period      = 2016
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 't', 'wjets']
+    mc_labels    = ['ttbar', 'zjets_alt']#, 'diboson', 't', 'wjets']
 
     dataset_list = []
     if do_data:

@@ -347,6 +347,8 @@ class FitData(object):
         #self._pool = Pool(processes = min(16, nprocesses))
         self._initialize_parameters()
         self._initialize_morphing_templates()
+        self._xs_zjets_err = pd.read_csv('data/xs_zjets_error.csv').set_index('category')
+        #self._xs_ttbar_err = pd.read_csv('data/xs_zjets_err.csv').set_index('category') # to be implemented
         self._cost_init = 0
 
     def _initialize_template_data(self, location, target, selection):
@@ -368,7 +370,7 @@ class FitData(object):
         '''
         Gets parameter configuration from a file.
         '''
-        df_params = pd.read_csv('data/model_parameters_partial.csv')
+        df_params = pd.read_csv('data/model_parameters.csv')
         df_params = df_params.set_index('name')
         #df_params = df_params.iloc[:4,]
         self._parameters = df_params
@@ -413,6 +415,7 @@ class FitData(object):
                             else:
                                 var_up.append(template['val'].values)
                                 var_down.append(template['val'].values)
+
 
 
                         var_up, var_down = np.vstack(var_up), np.vstack(var_down)
@@ -526,9 +529,12 @@ class FitData(object):
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
         # Drell-Yan
-        f_model   += pdict['xs_zjets']*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
-        #f_model   += pdict['xs_zjets']*templates['zjets_alt']['val']
-        var_model += pdict['xs_zjets']*templates['zjets_alt']['var']
+        n_jets    = int(self._xs_zjets_err.loc[category]['njets'])
+        err_xs    = self._xs_zjets_err.loc[category][selection]
+        err_scale = (1 + err_xs*pdict[f'xs_zjets_{n_jets}'])
+        #err_scale = pdict[f'xs_zjets']
+        f_model   += err_scale*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
+        var_model += err_scale*templates['zjets_alt']['var']
 
         # Diboson
         f_model   += pdict['xs_diboson']*templates['diboson']['val']
@@ -695,13 +701,15 @@ class FitData(object):
         for selection in self._selections:
             sdata = self.get_selection_data(selection)
             for category, cat_data in sdata.items():
+
+                # remove 0 b tag category #
+                #if selection in ['ee', 'mumu'] and category == 'cat_gt2_eq0':
+                #    continue
+
                 cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)
 
         # Add prior terms for nuisance parameters 
         for pname, p in pdict.items():
-            #if pname in ['beta_e', 'beta_mu', 'beta_tau', 'beta_h']:
-            #    continue
-
             p_chi2 = (p - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
             cost += p_chi2
 

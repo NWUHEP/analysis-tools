@@ -88,13 +88,15 @@ categories = dict(
                   cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$'),
                   cat_eq1_eq1   = Category('n_jets == 1 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$'),
                   cat_eq2_eq1   = Category('n_jets == 2 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$'),
-                  cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
+                  cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu'], '$N_{j} \geq 2, N_{b} = 1$'),
                   cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
                   cat_gt3_eq1   = Category('n_jets >= 3 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$'),
                   cat_eq2_gt2   = Category('n_jets == 2 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$'),
-                  cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
+                  cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$'),
                   cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
                   cat_gt3_gt2   = Category('n_jets >= 3 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$'),
+                  cat_gt4_eq1   = Category('n_jets >= 4 and n_bjets == 1',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} = 1$'),
+                  cat_gt4_gt2   = Category('n_jets >= 4 and n_bjets >= 2',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$'),
                   )
 
 def make_directory(file_path, clear=True):
