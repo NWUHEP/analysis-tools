@@ -7,10 +7,6 @@ br_tau_e,$b_{\tau_{e}}$,0.1783,0.0004,norm,1,1,0,0,1,0,0,1,1,1,1,1,1,1
 br_tau_mu,$b_{\tau_{\mu}}$,0.1741,0.0004,norm,1,1,0,0,1,0,0,1,1,1,1,1,1,1
 br_tau_h,$b_{\tau_{h}}$,0.6476,0.001,norm,1,1,0,0,1,0,0,1,1,1,1,1,1,1
 lumi,$L_{int}$,1,0.025,norm,1,1,1,1,1,1,0,1,1,1,1,1,1,1
-xs_zjets_0,$\sigma_{Z}\ (n_{jets} = 0)$,0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_1,$\sigma_{Z}\ (n_{jets} = 1)$,0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_2,$\sigma_{Z}\ (n_{jets} = 2)$,0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_3,$\sigma_{Z}\ (n_{jets} \geq 3)$,0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
 xs_diboson,$\sigma_{VV}$,1,0.1,norm,0,0,0,0,0,1,0,1,1,1,1,1,1,1
 xs_ttbar,$\sigma_{t\bar{t}}$,1,0.05,norm,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_t,$\sigma_{tW}$,1,0.1,norm,0,1,0,0,0,0,0,1,1,1,1,1,1,1
@@ -25,6 +21,10 @@ eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,0,0,0,1,1,0,1,0,1
 eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,1,1,0,0
 misid_tau_e,$\sf e\rightarrow\tau$ ,1,0.3,norm,1,1,0,0,0,0,0,0,0,0,1,1,0,0
 misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),1,0.2,norm,1,1,0,0,1,0,0,0,0,0,1,1,0,0
+pdf_zjets,Z norm. (PDF),0,1,shape,0,0,1,1,0,0,0,1,1,1,1,1,1,1
+alpha_s_zjets,Z norm. ($\alpha_{s}$),0,1,shape,0,0,1,1,0,0,0,1,1,1,1,1,1,1
+mu_f_zjets,Z norm. ($\mu_{F}$),0,1,shape,0,0,1,1,0,0,0,1,1,1,1,1,1,1
+mu_r_zjets,Z norm. ($\mu_{R}$),0,1,shape,0,0,1,1,0,0,0,1,1,1,1,1,1,1
 misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
 misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
 misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0

@@ -405,23 +405,8 @@ class FitData(object):
                 for ds, template in templates['templates'].items():
                     if ds in ['data', 'diboson']:
                         continue
-                    elif ds == 'zjets_alt':
 
-                        var_up, var_down = [], []
-                        for pname, param in shape_params.iterrows():
-                            if f'{pname}_up' in template.columns:
-                                var_up.append(template[f'{pname}_up'].values)
-                                var_down.append(template[f'{pname}_down'].values)
-                            else:
-                                var_up.append(template['val'].values)
-                                var_down.append(template['val'].values)
-
-
-
-                        var_up, var_down = np.vstack(var_up), np.vstack(var_down)
-                        if var_up.sum() > 0:
-                            self._selection_data[sel][category]['np_shapes'][ds] = (var_up, var_down)
-                    elif ds in ['ttbar', 't', 'wjets']: # sub templates
+                    if ds in ['ttbar', 't', 'wjets', 'zjets_alt']: # sub templates
                         self._selection_data[sel][category]['np_shapes'][ds] = dict()
                         for sub_ds, sub_template in template.items():
                             var_up, var_down = [], []
@@ -470,11 +455,17 @@ class FitData(object):
             #    #print(pname, dt)
             #    t_new += dt
             #t_new += nominal_template
-
+            morphing_data = self._selection_data[selection][category]['np_shapes']
             if isinstance(sub_ds, type(None)):
-                morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset] 
+                if dataset in morphing_data.keys():
+                    morphing_templates = morphing_data[dataset] 
+                else:
+                    return nominal_template
             else:
-                morphing_templates = self._selection_data[selection][category]['np_shapes'][dataset][sub_ds] 
+                if sub_ds in morphing_data[dataset].keys():
+                    morphing_templates = morphing_data[dataset][sub_ds] 
+                else:
+                    return nominal_template
 
             # get coefficients for quadratic morphing
             sp = np.array(list(pdict.values()))
@@ -528,17 +519,17 @@ class FitData(object):
         # get simulated background components and apply cross-section nuisance parameters
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
-        # Drell-Yan
-        n_jets    = int(self._xs_zjets_err.loc[category]['njets'])
-        err_xs    = self._xs_zjets_err.loc[category][selection]
-        err_scale = (1 + err_xs*pdict[f'xs_zjets_{n_jets}'])
-        #err_scale = pdict[f'xs_zjets']
-        f_model   += err_scale*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
-        var_model += err_scale*templates['zjets_alt']['var']
-
         # Diboson
         f_model   += pdict['xs_diboson']*templates['diboson']['val']
         var_model += pdict['xs_diboson']*templates['diboson']['var']
+
+        # Drell-Yan
+        for njets in range(4):
+            template = templates['zjets_alt']
+            if f'njets_{njets}' in template.keys():
+                template = template[f'njets_{njets}']
+                f_model   += self.modify_template(template, pdict, 'zjets_alt', selection, category, f'njets_{njets}')
+                var_model += template['var']
 
         if selection in ['etau', 'mutau']:
             f_model *= pdict['eff_tau']
@@ -546,7 +537,7 @@ class FitData(object):
         # get the signal components and apply mixing of W decay modes according to beta
         for label in ['ttbar', 't', 'wjets']:
             template_collection = templates[label]
-            signal_template     = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
+            signal_template = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
             #signal_template     = pd.DataFrame.from_dict({dm: t['val'] for dm, t in template_collection.items()})
 
             if selection in ['etau', 'mutau']: # split real and misID taus
@@ -703,8 +694,8 @@ class FitData(object):
             for category, cat_data in sdata.items():
 
                 # remove 0 b tag category #
-                #if selection in ['ee', 'mumu'] and category == 'cat_gt2_eq0':
-                #    continue
+                if selection in ['ee', 'mumu'] and category == 'cat_gt2_eq0':
+                    continue
 
                 cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)
 

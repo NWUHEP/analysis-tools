@@ -377,6 +377,55 @@ class SystematicTemplateGenerator():
 
         return
 
+    def normalization_systematics(self, df, dataset_name, npartons=0):
+        '''
+        Accounts for normalization systematics based on PDF, alpha_s, and QCD
+        variations.
+
+        Parameters:
+        ===========
+        df: dataframe for target dataset
+        dataset_name: name of dataset (only Z+jets implemented)
+        npartons: needed for z+jets normalization systematics
+        '''
+
+        if dataset_name == 'zjets_alt':
+            #hardcode these for now; do something smarter in the fuuuture
+            pdf_up       = [0.012, 0.01, 0.007, 0.009]
+            pdf_down     = [-0.012, -0.009, -0.007, -0.007]
+            alpha_s_up   = [0.011, 0.015, 0.023, 0.026]
+            alpha_s_down = [-0.011, -0.015, -0.023, -0.026]
+            mu_f_up      = [0.025, 0.043, -0.005, 0.017]
+            mu_f_down    = [-0.044, -0.056, 0.003, -0.033]
+            mu_r_up      = [0.001, -0.078, -0.119, -0.26]
+            mu_r_down    = [-0.001, 0.091, 0.128, 0.401]
+
+            # carry out the pdf variations
+            h_up, h_down = (1 + pdf_up[npartons])*self._h, (1 + pdf_down[npartons])*self._h
+            self._df_sys['pdf_zjets_up']   = h_up
+            self._df_sys['pdf_zjets_down'] = h_down
+            self.template_overlays(h_up, h_down, 'pdf_zjets')
+
+            # carry out the alpha_s variations
+            h_up, h_down = (1 + alpha_s_up[npartons])*self._h, (1 + alpha_s_down[npartons])*self._h
+            self._df_sys['alpha_s_zjets_up']   = h_up
+            self._df_sys['alpha_s_zjets_down'] = h_down
+            self.template_overlays(h_up, h_down, 'alpha_s_zjets')
+
+            # carry out the mu_f variations
+            h_up, h_down = (1 + mu_f_up[npartons])*self._h, (1 + mu_f_down[npartons])*self._h
+            self._df_sys['mu_f_zjets_up']   = h_up
+            self._df_sys['mu_f_zjets_down'] = h_down
+            self.template_overlays(h_up, h_down, 'mu_f_zjets')
+
+            # carry out the mu_r variations
+            h_up, h_down = (1 + mu_r_up[npartons])*self._h, (1 + mu_r_down[npartons])*self._h
+            self._df_sys['mu_r_zjets_up']   = h_up
+            self._df_sys['mu_r_zjets_down'] = h_down
+            self.template_overlays(h_up, h_down, 'mu_r_zjets')
+
+        return
+
     def theory_shape_systematics(self, df, cut, renorm, dm_syst=None):
         '''
         Generates templates for theory systematics:

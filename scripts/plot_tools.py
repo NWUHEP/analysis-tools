@@ -287,7 +287,7 @@ class DataManager():
                                             sheet_name='variables_{0}'.format(self._selection),
                                             index_col='variable_name'
                                            ).dropna(how='all')
-        self._lut_features = pd.concat([lut_features_default, lut_features_select])
+        self._lut_features = pd.concat([lut_features_default, lut_features_select], sort=True)
 
     def _load_dataframes(self):
         '''
