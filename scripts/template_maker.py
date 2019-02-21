@@ -42,7 +42,6 @@ if __name__ == '__main__':
     mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['etau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -66,55 +65,21 @@ if __name__ == '__main__':
                             cuts          = pt.cuts[selection],
                             )
 
-        dm_syst = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics/{selection}_2016',
-                                 dataset_names = datasets_ttbar_syst,
-                                 selection     = selection,
-                                 scale         = 35.9e3,
-                                 cuts          = pt.cuts[selection]
-                                 )
-
-        # the theory systematics should not modify the overall ttbar
-        # cross-section.  To enforce this, a scaling factor is derived for each
-        # systematic type so that their integral is the same as the nominal
-        # ttbar sample (technically, this should be done over all final state
-        # categories... maybe later).
-
-        #corr_theory = calculate_theory_rescales(dm, dm_syst)
-        k_theory = dict()
-        df_ttbar = dm.get_dataframe('ttbar')
-        w_nominal = df_ttbar.weight
-        n_nominal = w_nominal.sum()
-
-        # mur
-        k_theory['mur_up']       = np.sum(w_nominal*df_ttbar.qcd_weight_up_nom)/n_nominal
-        k_theory['mur_down']     = np.sum(w_nominal*df_ttbar.qcd_weight_down_nom)/n_nominal
-
-        # muf
-        k_theory['muf_up']       = np.sum(w_nominal*df_ttbar.qcd_weight_nom_up)/n_nominal
-        k_theory['muf_down']     = np.sum(w_nominal*df_ttbar.qcd_weight_nom_down)/n_nominal
-
-        # muf
-        k_theory['mur_muf_up']   = np.sum(w_nominal*df_ttbar.qcd_weight_up_up)/n_nominal
-        k_theory['mur_muf_down'] = np.sum(w_nominal*df_ttbar.qcd_weight_down_down)/n_nominal
-
-        # pdf
-        k_theory['pdf_up']       = np.sum(w_nominal*(1 + np.sqrt(df_ttbar.pdf_var)/np.sqrt(100)))/n_nominal
-        k_theory['pdf_down']     = np.sum(w_nominal*(1 - np.sqrt(df_ttbar.pdf_var)/np.sqrt(100)))/n_nominal
-
-        #for ds in datasets_ttbar_syst:
-        #    ds = ds.replace('_inclusive', '')
-        #    df_syst  = dm_syst.get_dataframe(ds)
-        #    l = ds.split('_')[-1]
-        #    k_theory[l] = df_syst.weight.sum()/n_nominal
+        #dm_syst = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics/{selection}_2016',
+        #                         dataset_names = datasets_ttbar_syst,
+        #                         selection     = selection,
+        #                         scale         = 35.9e3,
+        #                         cuts          = pt.cuts[selection]
+        #                         )
 
         data = dict()
-        for i, (category, cat_items) in enumerate(tqdm(pt.categories.items(),
-                                                       desc       = 'binning jet categories...',
-                                                       unit_scale = True,
-                                                       ncols      = 75,
-                                                       )):
-            if selection not in cat_items.selections:
-                continue
+        selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
+        for category in tqdm(selection_categories,
+                             desc       = 'binning jet categories...',
+                             unit_scale = True,
+                             ncols      = 75,
+                            ):
+            cat_items = pt.categories[category]
 
             ### calculate binning based on data sample
             df_data = dm.get_dataframe('data', cat_items.cut)
@@ -167,23 +132,20 @@ if __name__ == '__main__':
                         if label == 'wjets' and (idecay < 16): 
                             continue
 
-                        x = dm.get_dataframe(label, f'{cat_items.cut} and {c}')[feature].values
-                        w = dm.get_dataframe(label, f'{cat_items.cut} and {c}')['weight'].values
+                        df = dm.get_dataframe(label, f'{cat_items.cut} and {c}')
+                        x = df[feature].values
+                        w = df['weight'].values
                         h, _ = np.histogram(x,
                                             bins    = binning,
                                             range   = bin_range,
                                             weights = w
                                             )
-                        #overflow = np.sum(w[x > b[-1]])
-                        #h = np.append(h, overflow)
 
                         hvar, _ = np.histogram(x,
                                                bins    = binning,
                                                range   = bin_range,
                                                weights = w**2
                                                )
-                        #overflow = np.sum(w[x > b[-1]]**2)
-                        #hvar = np.append(hvar, overflow)
 
                         if label == 'wjets':
                             n = n.rsplit('_', 1)[0]
@@ -194,80 +156,40 @@ if __name__ == '__main__':
                          
                         ### produce morphing templates for shape systematics
                         if np.any(h != 0):
-                            if np.sqrt(np.sum(hvar))/np.sum(h) < 0.1: # only consider systematics if sigma_N/N < 10%
+                            if np.sqrt(np.sum(hvar))/np.sum(h) < 0.05: 
 
                                 df = dm.get_dataframe(label, c)
                                 syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{n}', 
                                                                           feature, binning, 
                                                                           h, cat_items.cut, category)
-                                syst_gen.jet_shape_systematics(df) # don't apply jet cut for jet syst.
+                                # don't apply jet cut for jet syst.
+                                syst_gen.jes_systematics(df)
+                                syst_gen.btag_systematics(df)
 
+                                # apply jet cut for all other systematics
                                 df = df.query(cat_items.cut)
-                                syst_gen.reco_shape_systematics(df)
-                                syst_gen.electron_reco_systematics(df)
+                                if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
+                                    syst_gen.muon_systematics(df)
+
+                                if selection in ['ee', 'emu', 'etau', 'e4j']:
+                                    syst_gen.electron_systematics(df)
 
                                 # tau misid 
-                                if selection in ['etau', 'mutau'] and (label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]):
-                                    syst_gen.tau_misid_systematics(df)
+                                if selection in ['etau', 'mutau']: 
+                                    if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
+                                        syst_gen.tau_misid_systematics(df)
+                                    elif idecay in [7, 8, 9, 12, 15]:
+                                        syst_gen.tau_systematics(df)
 
                                 # theory systematics
                                 if label == 'ttbar':
-                                    syst_gen.theory_shape_systematics(df, f'{cat_items.cut} and {c}', k_theory)
+                                    syst_gen.theory_systematics(df, f'{cat_items.cut} and {c}')
 
                                 df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
 
                         mode_dict[n] = df_temp
 
                     templates[label] = mode_dict
-
-                elif label == 'zjets_alt': # 1 template per background
-                    if label not in dm._dataframes.keys():
-                        print(f'Label {label} not found in datasets.')
-                        continue
-
-                    parton_dict = dict()
-                    for npartons in range(4): # Drell-Yan should be split by number of partons to account for theory variation
-                        df_skim = dm.get_dataframe(label, f'n_partons == {npartons} and {cat_items.cut}')
-                        x, w = df_skim[feature].values, df_skim['weight'].values
-
-                        if x.size == 0: continue
-
-                        h, _ = np.histogram(x,
-                                            bins    = binning,
-                                            range   = bin_range,
-                                            weights = w
-                                            )
-                        hvar, _ = np.histogram(x,
-                                               bins    = binning,
-                                               range   = bin_range,
-                                               weights = w**2
-                                               )
-                        # save templates, statistical errors, and systematic variations
-                        df_temp = pd.DataFrame(dict(bins=binning[:-1], val=h, var=hvar))
-                        df_temp = df_temp.set_index('bins')
-
-                        ### produce morphing templates for shape systematics
-                        total_var = np.sqrt(np.sum(hvar))/np.sum(h)
-                        if np.abs(total_var) < 0.1: # only consider systematics if sigma_N/N < 10%
-
-                            df = dm.get_dataframe(label, f'n_partons == {npartons}')
-                            syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{npartons}', 
-                                                                      feature, binning, 
-                                                                      h_nominal = h, 
-                                                                      cut = f'n_partons == {npartons} and {cat_items.cut}', 
-                                                                      cut_name = category
-                                                                      )
-                            syst_gen.jet_shape_systematics(df) # don't apply jet cut for jet syst.
-
-                            df = df.query(cat_items.cut)
-                            syst_gen.normalization_systematics(df, label, npartons)
-                            syst_gen.reco_shape_systematics(df)
-                            syst_gen.electron_reco_systematics(df)
-                            df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
-
-                        parton_dict[f'njets_{npartons}'] = df_temp
-
-                    templates[f'{label}'] = parton_dict
 
                 else: # 1 template per background
                     if label not in dm._dataframes.keys():
@@ -281,24 +203,55 @@ if __name__ == '__main__':
                                         range   = bin_range,
                                         weights = w
                                         )
-                    #overflow = np.sum(w[x > b[-1]])
-                    #h = np.append(h, overflow)
 
                     hvar, _ = np.histogram(x,
                                            bins    = binning,
                                            range   = bin_range,
                                            weights = w**2
                                            )
-                    #overflow = np.sum(w[x > b[-1]]**2)
-                    #hvar = np.append(hvar, overflow)
 
                     if label == 'fakes_ss':
-                        #print(selection, category, h)
                         label = 'fakes'
 
                     # save templates, statistical errors, and systematic variations
                     df_temp = pd.DataFrame(dict(bins=binning[:-1], val=h, var=hvar))
                     df_temp = df_temp.set_index('bins')
+
+                    ### produce morphing templates for shape systematics
+                    total_var = np.sqrt(np.sum(hvar))/np.sum(h)
+                    if label == 'zjets' and np.abs(total_var) < 0.05: # only consider systematics if sigma_N/N < 5%
+
+                        df = dm.get_dataframe(label, f'n_partons == {npartons}')
+                        syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{npartons}', 
+                                                                  feature, binning, 
+                                                                  h_nominal = h, 
+                                                                  cut = f'n_partons == {npartons} and {cat_items.cut}', 
+                                                                  cut_name = category
+                                                                  )
+                        # don't apply jet cut for jet syst.
+                        syst_gen.jes_systematics(df)
+                        syst_gen.btag_systematics(df)
+
+                        # apply jet cut for all other systematics
+                        df = df.query(cat_items.cut)
+                        if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
+                            syst_gen.muon_systematics(df)
+
+                        if selection in ['ee', 'emu', 'etau', 'e4j']:
+                            syst_gen.electron_systematics(df)
+
+                        # tau misid 
+                        if selection in ['etau', 'mutau']: 
+                            if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
+                                syst_gen.tau_misid_systematics(df)
+                            elif idecay in [7, 8, 9, 12, 15]:
+                                syst_gen.tau_systematics(df)
+
+                        # theory systematics
+                        syst_gen.theory_shape_systematics(df, f'{cat_items.cut} and {c}')
+
+                        df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
+
                     templates[label] = df_temp
 
             data[category] = dict(bins = binning, templates = templates)

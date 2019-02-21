@@ -33,6 +33,14 @@ fancy_labels['etau']  = (r'$\sf p_{T,\tau}$', r'$\sf e\tau$')
 fancy_labels['mu4j']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$')
 fancy_labels['e4j']   = (r'$\sf p_{T,e}$', r'$\sf e+jets$')
 
+category_dict = dict(
+                     cat_eq0_eq0   = 0, cat_eq1_eq0   = 1, cat_gt2_eq0   = 2, 
+                     cat_eq1_eq1   = 1, cat_eq2_eq1   = 2, cat_gt2_eq1_a = 2, 
+                     cat_gt2_eq1_b = 2, cat_gt3_eq1   = 3, cat_eq2_gt2   = 2, 
+                     cat_gt2_gt2_a = 2, cat_gt2_gt2_b = 2, cat_gt3_gt2   = 3, 
+                     cat_gt4_eq1   = 3, cat_gt4_gt2   = 3, 
+                     )
+
 def reduced_objective(p, mask, p_init):
     masked_p = p_init.copy()
     masked_p[mask] = p
@@ -347,9 +355,12 @@ class FitData(object):
         #self._pool = Pool(processes = min(16, nprocesses))
         self._initialize_parameters()
         self._initialize_morphing_templates()
-        self._xs_zjets_err = pd.read_csv('data/xs_zjets_error.csv').set_index('category')
         #self._xs_ttbar_err = pd.read_csv('data/xs_zjets_err.csv').set_index('category') # to be implemented
         self._cost_init = 0
+
+        # hack for zjets normalization
+        f = open('data/theory_var_zjets.pkl', 'rb')
+        self._xs_zjets_err = pickle.load(f)
 
     def _initialize_template_data(self, location, target, selection):
         '''
@@ -455,6 +466,7 @@ class FitData(object):
             #    #print(pname, dt)
             #    t_new += dt
             #t_new += nominal_template
+
             morphing_data = self._selection_data[selection][category]['np_shapes']
             if isinstance(sub_ds, type(None)):
                 if dataset in morphing_data.keys():
@@ -519,17 +531,22 @@ class FitData(object):
         # get simulated background components and apply cross-section nuisance parameters
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
-        # Diboson
-        f_model   += pdict['xs_diboson']*templates['diboson']['val']
-        var_model += pdict['xs_diboson']*templates['diboson']['var']
-
-        # Drell-Yan
+        # Drell-Yan (change this back to a single template)
         for njets in range(4):
             template = templates['zjets_alt']
             if f'njets_{njets}' in template.keys():
                 template = template[f'njets_{njets}']
                 f_model   += self.modify_template(template, pdict, 'zjets_alt', selection, category, f'njets_{njets}')
                 var_model += template['var']
+
+        njets = category_dict[category]
+        f_model *= (1 + self._xs_zjets_err[selection]['alpha_s'][1][njets]*pdict['xs_zjets_alpha_s'])
+        f_model *= (1 + self._xs_zjets_err[selection]['pdf'][1][njets]*pdict['xs_zjets_pdf'])
+        f_model *= (1 + self._xs_zjets_err[selection]['qcd'][1][njets]*pdict[f'xs_zjets_qcd_{njets}'])
+
+        # Diboson
+        f_model   += pdict['xs_diboson']*templates['diboson']['val']
+        var_model += pdict['xs_diboson']*templates['diboson']['var']
 
         if selection in ['etau', 'mutau']:
             f_model *= pdict['eff_tau']

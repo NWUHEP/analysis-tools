@@ -347,7 +347,7 @@ class DataManager():
                 if label not in dataframes.keys():
                     dataframes[label] = df
                 else:
-                    dataframes[label] = dataframes[label].append(df)
+                    dataframes[label] = dataframes[label].append(df, sort=False)
             else:
                 dataframes[dataset] = df
     
@@ -924,7 +924,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim((0.1*np.min(hist), 15.*y_max))
+            ax.set_ylim((0.1*abs(np.min(hist)), 15.*y_max))
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 

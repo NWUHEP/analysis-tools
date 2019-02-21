@@ -198,33 +198,37 @@ def fill_dilepton_vars(tree):
     p_vis_zeta, p_miss_zeta = calculate_zeta_vars(lep1, lep2, met_p2)
 
     if lep1.Pt() > lep2.Pt():
-        lead_lepton_pt     = lep1.Pt()
-        lead_lepton1_phi   = lep1.Phi()
-        lead_lepton_mt     = lep1_mt
+        lead_lepton_pt       = lep1.Pt()
+        lead_lepton1_phi     = lep1.Phi()
+        lead_lepton_mt       = lep1_mt
         lead_lepton_met_dphi = lep1_met_dphi
-        lead_lepton_mother = tree.leptonOneMother
-        lead_lepton_flavor = tree.leptonOneFlavor
+        lead_lepton_mother   = tree.leptonOneMother
+        lead_lepton_flavor   = tree.leptonOneFlavor
+        lead_lepton_pt_corr  = tree.leptonOnePtCorr
 
-        trailing_lepton_pt     = lep2.Pt()
-        trailing_lepton_phi    = lep2.Phi()
-        trailing_lepton_mt     = lep2_mt
+        trailing_lepton_pt       = lep2.Pt()
+        trailing_lepton_phi      = lep2.Phi()
+        trailing_lepton_mt       = lep2_mt
         trailing_lepton_met_dphi = lep2_met_dphi
-        trailing_lepton_mother = tree.leptonTwoMother
-        trailing_lepton_flavor = tree.leptonTwoFlavor
+        trailing_lepton_mother   = tree.leptonTwoMother
+        trailing_lepton_flavor   = tree.leptonTwoFlavor
+        trailing_lepton_pt_corr  = tree.leptonTwoPtCorr
     else:
-        lead_lepton_pt     = lep2.Pt()
-        lead_lepton1_phi   = lep2.Phi()
-        lead_lepton_mt     = lep2_mt
+        lead_lepton_pt       = lep2.Pt()
+        lead_lepton1_phi     = lep2.Phi()
+        lead_lepton_mt       = lep2_mt
         lead_lepton_met_dphi = lep2_met_dphi
-        lead_lepton_mother = tree.leptonTwoMother
-        lead_lepton_flavor = tree.leptonTwoFlavor
+        lead_lepton_mother   = tree.leptonTwoMother
+        lead_lepton_flavor   = tree.leptonTwoFlavor
+        lead_lepton_pt_corr  = tree.leptonTwoPtCorr
 
-        trailing_lepton_pt     = lep1.Pt()
-        trailing_lepton_phi    = lep1.Phi()
-        trailing_lepton_mt     = lep1_mt
+        trailing_lepton_pt       = lep1.Pt()
+        trailing_lepton_phi      = lep1.Phi()
+        trailing_lepton_mt       = lep1_mt
         trailing_lepton_met_dphi = lep1_met_dphi
-        trailing_lepton_mother = tree.leptonOneMother
-        trailing_lepton_flavor = tree.leptonOneFlavor
+        trailing_lepton_mother   = tree.leptonOneMother
+        trailing_lepton_flavor   = tree.leptonOneFlavor
+        trailing_lepton_pt_corr  = tree.leptonOnePtCorr
 
     out_dict = dict(
                     lepton1_pt             = lep1.Pt(),
@@ -236,6 +240,7 @@ def fill_dilepton_vars(tree):
                     lepton1_dz             = tree.leptonOneDZ,
                     lepton1_q              = np.sign(tree.leptonOneFlavor),
                     lepton1_flavor         = np.abs(tree.leptonOneFlavor),
+                    lepton1_pt_corr        = tree.leptonOnePtCorr,
                     lepton1_iso            = tree.leptonOneIso,
                     lepton1_reliso         = tree.leptonOneIso/lep1.Pt(),
                     lepton1_mother         = tree.leptonOneMother,
@@ -249,6 +254,7 @@ def fill_dilepton_vars(tree):
                     lepton2_dz             = tree.leptonTwoDZ,
                     lepton2_q              = np.sign(tree.leptonTwoFlavor),
                     lepton2_flavor         = np.abs(tree.leptonTwoFlavor),
+                    lepton2_pt_corr        = tree.leptonTwoPtCorr,
                     lepton2_iso            = tree.leptonTwoIso,
                     lepton2_reliso         = tree.leptonTwoIso/lep2.Pt(),
                     lepton2_mother         = tree.leptonTwoMother,
@@ -463,6 +469,7 @@ def fill_lepton4j_vars(tree):
                     lepton1_phi     = lep.Phi(),
                     lepton1_q       = np.sign(tree.leptonOneFlavor),
                     lepton1_flavor  = np.abs(tree.leptonOneFlavor),
+                    lepton1_pt_corr = tree.leptonTwoPtCorr,
                     lepton1_iso     = tree.leptonOneIso,
                     lepton1_reliso  = tree.leptonOneIso/lep.Pt(),
 
