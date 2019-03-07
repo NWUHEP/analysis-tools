@@ -36,7 +36,8 @@ dataset_dict = dict(
                                 'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
                                 'qcd_ht2000'
                                 ],
-                    diboson  = ['ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
+                    ww       = ['ww'],
+                    diboson  = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
                     fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
                                 'muon_2016H_fakes'
@@ -48,13 +49,13 @@ dataset_dict = dict(
                     )
 
 selection_dataset_dict = dict(
-                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
-                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
-                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson'],
-                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes_ss'],
-                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes_ss'],
-                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
-                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'diboson', 'fakes'],
+                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
+                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
+                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
+                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
                               )
 
 cuts = dict(
@@ -76,27 +77,33 @@ cuts = dict(
 tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90 \
                and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
-Category = namedtuple('Category', ['cut', 'selections', 'label'])
+Category = namedtuple('Category', ['cut', 'selections', 'label', 'njets'])
 categories = dict(
                   #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
                   #cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
                   #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
                   #cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
 
-                  cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto'),
-                  cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto'),
-                  cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$'),
-                  cat_eq1_eq1   = Category('n_jets == 1 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$'),
-                  cat_eq2_eq1   = Category('n_jets == 2 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$'),
-                  cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu'], '$N_{j} \geq 2, N_{b} = 1$'),
-                  cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
-                  cat_gt3_eq1   = Category('n_jets >= 3 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$'),
-                  cat_eq2_gt2   = Category('n_jets == 2 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$'),
-                  cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$'),
-                  cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
-                  cat_gt3_gt2   = Category('n_jets >= 3 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$'),
-                  cat_gt4_eq1   = Category('n_jets >= 4 and n_bjets == 1',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} = 1$'),
-                  cat_gt4_gt2   = Category('n_jets >= 4 and n_bjets >= 2',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$'),
+                  cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto', 0),
+                  cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto', 1),
+                  cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
+                  cat_eq1_eq1   = Category('n_jets == 1 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$', 1),
+                  cat_eq2_eq1   = Category('n_jets == 2 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$', 2),
+                  cat_gt3_eq1   = Category('n_jets >= 3 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$', 3),
+                  cat_eq2_gt2   = Category('n_jets == 2 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$', 2),
+                  cat_gt3_gt2   = Category('n_jets >= 3 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$', 3),
+
+                  cat_eq0_eq0_a = Category('n_jets == 0 and n_bjets == 0',                   ['emu'], '$N_{j} = 0, N_{b} = 0$', 0),
+                  cat_eq1_eq0_a = Category('n_jets == 1 and n_bjets == 0',                   ['emu'], '$N_{j} = 1, N_{b} = 0$', 1),
+                  cat_eq1_eq1_a = Category('n_jets == 1 and n_bjets == 1',                   ['emu'], '$N_{j} = 1, N_{b} = 1$', 1),
+                  cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu'], '$N_{j} \geq 2, N_{b} = 1$', 2),
+                  cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$', 2),
+
+                  cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto', 2),
+                  cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
+
+                  cat_gt4_eq1   = Category('n_jets >= 4 and n_bjets == 1',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} = 1$', 4),
+                  cat_gt4_gt2   = Category('n_jets >= 4 and n_bjets >= 2',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$', 4),
                   )
 
 def make_directory(file_path, clear=True):
@@ -392,6 +399,7 @@ class DataManager():
     def print_yields(self, dataset_names,
                      exclude    = [],
                      conditions = [''],
+                     labels     = None,
                      mc_scale   = True,
                      do_string  = False,
                      output_format = 'csv'
@@ -412,8 +420,8 @@ class DataManager():
         # print header
         table = dict()
         dataset_names = [dn for dn in dataset_names if dn in self._dataframes.keys()]
-        for i, condition in enumerate(conditions):
-            table[f'condition_{i+1}'] = []
+        for i, (condition_label, condition) in enumerate(conditions.items()):
+            table[f'{condition_label}'] = []
             if not do_string:
                 table[f'error_{i+1}'] = []
 
@@ -442,19 +450,19 @@ class DataManager():
 
                 if do_string:
                     if dataset == 'data':
-                        table[f'condition_{i+1}'].append('${0}$'.format(int(n)))
+                        table[f'{condition_label}'].append('${0}$'.format(int(n)))
                     else:
-                        table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(n, err))
+                        table[f'{condition_label}'].append('${0:.1f} \pm {1:.1f}$'.format(n, err))
                 else:
-                    table[f'condition_{i+1}'].append(n)
+                    table[f'{condition_label}'].append(n)
                     table[f'error_{i+1}'].append(err)
 
                 dataframes[dataset] = df  # update dataframes so cuts are applied sequentially
 
             if do_string:
-                table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
+                table[f'{condition_label}'].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
             else:
-                table[f'condition_{i+1}'].append(bg_total[0])
+                table[f'{condition_label}'].append(bg_total[0])
                 table[f'error_{i+1}'].append(np.sqrt(bg_total[1]))
 
         if do_string:

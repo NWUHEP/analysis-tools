@@ -33,14 +33,6 @@ fancy_labels['etau']  = (r'$\sf p_{T,\tau}$', r'$\sf e\tau$')
 fancy_labels['mu4j']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$')
 fancy_labels['e4j']   = (r'$\sf p_{T,e}$', r'$\sf e+jets$')
 
-category_dict = dict(
-                     cat_eq0_eq0   = 0, cat_eq1_eq0   = 1, cat_gt2_eq0   = 2, 
-                     cat_eq1_eq1   = 1, cat_eq2_eq1   = 2, cat_gt2_eq1_a = 2, 
-                     cat_gt2_eq1_b = 2, cat_gt3_eq1   = 3, cat_eq2_gt2   = 2, 
-                     cat_gt2_gt2_a = 2, cat_gt2_gt2_b = 2, cat_gt3_gt2   = 3, 
-                     cat_gt4_eq1   = 3, cat_gt4_gt2   = 3, 
-                     )
-
 def reduced_objective(p, mask, p_init):
     masked_p = p_init.copy()
     masked_p[mask] = p
@@ -360,7 +352,6 @@ class FitData(object):
 
         # hack for zjets normalization
         f = open('data/theory_var_zjets.pkl', 'rb')
-        self._xs_zjets_err = pickle.load(f)
 
     def _initialize_template_data(self, location, target, selection):
         '''
@@ -417,7 +408,21 @@ class FitData(object):
                     if ds in ['data', 'diboson']:
                         continue
 
-                    if ds in ['ttbar', 't', 'wjets', 'zjets_alt']: # sub templates
+                    elif ds == 'zjets_alt':
+                        var_up, var_down = [], []
+                        for pname, param in shape_params.iterrows():
+                            if f'{pname}_up' in template.columns:
+                                var_up.append(template[f'{pname}_up'].values)
+                                var_down.append(template[f'{pname}_down'].values)
+                            else:
+                                var_up.append(template['val'].values)
+                                var_down.append(template['val'].values)
+
+                        var_up, var_down = np.vstack(var_up), np.vstack(var_down)
+                        if var_up.sum() > 0:
+                            self._selection_data[sel][category]['np_shapes'][ds] = (var_up, var_down)
+
+                    elif ds in ['ttbar', 't', 'ww', 'wjets']: # sub templates
                         self._selection_data[sel][category]['np_shapes'][ds] = dict()
                         for sub_ds, sub_template in template.items():
                             var_up, var_down = [], []
@@ -432,6 +437,8 @@ class FitData(object):
                             var_up, var_down = np.vstack(var_up), np.vstack(var_down)
                             if var_up.sum() > 0:
                                 self._selection_data[sel][category]['np_shapes'][ds][sub_ds] = (var_up, var_down)
+
+
  
     def get_selection_data(self, selection):
         return self._selection_data[selection]
@@ -531,20 +538,11 @@ class FitData(object):
         # get simulated background components and apply cross-section nuisance parameters
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
-        # Drell-Yan (change this back to a single template)
-        for njets in range(4):
-            template = templates['zjets_alt']
-            if f'njets_{njets}' in template.keys():
-                template = template[f'njets_{njets}']
-                f_model   += self.modify_template(template, pdict, 'zjets_alt', selection, category, f'njets_{njets}')
-                var_model += template['var']
+        # Drell-Yan 
+        f_model   += self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
+        var_model += templates['zjets_alt']['var']
 
-        njets = category_dict[category]
-        f_model *= (1 + self._xs_zjets_err[selection]['alpha_s'][1][njets]*pdict['xs_zjets_alpha_s'])
-        f_model *= (1 + self._xs_zjets_err[selection]['pdf'][1][njets]*pdict['xs_zjets_pdf'])
-        f_model *= (1 + self._xs_zjets_err[selection]['qcd'][1][njets]*pdict[f'xs_zjets_qcd_{njets}'])
-
-        # Diboson
+        # non-WW diboson
         f_model   += pdict['xs_diboson']*templates['diboson']['val']
         var_model += pdict['xs_diboson']*templates['diboson']['var']
 
@@ -552,7 +550,7 @@ class FitData(object):
             f_model *= pdict['eff_tau']
 
         # get the signal components and apply mixing of W decay modes according to beta
-        for label in ['ttbar', 't', 'wjets']:
+        for label in ['ttbar', 't', 'ww', 'wjets']:
             template_collection = templates[label]
             signal_template = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
             #signal_template     = pd.DataFrame.from_dict({dm: t['val'] for dm, t in template_collection.items()})
@@ -609,39 +607,37 @@ class FitData(object):
                                              single_w = (label == 'wjets')
                                             )
 
-            # prepare mixture
-            #f_model   += f_sig
-            #var_model += var_sig # figure this out
-            f_model += pdict[f'xs_{label}']*f_sig
-            #var_model += pdict[f'xs_{label}']*templates[label]['var']
+            # prepare mixture (ttbar normalization is a shape n.p.)
+            if label != 'ttbar':
+                f_model += pdict[f'xs_{label}']*f_sig
+                #var_model += pdict[f'xs_{label}']*templates[label]['var']
+            else:
+                f_model   += f_sig
+                #var_model += var_sig # figure this out
 
-        # lepton efficiencies as normalization nuisance parameters
-        # lepton energy scale as morphing parameters
+        # lepton trigger efficiencies (move these to shape nuisances)
         if selection == 'ee':
             f_model *= pdict['trigger_e']**2
             #f_model *= pdict['eff_e']**2
         elif selection == 'emu':
             f_model *= pdict['trigger_mu']*pdict['trigger_e']
-            f_model *= pdict['eff_mu']#*pdict['eff_e']
         elif selection == 'mumu':
             f_model *= pdict['trigger_mu']**2
-            f_model *= pdict['eff_mu']**2
         elif selection == 'etau':
             f_model *= pdict['trigger_e']
             #f_model *= pdict['eff_e']
         elif selection == 'mutau':
             f_model *= pdict['trigger_mu']
-            f_model *= pdict['eff_mu']
         elif selection == 'e4j':
             f_model *= pdict['trigger_e']
             #f_model *= pdict['eff_e']
         elif selection == 'mu4j':
             f_model *= pdict['trigger_mu']
-            f_model *= pdict['eff_mu']
 
         # apply overall lumi nuisance parameter
         f_model *= pdict['lumi']
 
+        # data-driven estimates here (do not apply simulation/theory uncertainties)
         # get fake background and include normalization nuisance parameters
         if selection == 'e4j':
             #f_model   += templates['fakes']['val']
@@ -663,7 +659,7 @@ class FitData(object):
             f_model   += pdict['mu_fakes_ss']*templates['fakes']['val']
             var_model += templates['fakes']['var']
 
-        # for testing parameter estimation without estimating kinematic fit
+        # for testing parameter estimation while excluding kinematic shape information
         if no_shape:
             f_data    = np.sum(f_data)
             var_data  = np.sum(var_data)
@@ -710,8 +706,12 @@ class FitData(object):
             sdata = self.get_selection_data(selection)
             for category, cat_data in sdata.items():
 
-                # remove 0 b tag category #
+                # remove 0 b tag category for ee and mumu channels#
                 if selection in ['ee', 'mumu'] and category == 'cat_gt2_eq0':
+                    continue
+
+                # remove additional (WW & Z+jets) categories for emu channels#
+                if selection == 'emu' and category in ['cat_eq0_eq0_a', 'cat_eq1_eq0_a', 'cat_eq1_eq1_a']:
                     continue
 
                 cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)

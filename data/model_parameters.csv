@@ -1,84 +1,86 @@
-name,label,val_init,err_init,type,ttbar,t,zjets_alt,zjets,wjets,diboson,fakes,ee,emu,mumu,etau,mutau,e4j,mu4j
-beta_e,$\beta_{e}$,0.108,0.108,poi,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-beta_mu,$\beta_{\mu}$,0.108,0.108,poi,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-beta_tau,$\beta_{\tau}$,0.108,0.108,poi,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-beta_h,$\beta_{h}$,0.676,0.676,poi,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-br_tau_e,$b_{\tau_{e}}$,0.1783,0.0004,norm,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-br_tau_mu,$b_{\tau_{\mu}}$,0.1741,0.0004,norm,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-br_tau_h,$b_{\tau_{h}}$,0.6476,0.001,norm,1,1,0,0,1,0,0,1,1,1,1,1,1,1
-lumi,$L_{int}$,1,0.025,norm,1,1,1,1,1,1,0,1,1,1,1,1,1,1
-xs_diboson,$\sigma_{VV}$,1,0.1,norm,0,0,0,0,0,1,0,1,1,1,1,1,1,1
-xs_ttbar,$\sigma_{t\bar{t}}$,1,0.05,norm,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-xs_t,$\sigma_{tW}$,1,0.1,norm,0,1,0,0,0,0,0,1,1,1,1,1,1,1
-xs_wjets,$\sigma_{W}$,1,0.05,norm,0,0,0,0,1,0,0,1,1,1,1,1,1,1
-xs_zjets_pdf,Z norm. (PDF),0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_alpha_s,Z norm. ($\alpha_{s}$),0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_qcd_0,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 0$),0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_qcd_1,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 1$),0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_qcd_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-xs_zjets_qcd_3,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} \geq 3$),0,1,norm,0,0,1,1,0,0,0,1,1,1,1,1,1,1
-e_fakes,"QCD norm (e, iso)",1,0.25,norm,0,0,0,0,0,0,1,0,0,0,0,0,1,0
-mu_fakes,"QCD norm ($\mu$, iso)",1,0.05,norm,0,0,0,0,0,0,1,0,0,0,0,0,0,1
-e_fakes_ss,"QCD norm (e, ss)",1,0.05,norm,0,0,0,0,0,0,1,0,0,0,1,0,1,0
-mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.05,norm,0,0,0,0,0,0,1,0,0,0,0,1,0,1
-trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,0,1,1,0,1,0,1,0
-trigger_mu,$\mu$ trigger,1,0.01,norm,1,1,1,1,1,1,0,0,1,1,0,1,0,1
-eff_mu,$\epsilon_{\mu}$,1,0.01,norm,1,1,1,1,1,0,0,0,1,1,0,1,0,1
-eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,1,1,0,0
-misid_tau_e,$\sf e\rightarrow\tau$ ,1,0.3,norm,1,1,0,0,0,0,0,0,0,0,1,1,0,0
-misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),1,0.2,norm,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-misid_tau_3,$\sf jet\rightarrow\tau$ ($40 \leq p_{T} < 50$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-misid_tau_4,$\sf jet\rightarrow\tau$ ($50 \leq p_{T} < 65$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-misid_tau_5,$\sf jet\rightarrow\tau$ ($p_{T} \geq 65$),0,1,shape,1,1,0,0,1,0,0,0,0,0,1,1,0,0
-eff_id_e,"$\epsilon_{e,id}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
-eff_reco_e,"$\epsilon_{e,reco}$",0,1,shape,1,1,1,1,1,0,0,1,1,0,1,0,1,0
-escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,0,1,1,0,0,0,1,0
-escale_mu,$\mu$ ES,0,1,shape,1,1,1,0,1,0,0,0,1,1,0,0,0,1
-escale_tau_0,$\tau\rightarrow\pi$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
-escale_tau_1,$\tau\rightarrow\pi\pi^{0}$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
-escale_tau_10,$\tau\rightarrow\pi\pi\pi$ ES,0,1,shape,1,1,1,0,1,0,0,0,0,0,1,1,0,0
-mur,$\mu_{r}$,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-muf,$\mu_{f}$,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-pdf,PDF,0,1,shape,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-btag_bfragmentation,b-tag: b frag.,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_btempcorr,b-tag: b templ. corr.,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_cb,b-tag:JP corr,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_cfragmentation,b-tag: c frag.,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_dmux,b-tag: $\sf D\rightarrow\mu$ X BR,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_gluonsplitting,b-tag: gluon splitting,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_jes,b-tag: JES,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_jetaway,b-tag: away jet tag,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_ksl,b-tag:$K_{s}^{0} (\Lambda)$ prod.,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_l2c,b-tag: I/c ratio,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_ltothers,b-tag: LT others,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_mudr,b-tag: muon $\Delta R$,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_mupt,b-tag: muon $p_{T}$,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_ptrel,b-tag: muon $p_{T}$ (rel.),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_sampledependence,b-tag: sample dependence,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_pileup,b-tag: pileup,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-btag_statistic,b-tag: stat.,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-ctag,b-tag: c-tag,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-mistag,b-tag: mistag,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jer,JER,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_abs_scale,JES: absolute scale,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_abs_stat,JES: absolute stat,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_fragmentation,JES: fragmentation,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_abs_mpf_bias,JES: mpf bias,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_pileup_data_mc,JES: pileup data/MC,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_pileup_pt_bb,JES: pileup $p_{T}$ (bb),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_pileup_pt_ec1,JES: pileup $p_{T}$ (ec),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_pileup_pt_ref,JES: pileup $p_{T}$ (ref),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_relative_bal,JES: rel. balance,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_relative_jer_ec1,JES: rel. JER (ec),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_relative_pt_bb,JES: rel. $p_{T}$ (bb),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_relative_pt_ec1,JES: rel. $p_{T}$ (ec),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_relative_stat_fsr,JES: rel. stat. FSR,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_relative_stat_ec,JES: rel. stat. (ec),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_single_pion_ecal,JES: $\pi$ (ECAL),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_single_pion_hcal,JES: $\pi$ (HCAL),0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_time_pt_eta,JES: time $p_{T}/\eta$,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-jes_flavor_qcd,JES: flavor,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
-pileup,pileup,0,1,shape,1,1,1,0,1,0,0,1,1,1,1,1,1,1
+name,label,val_init,err_init,type,ttbar,t,zjets_alt,zjets,wjets,diboson,ww,fakes,ee,emu,mumu,etau,mutau,e4j,mu4j
+beta_e,$\beta_{e}$,0.108,0.108,poi,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+beta_mu,$\beta_{\mu}$,0.108,0.108,poi,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+beta_tau,$\beta_{\tau}$,0.108,0.108,poi,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+beta_h,$\beta_{h}$,0.676,0.676,poi,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_e,$b_{\tau_{e}}$,0.1783,0.0004,norm,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_mu,$b_{\tau_{\mu}}$,0.1741,0.0004,norm,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_h,$b_{\tau_{h}}$,0.6476,0.001,norm,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1
+lumi,$L_{int}$,1,0.025,norm,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1
+xs_diboson,VV norm. (non-WW),1,0.1,norm,0,0,0,0,0,1,0,0,1,1,1,1,1,1,1
+xs_ww,WW norm.,1,0.1,norm,0,0,0,0,0,0,1,0,1,1,1,1,1,1,1
+xs_t,tW norm.,1,0.1,norm,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+xs_wjets,W norm.,1,0.05,norm,0,0,0,0,1,0,0,0,1,1,1,1,1,1,1
+e_fakes,"QCD norm (e, iso)",1,0.25,norm,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0
+mu_fakes,"QCD norm ($\mu$, iso)",1,0.05,norm,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1
+e_fakes_ss,"QCD norm (e, ss)",1,0.05,norm,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0
+mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.05,norm,0,0,0,0,0,0,0,1,0,0,0,0,1,0,1
+trigger_e,$e$ trigger,1,0.01,norm,1,1,1,1,1,1,1,0,1,1,0,1,0,1,0
+trigger_mu,$\mu$ trigger,1,0.005,norm,1,1,1,1,1,1,1,0,0,1,1,0,1,0,1
+eff_tau,$\epsilon_{\tau}$,1,0.05,norm,1,1,1,1,1,0,0,0,0,0,0,1,1,0,0
+misid_tau_e,$\sf e\rightarrow\tau$ ,1,0.3,norm,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0
+misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),1,0.2,norm,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+xs_zjets_alt_pdf,Z norm. (PDF),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_zjets_alt_alpha_s,Z norm. ($\alpha_{s}$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_zjets_alt_qcd_scale_0,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 0$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_zjets_alt_qcd_scale_1,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 1$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_zjets_alt_qcd_scale_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_zjets_alt_qcd_scale_3,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} \geq 3$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_ttbar_pdf,$t\bar{t}$ norm. (PDF),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_ttbar_alpha_s,$t\bar{t}$ norm. ($\alpha_{s}$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+xs_ttbar_qcd_scale,$t\bar{t}$ norm. ($\mu_{f}/\mu_{r}$),0,1,shape,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1
+misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+misid_tau_3,$\sf jet\rightarrow\tau$ ($40 \leq p_{T} < 50$),0,1,shape,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+misid_tau_4,$\sf jet\rightarrow\tau$ ($50 \leq p_{T} < 65$),0,1,shape,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+misid_tau_5,$\sf jet\rightarrow\tau$ ($p_{T} \geq 65$),0,1,shape,1,1,0,0,1,0,0,0,0,0,0,1,1,0,0
+eff_id_e,"$\epsilon_{e,id}$",0,1,shape,1,1,1,1,1,0,1,0,1,1,0,1,0,1,0
+eff_reco_e,"$\epsilon_{e,reco}$",0,1,shape,1,1,1,1,1,0,1,0,1,1,0,1,0,1,0
+eff_id_mu,"$\epsilon_{\mu,id}$",0,1,shape,1,1,1,1,1,0,1,0,0,1,1,0,1,0,1
+eff_iso_mu,"$\epsilon_{\mu,iso}$",0,1,shape,1,1,1,1,1,0,1,0,0,1,1,0,1,0,1
+escale_e,$e$ ES,0,1,shape,1,1,1,0,1,0,1,0,1,1,0,0,0,1,0
+escale_mu,$\mu$ ES,0,1,shape,1,1,1,0,1,0,1,0,0,1,1,0,0,0,1
+escale_tau_0,$\tau\rightarrow\pi$ ES,0,1,shape,1,1,1,0,1,0,1,0,0,0,0,1,1,0,0
+escale_tau_1,$\tau\rightarrow\pi\pi^{0}$ ES,0,1,shape,1,1,1,0,1,0,1,0,0,0,0,1,1,0,0
+escale_tau_10,$\tau\rightarrow\pi\pi\pi$ ES,0,1,shape,1,1,1,0,1,0,1,0,0,0,0,1,1,0,0
+btag_bfragmentation,b-tag: b frag.,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_btempcorr,b-tag: b templ. corr.,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_cb,b-tag:JP corr,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_cfragmentation,b-tag: c frag.,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_dmux,b-tag: $\sf D\rightarrow\mu$ X BR,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_gluonsplitting,b-tag: gluon splitting,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_jes,b-tag: JES,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_jetaway,b-tag: away jet tag,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_ksl,b-tag:$K_{s}^{0} (\Lambda)$ prod.,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_l2c,b-tag: I/c ratio,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_ltothers,b-tag: LT others,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_mudr,b-tag: muon $\Delta R$,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_mupt,b-tag: muon $p_{T}$,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_ptrel,b-tag: muon $p_{T}$ (rel.),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_sampledependence,b-tag: sample dependence,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_pileup,b-tag: pileup,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+btag_statistic,b-tag: stat.,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+ctag,b-tag: c-tag,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+mistag,b-tag: mistag,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jer,JER,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_scale,JES: absolute scale,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_stat,JES: absolute stat,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_fragmentation,JES: fragmentation,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_mpf_bias,JES: mpf bias,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_data_mc,JES: pileup data/MC,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_pt_bb,JES: pileup $p_{T}$ (bb),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_pt_ec1,JES: pileup $p_{T}$ (ec),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_pt_ref,JES: pileup $p_{T}$ (ref),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_bal,JES: rel. balance,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_jer_ec1,JES: rel. JER (ec),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_pt_bb,JES: rel. $p_{T}$ (bb),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_pt_ec1,JES: rel. $p_{T}$ (ec),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_stat_fsr,JES: rel. stat. FSR,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_stat_ec,JES: rel. stat. (ec),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_single_pion_ecal,JES: $\pi$ (ECAL),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_single_pion_hcal,JES: $\pi$ (HCAL),0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_time_pt_eta,JES: time $p_{T}/\eta$,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+jes_flavor_qcd,JES: flavor,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+pileup,pileup,0,1,shape,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+top_pt,"$p_{T,top}$",0,1,shape,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1
