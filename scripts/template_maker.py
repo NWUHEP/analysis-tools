@@ -166,6 +166,7 @@ if __name__ == '__main__':
 
                                 # apply jet cut for all other systematics
                                 df = df.query(cat_items.cut)
+                                syst_gen.misc_systematics(df)
                                 if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
                                     syst_gen.muon_systematics(df)
 
@@ -233,6 +234,7 @@ if __name__ == '__main__':
 
                         # apply jet cut for all other systematics
                         df = df.query(cat_items.cut)
+                        syst_gen.misc_systematics(df)
                         if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
                             syst_gen.muon_systematics(df)
 

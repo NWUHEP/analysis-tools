@@ -337,23 +337,19 @@ def fit_plot(fit_data, selection, xlabel, log_scale=False):
 
 
 class FitData(object):
-    def __init__(self, path, selections, feature_map, nprocesses=8):
+    def __init__(self, path, selections, nprocesses=8):
         self._selections     = selections
         self._n_selections   = len(selections)
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
-        self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
+        self._selection_data = {s: self._initialize_template_data(path, s) for s in selections}
 
         # retrieve parameter configurations
         #self._pool = Pool(processes = min(16, nprocesses))
         self._initialize_parameters()
         self._initialize_morphing_templates()
-        #self._xs_ttbar_err = pd.read_csv('data/xs_zjets_err.csv').set_index('category') # to be implemented
         self._cost_init = 0
 
-        # hack for zjets normalization
-        f = open('data/theory_var_zjets.pkl', 'rb')
-
-    def _initialize_template_data(self, location, target, selection):
+    def _initialize_template_data(self, location, selection):
         '''
         Gets data for given selection including:
         * data templates
