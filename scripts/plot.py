@@ -33,11 +33,11 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['diboson', 'zjets_alt', 'wjets', 't', 'ttbar']
+    model_labels = ['diboson', 'ww', 'zjets_alt', 'wjets', 't', 'ttbar']
 
     if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
-    elif selection in ['mutau', 'etau']:
+    elif selection in ['emu', 'mutau', 'etau']:
         model_labels = ['fakes_ss'] + model_labels
 
     # data samples
@@ -52,8 +52,8 @@ if __name__ == '__main__':
 
                 'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_mt', 
                 'lepton1_iso', 'lepton1_reliso', 
-                #'jet1_pt', 'jet1_eta', 'jet1_phi',
-                #'jet2_pt', 'jet2_eta', 'jet2_phi',
+                'jet1_pt', 'jet1_eta', 'jet1_phi',
+                'jet2_pt', 'jet2_eta', 'jet2_phi',
                ]
 
     if selection not in ['e4j', 'mu4j']:
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     ### Cuts ###
     if selection in ['e4j', 'mu4j']:
         cut = 'n_jets >= 4 and n_bjets >= 1'
-    elif selection in ['etau', 'mutau']:
+    elif selection in ['emu', 'etau', 'mutau']:
         cut = 'n_jets >= 0 and n_bjets >= 0'
     else:
         cut = 'n_jets >= 2 and n_bjets >= 0'
@@ -95,8 +95,9 @@ if __name__ == '__main__':
                                   scale         = args.lumi,
                                   cuts          = cut
                                  )
-    jet_cuts = [cat_items.cut for cat, cat_items in pt.categories.items() if selection in cat_items.selections]
-    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=jet_cuts)
+    jet_cuts = {cat:cat_items.cut for cat, cat_items in pt.categories.items() if selection in cat_items.selections}
+    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=jet_cuts, do_string=True)
+    table.transpose().to_latex(f'{output_path}/yields_{selection}.tex', escape=False)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
 
     ### Loop over features and make the plots ###
@@ -120,41 +121,43 @@ if __name__ == '__main__':
     bg_labels = ['wjets', 'diboson', 'zjets_alt']
     if selection in ['mu4j', 'e4j']: 
         bg_labels = ['fakes'] + bg_labels
-    elif selection in ['mutau', 'etau']:
+    elif selection in ['emu', 'mutau', 'etau']:
         bg_labels = ['fakes_ss'] + bg_labels
 
     #inclusive_cut = 'n_bjets >= 1'
     if selection == 'emu':
-        inclusive_cut = 'n_jets >= 2'
+        inclusive_cut = 'n_jets >= 0'
     elif selection in ['ee', 'mumu']:
         inclusive_cut = 'n_jets >= 2 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
     elif selection in ['etau', 'mutau']:
-        inclusive_cut = 'n_jets >= 2'
-    else:
-        inclusive_cut = 'n_jets >= 2 and n_bjets >= 1'
+        inclusive_cut = 'n_jets >= 0'
+    elif selection in ['e4j', 'mu4j']:
+        inclusive_cut = 'n_jets >= 4 and n_bjets >= 1'
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
     plot_manager.set_output_path(f'{output_path}/inclusive')
-    plot_manager.make_conditional_overlays(features, ['ttbar', 't'], conditions,
+    plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                            cut         = inclusive_cut,
-                                           legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
+                                           legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
                                            c_colors    = colors[:len(conditions) - 1] + ['gray'],
                                            aux_labels  = bg_labels,
                                            do_ratio    = True,
                                            do_cms_text = True
                                           )
 
-    for i, (category, cat_items) in enumerate(tqdm(pt.categories.items(),
-                             desc       = 'plotting jet categories...',
-                             unit_scale = True,
-                             ncols      = 75,
-                             )):
+    selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
+    for category in tqdm(selection_categories,
+                         desc       = 'plotting jet categories...',
+                         unit_scale = True,
+                         ncols      = 75,
+                        ):
+        cat_items = pt.categories[category]
 
         if selection in cat_items.selections:
             plot_manager.set_output_path(f'{output_path}/{category}')
-            plot_manager.make_conditional_overlays(features, ['ttbar', 't'], conditions,
+            plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                                    cut        = cat_items.cut,
-                                                   legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW\rightarrow other$'],
+                                                   legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
                                                    #c_colors   = list(decay_map.colors) + ['gray'],
                                                    c_colors   = colors[:len(conditions) - 1] + ['gray'],
                                                    aux_labels = bg_labels,

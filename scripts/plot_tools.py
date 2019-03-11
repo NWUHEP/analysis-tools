@@ -24,20 +24,21 @@ dataset_dict = dict(
                     ttbar    = ['ttbar_inclusive'], #'ttbar_lep', 'ttbar_semilep',
                     t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
-                    zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'], 
-                    zjets    = ['zjets_m-50',  'zjets_m-10to50', 
-                                'z1jets_m-50', 'z1jets_m-10to50', 
-                                'z2jets_m-50', 'z2jets_m-10to50', 
-                                'z3jets_m-50', 'z3jets_m-10to50', 
+                    zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'],
+                    zjets    = ['zjets_m-50',  'zjets_m-10to50',
+                                'z1jets_m-50', 'z1jets_m-10to50',
+                                'z2jets_m-50', 'z2jets_m-10to50',
+                                'z3jets_m-50', 'z3jets_m-10to50',
                                 'z4jets_m-50', 'z4jets_m-10to50'
                                 ],
-                    qcd      = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500', 
-                                'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000', 
+                    qcd      = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500',
+                                'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
                                 'qcd_ht2000'
                                 ],
-                    diboson  = ['ww', 'wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
-                    fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes', 
-                                'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes', 
+                    ww       = ['ww'],
+                    diboson  = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
+                    fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
+                                'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
                                 'muon_2016H_fakes'
 
                                 'electron_2016B_fakes', 'electron_2016C_fakes', 'electron_2016D_fakes', 
@@ -287,7 +288,7 @@ class DataManager():
                                             sheet_name='variables_{0}'.format(self._selection),
                                             index_col='variable_name'
                                            ).dropna(how='all')
-        self._lut_features = pd.concat([lut_features_default, lut_features_select])
+        self._lut_features = pd.concat([lut_features_default, lut_features_select], sort=True)
 
     def _load_dataframes(self):
         '''
@@ -347,7 +348,7 @@ class DataManager():
                 if label not in dataframes.keys():
                     dataframes[label] = df
                 else:
-                    dataframes[label] = dataframes[label].append(df)
+                    dataframes[label] = dataframes[label].append(df, sort=False)
             else:
                 dataframes[dataset] = df
     
@@ -392,9 +393,10 @@ class DataManager():
     def print_yields(self, dataset_names,
                      exclude    = [],
                      conditions = [''],
+                     labels     = None,
                      mc_scale   = True,
                      do_string  = False,
-                     fmt        = 'markdown'
+                     output_format = 'csv'
                      ):
         '''
         Prints sum of the weights for the provided datasets
@@ -406,14 +408,14 @@ class DataManager():
         conditions    : list of conditions to apply
         mc_scale      : scale MC according to weights and scale
         do_string     : format of output cells: if True then string else float
-        fmt           : formatting of the table (default:markdown)
+        output_format : formatting of the table (default:markdown)
         '''
 
         # print header
         table = dict()
         dataset_names = [dn for dn in dataset_names if dn in self._dataframes.keys()]
-        for i, condition in enumerate(conditions):
-            table[f'condition_{i+1}'] = []
+        for i, (condition_label, condition) in enumerate(conditions.items()):
+            table[f'{condition_label}'] = []
             if not do_string:
                 table[f'error_{i+1}'] = []
 
@@ -425,38 +427,43 @@ class DataManager():
                     df = df.query(condition).copy()
 
                 if mc_scale:
-                    n     = df.weight.sum()
-                    n_err = np.sqrt(np.sum(df.weight**2))
+                    n   = df.weight.sum()
+                    var_stat = np.sum(df.weight**2)
+                    sigma_xs = 0.1 if dataset in ['zjets_alt', 'diboson'] else 0.05
+                    var_syst = (sigma_xs**2 + 0.025**2)*n**2
+                    err = np.sqrt(var_stat + var_syst)
+                    
                 else:
-                    n     = df.shape[0]
-                    n_err = np.sqrt(n)
+                    n   = df.shape[0]
+                    err = np.sqrt(n)
 
                 # calculate sum of bg events
                 if dataset not in exclude and dataset != 'data':
                     bg_total[0] += n
-                    bg_total[1] += n_err**2
+                    bg_total[1] += err**2
 
                 if do_string:
                     if dataset == 'data':
-                        table[f'condition_{i+1}'].append('${0}$'.format(int(n)))
+                        table[f'{condition_label}'].append('${0}$'.format(int(n)))
                     else:
-                        table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(n, n_err))
+                        table[f'{condition_label}'].append('${0:.1f} \pm {1:.1f}$'.format(n, err))
                 else:
-                    table[f'condition_{i+1}'].append(n)
-                    table[f'error_{i+1}'].append(n_err)
+                    table[f'{condition_label}'].append(n)
+                    table[f'error_{i+1}'].append(err)
 
                 dataframes[dataset] = df  # update dataframes so cuts are applied sequentially
 
             if do_string:
-                table[f'condition_{i+1}'].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
+                table[f'{condition_label}'].append('${0:.1f} \pm {1:.1f}$'.format(bg_total[0], np.sqrt(bg_total[1])))
             else:
-                table[f'condition_{i+1}'].append(bg_total[0])
+                table[f'{condition_label}'].append(bg_total[0])
                 table[f'error_{i+1}'].append(np.sqrt(bg_total[1]))
 
         if do_string:
             labels = [self._lut_datasets.loc[d].text for d in dataset_names]
         else:
             labels = dataset_names
+
         table = pd.DataFrame(table, index=labels+['background'])
         return table
 
@@ -919,7 +926,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim((0.1*np.min(hist), 15.*y_max))
+            ax.set_ylim((0.1*abs(np.min(hist)), 15.*y_max))
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 

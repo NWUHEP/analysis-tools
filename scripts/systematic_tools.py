@@ -10,7 +10,27 @@ from scipy.special import expit
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
-from scripts.blt_reader import jec_source_names
+from scripts.blt_reader import jec_source_names, btag_source_names
+
+def conditional_scaling(df, bins, scale, mask, feature, type='var'):
+    '''
+    Generates morphing templates based on systematic assigned to subset of the data.
+    '''
+
+    if type == 'var':
+        df.loc[mask, feature] *= 1 + scale
+        h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, feature] *= (1 - scale)/(1 + scale)
+        h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, feature] /= (1 - scale)
+    elif type == 'weight':
+        df.loc[mask, 'weight'] *= 1 + scale
+        h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, 'weight'] *= (1 - scale)/(1 + scale)
+        h_down, _ = np.histogram(df[feature], bins=bins, weights=df.weight)
+        df.loc[mask, 'weight'] /= (1 - scale)
+
+    return h_up, h_down
 
 def variation_template_smoothing(bins, h_nominal, h_up, h_down):
     '''
@@ -102,6 +122,7 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
                              bins=bins, 
                              weights=df.query(up_condition).weight
                              )
+
     h_down, _ = np.histogram(df.query(down_condition)[feature],
                              bins=bins, 
                              weights=df.query(down_condition).weight
@@ -165,11 +186,10 @@ class SystematicTemplateGenerator():
     def get_syst_dataframe(self):
         return self._df_sys.set_index('bins')
 
-    def jet_shape_systematics(self, df):
+    def jes_systematics(self, df):
         '''
         Generates morpthing templates for: 
            * jet energy scale/resolution
-           * b tag/mistag efficiency
 
         Parameters:
         ===========
@@ -266,16 +286,13 @@ class SystematicTemplateGenerator():
 
     def reco_shape_systematics(self, df):
         '''
-        Generates templates for:
-           * pileup
-           * lepton energy scale
+        Generates morpthing templates for: 
+           * b tag efficiency systematics
 
         Parameters:
         ===========
-        df: dataframe for target dataset with
-       '''
-        bins = self._binning
-        feature = self._feature
+        df: dataframe for target dataset without the jet cuts applied
+        '''
 
         # pileup
         h_up, h_down = pileup_morph(df, feature, bins)
@@ -343,7 +360,25 @@ class SystematicTemplateGenerator():
 
         return
 
-    def theory_shape_systematics(self, df, cut, renorm, dm_syst=None):
+    def misc_systematics(self, df):
+        '''
+        Generates templates for:
+           * pileup
+
+        Parameters:
+        ===========
+        df: dataframe for target dataset with
+       '''
+        bins = self._binning
+        feature = self._feature
+
+        # pileup
+        h_up, h_down = pileup_morph(df, feature, bins)
+        self._df_sys['pileup_up'], self._df_sys['pileup_down'] = h_up, h_down
+
+        return
+
+    def theory_systematics(self, df, label, njets, cut, dm_syst=None):
         '''
         Generates templates for theory systematics:
            * QCD scale
@@ -356,7 +391,8 @@ class SystematicTemplateGenerator():
         ===========
         df: dataframe for target dataset 
         cut: jet and W decay category cut
-        renorm: dict of renormalization factors to remove normalization changes due to pdf and QCD changes
+        label: name of dataset being run over
+        njets: number of jets required
         dm_syst: data manager with dedicated ttbar samples for non-weight based systematics
         '''
 

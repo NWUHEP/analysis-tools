@@ -337,11 +337,11 @@ def fit_plot(fit_data, selection, xlabel, log_scale=False):
 
 
 class FitData(object):
-    def __init__(self, path, selections, feature_map, nprocesses=8):
+    def __init__(self, path, selections, nprocesses=8):
         self._selections     = selections
         self._n_selections   = len(selections)
         self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
-        self._selection_data = {s: self._initialize_template_data(path, feature_map[s], s) for s in selections}
+        self._selection_data = {s: self._initialize_template_data(path, s) for s in selections}
 
         # retrieve parameter configurations
         #self._pool = Pool(processes = min(16, nprocesses))
@@ -349,7 +349,7 @@ class FitData(object):
         self._initialize_morphing_templates()
         self._cost_init = 0
 
-    def _initialize_template_data(self, location, target, selection):
+    def _initialize_template_data(self, location, selection):
         '''
         Gets data for given selection including:
         * data templates
@@ -368,7 +368,7 @@ class FitData(object):
         '''
         Gets parameter configuration from a file.
         '''
-        df_params = pd.read_csv('data/model_parameters_partial.csv')
+        df_params = pd.read_csv('data/model_parameters.csv')
         df_params = df_params.set_index('name')
         #df_params = df_params.iloc[:4,]
         self._parameters = df_params
@@ -401,8 +401,8 @@ class FitData(object):
                 for ds, template in templates['templates'].items():
                     if ds in ['data', 'diboson']:
                         continue
-                    elif ds == 'zjets_alt':
 
+                    elif ds == 'zjets_alt':
                         var_up, var_down = [], []
                         for pname, param in shape_params.iterrows():
                             if f'{pname}_up' in template.columns:
@@ -412,11 +412,11 @@ class FitData(object):
                                 var_up.append(template['val'].values)
                                 var_down.append(template['val'].values)
 
-
                         var_up, var_down = np.vstack(var_up), np.vstack(var_down)
                         if var_up.sum() > 0:
                             self._selection_data[sel][category]['np_shapes'][ds] = (var_up, var_down)
-                    elif ds in ['ttbar', 't', 'wjets']: # sub templates
+
+                    elif ds in ['ttbar', 't', 'ww', 'wjets']: # sub templates
                         self._selection_data[sel][category]['np_shapes'][ds] = dict()
                         for sub_ds, sub_template in template.items():
                             var_up, var_down = [], []
@@ -431,6 +431,8 @@ class FitData(object):
                             var_up, var_down = np.vstack(var_up), np.vstack(var_down)
                             if var_up.sum() > 0:
                                 self._selection_data[sel][category]['np_shapes'][ds][sub_ds] = (var_up, var_down)
+
+
  
     def get_selection_data(self, selection):
         return self._selection_data[selection]
@@ -527,12 +529,11 @@ class FitData(object):
         # get simulated background components and apply cross-section nuisance parameters
         f_model, var_model = np.zeros(f_data.shape), np.zeros(f_data.shape)
 
-        # Drell-Yan
-        f_model   += pdict['xs_zjets']*self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
-        #f_model   += pdict['xs_zjets']*templates['zjets_alt']['val']
-        var_model += pdict['xs_zjets']*templates['zjets_alt']['var']
+        # Drell-Yan 
+        f_model   += self.modify_template(templates['zjets_alt'], pdict, 'zjets_alt', selection, category)
+        var_model += templates['zjets_alt']['var']
 
-        # Diboson
+        # non-WW diboson
         f_model   += pdict['xs_diboson']*templates['diboson']['val']
         var_model += pdict['xs_diboson']*templates['diboson']['var']
 
@@ -540,48 +541,72 @@ class FitData(object):
             f_model *= pdict['eff_tau']
 
         # get the signal components and apply mixing of W decay modes according to beta
-        for label in ['ttbar', 't', 'wjets']:
+        for label in ['ttbar', 't', 'ww', 'wjets']:
             template_collection = templates[label]
-            signal_template     = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
+            signal_template = pd.DataFrame.from_dict({dm: self.modify_template(t, pdict, label, selection, category, dm) for dm, t in template_collection.items()})
             #signal_template     = pd.DataFrame.from_dict({dm: t['val'] for dm, t in template_collection.items()})
 
-            if selection in ['etau', 'mutau'] and label != 'wjets': # split real and misID taus
-                mask = np.zeros(21).astype(bool)
+            if selection in ['etau', 'mutau']: # split real and misID taus
+                if label != 'wjets': 
 
-                # real tau component (indices taken from decay_map.csv)
-                mask[[6,7,8,11,14]] = True
-                f_real = signal_mixture_model(beta, br_tau,
-                                              h_temp   = signal_template,
-                                              mask     = mask,
-                                              single_w = (label == 'wjets'),
-                                             )
+                    # real tau component (indices taken from decay_map.csv)
+                    mask = np.zeros(21).astype(bool)
+                    mask[[6,7,8,11,14]] = True
+                    f_real = signal_mixture_model(beta, br_tau,
+                                                  h_temp   = signal_template,
+                                                  mask     = mask,
+                                                 )
+                    f_real *= pdict['eff_tau']
 
-                # apply misID nuisance parameter for "fake" taus
-                mask = np.invert(mask)
-                f_fake = signal_mixture_model(beta, br_tau,
-                                              h_temp   = signal_template,
-                                              mask     = mask,
-                                              single_w = (label == 'wjets')
-                                             )
+                    # apply misID nuisance parameter for jets faking taus
+                    mask = np.zeros(21).astype(bool)
+                    mask[[15, 16, 17, 18, 19, 20]] = True
+                    f_fake_h = signal_mixture_model(beta, br_tau,
+                                                    h_temp   = signal_template,
+                                                    mask     = mask,
+                                                   )
+                    f_fake_h *= pdict['misid_tau_h']
 
-                f_sig = pdict['eff_tau']*f_real + pdict['misid_tau_h']*f_fake
+                    # e faking tau
+                    mask = np.zeros(21).astype(bool)
+                    if selection == 'etau':
+                        mask[[0, 3, 9]] = True
+                        f_fake_e = signal_mixture_model(beta, br_tau,
+                                                      h_temp   = signal_template,
+                                                      mask     = mask,
+                                                     )
+                        f_fake_e *= pdict['misid_tau_e']
+
+                    elif selection == 'mutau':
+                        mask[[2, 5, 12]] = True
+                        f_fake_e = signal_mixture_model(beta, br_tau,
+                                                      h_temp   = signal_template,
+                                                      mask     = mask,
+                                                     )
+                        f_fake_e *= pdict['misid_tau_e']
+
+                    f_sig = f_real + f_fake_h + f_fake_e
+                else:
+                    f_sig = signal_mixture_model(beta, br_tau,
+                                                 h_temp   = signal_template,
+                                                 single_w = True
+                                                )
+                    f_sig *= pdict['misid_tau_h']
             else:
                 f_sig = signal_mixture_model(beta, br_tau,
                                              h_temp   = signal_template,
                                              single_w = (label == 'wjets')
                                             )
 
-                if selection in ['etau', 'mutau'] and label == 'wjets': 
-                    f_sig *= pdict['misid_tau_h']
+            # prepare mixture (ttbar normalization is a shape n.p.)
+            if label != 'ttbar':
+                f_model += pdict[f'xs_{label}']*f_sig
+                #var_model += pdict[f'xs_{label}']*templates[label]['var']
+            else:
+                f_model   += f_sig
+                #var_model += var_sig # figure this out
 
-            # prepare mixture
-            #f_model   += f_sig
-            #var_model += var_sig # figure this out
-            f_model += pdict[f'xs_{label}']*f_sig
-            #var_model += pdict[f'xs_{label}']*templates[label]['var']
-
-        # lepton efficiencies as normalization nuisance parameters
-        # lepton energy scale as morphing parameters
+        # lepton trigger efficiencies (move these to shape nuisances)
         if selection == 'ee':
             f_model *= pdict['trigger_e']**2
         elif selection == 'emu':
@@ -589,21 +614,19 @@ class FitData(object):
             f_model *= pdict['eff_mu']
         elif selection == 'mumu':
             f_model *= pdict['trigger_mu']**2
-            f_model *= pdict['eff_mu']**2
         elif selection == 'etau':
             f_model *= pdict['trigger_e']
         elif selection == 'mutau':
             f_model *= pdict['trigger_mu']
-            f_model *= pdict['eff_mu']
         elif selection == 'e4j':
             f_model *= pdict['trigger_e']
         elif selection == 'mu4j':
             f_model *= pdict['trigger_mu']
-            f_model *= pdict['eff_mu']
 
         # apply overall lumi nuisance parameter
         f_model *= pdict['lumi']
 
+        # data-driven estimates here (do not apply simulation/theory uncertainties)
         # get fake background and include normalization nuisance parameters
         if selection == 'e4j':
             #f_model   += templates['fakes']['val']
@@ -625,7 +648,7 @@ class FitData(object):
             f_model   += pdict['mu_fakes_ss']*templates['fakes']['val']
             var_model += templates['fakes']['var']
 
-        # for testing parameter estimation without estimating kinematic fit
+        # for testing parameter estimation while excluding kinematic shape information
         if no_shape:
             f_data    = np.sum(f_data)
             var_data  = np.sum(var_data)
@@ -671,13 +694,19 @@ class FitData(object):
         for selection in self._selections:
             sdata = self.get_selection_data(selection)
             for category, cat_data in sdata.items():
+
+                # remove 0 b tag category for ee and mumu channels#
+                if selection in ['ee', 'mumu'] and category == 'cat_gt2_eq0':
+                    continue
+
+                # remove additional (WW & Z+jets) categories for emu channels#
+                if selection == 'emu' and category in ['cat_eq0_eq0_a', 'cat_eq1_eq0_a', 'cat_eq1_eq1_a']:
+                    continue
+
                 cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)
 
         # Add prior terms for nuisance parameters 
         for pname, p in pdict.items():
-            #if pname in ['beta_e', 'beta_mu', 'beta_tau', 'beta_h']:
-            #    continue
-
             p_chi2 = (p - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
             cost += p_chi2
 

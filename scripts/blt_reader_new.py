@@ -69,7 +69,7 @@ if __name__ == '__main__':
                         type    = int
                         )
     parser.add_argument('-a', '--append',
-                        help    = 'Run in append mode (existing datasets will be overwritten)',
+                        help    = 'Run in append mode (existing datasets will not be overwritten)',
                         default = True,
                         type    = bool
                         )

@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    sim_labels = ['diboson', 'wjets', 'zjets_alt', 't', 'ttbar']
+    sim_labels = ['diboson', 'ww', 'wjets', 'zjets_alt', 't', 'ttbar']
 
     ### Get dataframes with features for each of the datasets ###
     input_dir = f'{args.input}/{args.selection}_{args.period}'
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         print('No same-sign events in dataset.')
     else:
         df_sim.loc[:,'weight'] *= -1
-        df_qcd = pd.concat([df_data, df_sim])
+        df_qcd = pd.concat([df_data, df_sim], sort=False)
         df_qcd.loc[:,'lepton2_q'] = -1*df_qcd['lepton1_q']
 
         # save output and update event counts
