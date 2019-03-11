@@ -11,7 +11,14 @@
 # directories #
 ###############
 
+plots
 slides
 document
 local_data
 figures
+scripts/__pycache__
+
+# specific files #
+#################
+
+notebooks/.ipynb_checkpoints/
