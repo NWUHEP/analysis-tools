@@ -346,9 +346,10 @@ class FitData(object):
         # retrieve parameter configurations
         #self._pool = Pool(processes = min(16, nprocesses))
         self._initialize_parameters()
-        self._initialize_morphing_templates()
+        self._initialize_templates()
         self._cost_init = 0
 
+    # initialization functions
     def _initialize_template_data(self, location, selection):
         '''
         Gets data for given selection including:
@@ -362,6 +363,7 @@ class FitData(object):
         infile = open(f'{location}/{selection}_templates.pkl', 'rb')
         data = pickle.load(infile)
         infile.close()
+
         return data
 
     def _initialize_parameters(self):
@@ -370,7 +372,6 @@ class FitData(object):
         '''
         df_params = pd.read_csv('data/model_parameters.csv')
         df_params = df_params.set_index('name')
-        #df_params = df_params.iloc[:4,]
         self._parameters = df_params
 
         # make a map of each shape n.p. to be considered for each selection and
@@ -387,55 +388,35 @@ class FitData(object):
                 np_dict[s][ds] = df_shape.query(f'{ds} == 1 and {s} == 1').index.values 
         self._np_dict = np_dict
 
-    def _initialize_morphing_templates(self):
+    def _initialize_template_data(self):
         '''
-        Creates standardized morphing templates.  This converts the dataframes
-        that store morphing templates to numpy arrays for faster computation of
-        variations due to nuisance parameters.
+        This converts the data stored in the input dataframes into a numpy tensor of
+        dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
         '''
-        shape_params = self._parameters.query(f'type == "shape"')
-        morph_templates = {s: dict() for s in self._selections}
+
+        params = self._parameters.query(f'type != "poi"')
         for sel in self._selections:
             for category, templates in self.get_selection_data(sel).items():
-                if 'np_shapes' not in self._selection_data[sel][category]:
-                    self._selection_data[sel][category]['np_shapes'] = dict()
 
                 for ds, template in templates['templates'].items():
-                    if ds in ['data', 'diboson']:
-                        continue
-
-                    elif ds == 'zjets_alt':
-                        var_up, var_down = [], []
-                        for pname, param in shape_params.iterrows():
-                            if f'{pname}_up' in template.columns:
-                                var_up.append(template[f'{pname}_up'].values)
-                                var_down.append(template[f'{pname}_down'].values)
+                    if ds in ['zjets_alt', 'diboson']: # processes that are not subdivided
+                        val, var = template['val'].values, template['var'].values
+                        delta_plus, delta_minus = [], []
+                        for pname, param in params.iterrows():
+                            if f'{pname}_up' in template.columns and param.type == 'shape':
+                                deff_plus = template[f'{pname}_up'].values - val
+                                deff_minus = template[f'{pname}_down'].values - val
                             else:
-                                var_up.append(template['val'].values)
-                                var_down.append(template['val'].values)
+                                deff_plus = np.zeros(val)
+                                deff_minus = np.zeros(val)
 
-                        var_up, var_down = np.vstack(var_up), np.vstack(var_down)
-                        if var_up.sum() > 0:
-                            self._selection_data[sel][category]['np_shapes'][ds] = (var_up, var_down)
+                            delta_plus.append(deff_plus + deff_minus)
+                            delta_minus.append(deff_plus - deff_minus)
 
                     elif ds in ['ttbar', 't', 'ww', 'wjets']: # sub templates
-                        self._selection_data[sel][category]['np_shapes'][ds] = dict()
-                        for sub_ds, sub_template in template.items():
-                            var_up, var_down = [], []
-                            for pname, param in shape_params.iterrows():
-                                if f'{pname}_up' in sub_template.columns:
-                                    var_up.append(sub_template[f'{pname}_up'].values)
-                                    var_down.append(sub_template[f'{pname}_down'].values)
-                                else:
-                                    var_up.append(sub_template['val'].values)
-                                    var_down.append(sub_template['val'].values)
-
-                            var_up, var_down = np.vstack(var_up), np.vstack(var_down)
-                            if var_up.sum() > 0:
-                                self._selection_data[sel][category]['np_shapes'][ds][sub_ds] = (var_up, var_down)
-
-
+                        continue
  
+    # getter functions
     def get_selection_data(self, selection):
         return self._selection_data[selection]
 
@@ -451,6 +432,7 @@ class FitData(object):
         else:
             return self._parameters['err_init']
 
+    # model building
     def modify_template(self, templates, pdict, dataset, selection, category, sub_ds=None):
         '''
         Modifies a single template based on all shape nuisance parameters save
@@ -502,6 +484,7 @@ class FitData(object):
 
             return t_new
 
+    # evaluation of objective functions
     def sub_objective(self, pdict, selection, category, cat_data, data,
                       cost_type='poisson',
                       no_shape=False
