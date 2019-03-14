@@ -170,187 +170,25 @@ def calculate_covariance(f, x0):
     else:
         return False
 
-def fit_plot(fit_data, selection, xlabel, log_scale=False):
-
-    # unpack fit_data
-    results  = fit_data['results']
-    ix       = fit_data['selections'].index(selection)
-    n_sel    = fit_data['n_selections']
-    br_tau   = fit_data['br_tau']
-
-    sel_data = fit_data[selection]
-    data     = sel_data['data']
-    bg       = sel_data['bg']
-    signal   = sel_data['signal']
-
-    #print(data[0].sum(), bg[0].sum(), signal[0].sum())
-
-    # starting amplitudes
-    p_init     = fit_data['p_init']['vals']
-    beta_init  = p_init[n_sel+1:]
-    lumi_scale = results.x[0]
-    alpha_fit  = results.x[ix+1]
-    beta_fit   = results.x[n_sel+1:]
-
-    # initialize the canvas
-    fig, axes = plt.subplots(2, 1,
-                             figsize     = (8, 9),
-                             facecolor   = 'white',
-                             sharex      = True,
-                             gridspec_kw = {'height_ratios': [3, 1]}
-                             )
-    fig.subplots_adjust(hspace=0)
-
-    # initialize bins
-    bins = fit_data[selection]['bins']
-    xmin, xmax = bins.min(), bins.max()
-    dx = (bins[1:] - bins[:-1])
-    dx = np.append(dx, dx[-1])
-    x = bins + dx/2
-
-    # plot the data
-    y_data, yerr_data = data[0], np.sqrt(data[1])
-    data_plot = axes[0].errorbar(x, y_data/dx, yerr_data/dx,
-                                 fmt        = 'ko',
-                                 capsize    = 0,
-                                 elinewidth = 2
-                                 )
-
-    # plot signal and bg (prefit)
-    y_bg, yerr_bg = bg[0], np.sqrt(bg[1])
-    axes[0].errorbar(x, y_bg/dx, yerr_bg/dx,
-                     label='_nolegend_',
-                     fmt        = 'C1.',
-                     markersize = 0,
-                     capsize    = 0,
-                     elinewidth = 5,
-                     alpha = 0.5
-                     )
-    axes[0].plot(bins, y_bg/dx, drawstyle='steps-post', c='C1', alpha=0.5)
-
-    y_sig, yvar_sig = signal_mixture_model(beta_init, br_tau, signal)
-    y_combined, yerr_combined = y_bg + y_sig, np.sqrt(yerr_bg**2 + yvar_sig)
-    axes[0].errorbar(x, y_combined/dx, yerr_combined/dx,
-                     label='_nolegend_',
-                     fmt        = 'C0.',
-                     markersize = 0,
-                     capsize    = 0,
-                     elinewidth = 5,
-                     alpha = 0.5
-                     )
-    axes[0].plot(bins, y_combined/dx, drawstyle='steps-post', c='C0', alpha=0.5)
-
-    ratio_pre = y_data/y_combined
-    ratio_pre_err = (1/y_combined**2)*np.sqrt(y_data**2*yerr_combined**2 + y_combined**2*yerr_data**2)
-
-    y_bg, yerr_bg = lumi_scale*alpha_fit*y_bg, lumi_scale*alpha_fit*yerr_bg
-    axes[0].errorbar(x, y_bg/dx, yerr_bg/dx,
-                     label = '_nolegend_',
-                     fmt        = 'C3.',
-                     markersize = 0,
-                     capsize    = 0,
-                     elinewidth = 5,
-                     alpha = 0.5,
-                     )
-    axes[0].plot(bins, y_bg/dx, drawstyle='steps-post', linestyle='--', label='_nolegend_', c='C3')
-
-    y_sig, yvar_sig = signal_mixture_model(beta_fit, br_tau, signal)
-    y_combined      = y_bg + lumi_scale*y_sig
-    yerr_combined   = np.sqrt(yerr_bg**2 + yvar_sig*lumi_scale**2)
-    axes[0].errorbar(x, y_combined/dx, yerr_combined/dx,
-                     fmt        = 'C9.',
-                     capsize    = 0,
-                     markersize = 0,
-                     elinewidth = 5,
-                     alpha = 0.5,
-                     label = '_nolegend_'
-                     )
-    axes[0].plot(bins, y_combined/dx, drawstyle='steps-post', linestyle='--', label='_nolegend_', c='C9')
-
-    ratio_post = y_data/y_combined
-    ratio_post_err = (1/y_combined**2)*np.sqrt(y_data**2*yerr_combined**2 + y_combined**2*yerr_data**2)
-
-    axes[0].grid()
-    axes[0].set_ylabel(r'Events / 1 GeV')
-    axes[0].set_xlim(xmin, xmax)
-    if log_scale:
-        axes[0].set_yscale('log')
-        axes[0].set_ylim(0.05, 10*np.max(y_data/dx))
-    else:
-        axes[0].set_ylim(0., 1.2*np.max(y_data/dx))
-
-    # custom legend handles
-    from matplotlib.legend_handler import HandlerBase
-
-    class AnyObjectHandler(HandlerBase):
-        def create_artists(self, legend, orig_handle, x0, y0, width, height, fontsize, trans):
-            l1 = plt.Line2D([x0, y0+width],
-                            [0.7*height, 0.7*height],
-                            linestyle='--',
-                            color=orig_handle[1]
-                            )
-            l2 = plt.Line2D([x0, y0+width],
-                            [0.3*height, 0.3*height],
-                            color=orig_handle[0]
-                            )
-            return [l1, l2]
-
-    axes[0].legend([('C1', 'C3'), ('C0', 'C9'), data_plot],
-                   ['background', r'$\sf t\bar{t}+tW$', 'data'],
-                   handler_map={tuple: AnyObjectHandler()}
-                   )
-
-    #axes[0].legend([
-    #                r'BG',
-    #                r'$\sf t\bar{t}/tW$',
-    #                'Data',
-    #                ])
-
-    #axes[0].text(80, 2200, r'$\alpha = $' + f' {results.x[0]:3.4} +/- {sig[0]:2.2}', {'size':20})
-
-    ### calculate ratios
-    axes[1].errorbar(x, ratio_pre, ratio_pre_err,
-                     fmt        = 'C0o',
-                     ecolor     = 'C0',
-                     capsize    = 0,
-                     elinewidth = 3,
-                     alpha = 1.
-                     )
-    axes[1].errorbar(x, ratio_post, ratio_post_err,
-                     fmt        = 'C1o',
-                     ecolor     = 'C1',
-                     capsize    = 0,
-                     elinewidth = 3,
-                     alpha = 1.
-                     )
-
-    axes[1].grid()
-    axes[1].set_xlabel(xlabel)
-    axes[1].set_ylabel('Data / MC')
-    axes[1].set_ylim(0.8, 1.19)
-    #axes[1].legend(['prefit', 'postfit'], loc=1, fontsize=16)
-    axes[1].plot([xmin, xmax], [1, 1], 'k--', alpha=0.5)
-
-    plt.savefig(f'plots/fits/{selection}_channel.pdf')
-    plt.savefig(f'plots/fits/{selection}_channel.png')
-    plt.show()
-
 
 class FitData(object):
-    def __init__(self, path, selections, nprocesses=8):
+    def __init__(self, path, selections, processes):
         self._selections     = selections
+        self._processes      = processes
         self._n_selections   = len(selections)
-        self._decay_map      = pd.read_csv('data/decay_map.csv').set_index('id')
-        self._selection_data = {s: self._initialize_template_data(path, s) for s in selections}
+        self._n_processess   = len(processes)
+        self._selection_data = {s: self._initialize_data(path, s) for s in selections}
 
         # retrieve parameter configurations
-        #self._pool = Pool(processes = min(16, nprocesses))
+        self._decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
         self._initialize_parameters()
-        self._initialize_templates()
+
+        # initialize fit data
+        self._initialize_fit_tensor()
         self._cost_init = 0
 
     # initialization functions
-    def _initialize_template_data(self, location, selection):
+    def _initialize_data(self, location, selection):
         '''
         Gets data for given selection including:
         * data templates
@@ -374,47 +212,109 @@ class FitData(object):
         df_params = df_params.set_index('name')
         self._parameters = df_params
 
-        # make a map of each shape n.p. to be considered for each selection and
-        # dataset (and maybe jet bin later, if needed)
-        df_shape = self._parameters.query(f'type == "shape"') 
-        self._shape_mask = np.array(self._parameters.type == 'shape')
-        np_dict = dict()
-        for s in self._selections:
-            np_dict[s] = dict()
-            for ds in pt.selection_dataset_dict[s]:
-                if ds == 'fakes_ss':
-                    ds = 'fakes'
+        return
 
-                np_dict[s][ds] = df_shape.query(f'{ds} == 1 and {s} == 1').index.values 
-        self._np_dict = np_dict
-
-    def _initialize_template_data(self):
+    def _initialize_fit_tensor(self):
         '''
         This converts the data stored in the input dataframes into a numpy tensor of
         dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
         '''
 
         params = self._parameters.query(f'type != "poi"')
+        self._category_data = dict()
         for sel in self._selections:
+            category_tensor = []
             for category, templates in self.get_selection_data(sel).items():
+                templates = templates['templates']
+                data_val, data_var = templates['data']['val'], templates['data']['var']
+                
+                process_mask = []
+                data_tensor = []
+                for ds in self._processes:
 
-                for ds, template in templates['templates'].items():
+                    # mask out missing processes
+                    if ds not in templates.keys():
+                        if ds in ['ttbar', 't', 'ww']:
+                            process_mask.extend(21*[0,])
+                        elif ds == 'wjets':
+                            process_mask.extend(6*[0,])
+                        else:
+                            process_mask.append(0)
+                        continue
+                    else:
+                        template = templates[ds]
+
                     if ds in ['zjets_alt', 'diboson']: # processes that are not subdivided
                         val, var = template['val'].values, template['var'].values
+                        #print(ds, val/np.sqrt(data_var))
+
+                        # determine whether process contribution is significant
+                        # or should be masked (this should be studied for
+                        # impact on poi to determine proper threshold)
+                        if val.sum()/np.sqrt(data_var.sum()) <= 0.1:
+                            process_mask.append(0)
+                            continue
+                        else:
+                            process_mask.append(1)
+
                         delta_plus, delta_minus = [], []
                         for pname, param in params.iterrows():
+                            if not params.loc[pname][sel]:
+                                continue
+
                             if f'{pname}_up' in template.columns and param.type == 'shape':
                                 deff_plus = template[f'{pname}_up'].values - val
                                 deff_minus = template[f'{pname}_down'].values - val
+                            elif param.type == 'norm' and param[sel] and param[ds]:
+                                deff_plus = val*(1 + param['err_init'])
+                                deff_minus = val*(1 - param['err_init'])
                             else:
-                                deff_plus = np.zeros(val)
-                                deff_minus = np.zeros(val)
+                                deff_plus  = np.zeros_like(val)
+                                deff_minus = np.zeros_like(val)
 
                             delta_plus.append(deff_plus + deff_minus)
                             delta_minus.append(deff_plus - deff_minus)
 
-                    elif ds in ['ttbar', 't', 'ww', 'wjets']: # sub templates
-                        continue
+                        process_array = np.vstack([val.reshape(1, val.size), delta_plus, delta_minus])
+                        data_tensor.append(process_array.T)
+
+                    elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
+                        full_sum, reduced_sum = 0, 0
+                        for sub_ds, sub_template in template.items():
+                            val, var = sub_template['val'].values, sub_template['var'].values
+                            full_sum += val.sum()
+
+                            # determine wheter process should be masked
+                            if val.sum()/np.sqrt(data_var.sum()) <= 0.1:
+                                process_mask.append(0)
+                                continue
+                            else:
+                                process_mask.append(1)
+
+                            delta_plus, delta_minus = [], []
+                            for pname, param in params.iterrows():
+                                if not params.loc[pname][sel]:
+                                    continue
+
+                                if f'{pname}_up' in sub_template.columns and param.type == 'shape':
+                                    deff_plus = sub_template[f'{pname}_up'].values - val
+                                    deff_minus = sub_template[f'{pname}_down'].values - val
+                                elif param.type == 'norm' and param[sel] and param[ds]:
+                                    deff_plus = val*param['err_init']
+                                    deff_minus = -val*param['err_init']
+                                else:
+                                    deff_plus  = np.zeros_like(val)
+                                    deff_minus = np.zeros_like(val)
+
+                                delta_plus.append(deff_plus + deff_minus)
+                                delta_minus.append(deff_plus - deff_minus)
+                            process_array = np.vstack([val.reshape(1, val.size), delta_plus, delta_minus])
+                            data_tensor.append(process_array.T)
+                
+                category_tensor = np.stack(data_tensor)
+                self._category_data[f'{sel}_{category}'] = (category_tensor, np.array(process_mask), params[sel].values)
+
+        return
  
     # getter functions
     def get_selection_data(self, selection):
@@ -431,6 +331,9 @@ class FitData(object):
             return self._parameters['err_init'].values
         else:
             return self._parameters['err_init']
+
+    def get_fit_tensor(self, category):
+        return self._category_data[category]
 
     # model building
     def modify_template(self, templates, pdict, dataset, selection, category, sub_ds=None):
