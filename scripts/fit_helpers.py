@@ -137,6 +137,7 @@ def signal_mixture_model(beta, br_tau, h_temp, mask=None, sample=False, single_w
 
     return f
 
+# covariance approximators
 def calculate_variance(f, x0):
     '''
     calculates variance for input function.
@@ -169,6 +170,11 @@ def calculate_covariance(f, x0):
         return sig, corr_matrix
     else:
         return False
+
+# GOF statistics
+def chi2_test(y1, y2, var1, var2):
+    chi2 = 0.5*(y1 - y2)**2/(var1 + var2)
+    return chi2
 
 
 class FitData(object):
@@ -275,7 +281,7 @@ class FitData(object):
                             delta_plus.append(deff_plus + deff_minus)
                             delta_minus.append(deff_plus - deff_minus)
 
-                        process_array = np.vstack([val.reshape(1, val.size), delta_plus, delta_minus])
+                        process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                         data_tensor.append(process_array.T)
 
                     elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
@@ -308,7 +314,7 @@ class FitData(object):
 
                                 delta_plus.append(deff_plus + deff_minus)
                                 delta_minus.append(deff_plus - deff_minus)
-                            process_array = np.vstack([val.reshape(1, val.size), delta_plus, delta_minus])
+                            process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                             data_tensor.append(process_array.T)
                 
                 category_tensor = np.stack(data_tensor)
@@ -336,56 +342,71 @@ class FitData(object):
         return self._category_data[category]
 
     # model building
+    def model_sums(self, selection, category):
+        '''
+        This sums overall datasets/sub_datasets in selection_data for the given category.
+        '''
+
+	templates = self._selection_data[selection][category]['templates'] 
+	outdata = np.zeros_like(templates['data']['val'], dtype=float)
+        for ds, template in templates.items():
+            if ds == 'data':
+                continue 
+
+            if ds in ['ttbar', 't', 'ww', 'wjets']:
+                for sub_ds, sub_template in template.items():
+                    outdata += sub_template['val'].values
+            else:
+                outdata += template['val'].values
+
+        return outdata
+
+    def mixture_model(self, selection, category):
+        '''
+        produces full mixture model
+        '''
+
+        # things that could possibly be available globally
+        br_tau_init = [0.1783, 0.1741, 0.6476]
+        beta_init = [0.108, 0.108, 0.108, 1 - 3*0.108] 
+
+
+	# build the process array
+	w_amp_init  = fh.signal_amplitudes(beta_init, br_tau, single_w=True)
+	ww_amp_init = fh.signal_amplitudes(beta_init, br_tau, single_w=False)
+	process_amplitudes = []
+	for process in processes:
+	    if process in ['zjets_alt', 'fakes', 'diboson']:
+		process_amplitudes.append(1)
+	    elif process in ['ttbar', 't', 'ww']:
+		process_amplitudes.extend(fh.signal_amplitudes(beta_init, br_tau_init)/ww_amp_init)
+	    elif process == 'wjets':
+		process_amplitudes.extend(fh.signal_amplitudes(beta_init, br_tau_init, single_w=True)/w_amp_init)
+		
+	process_amplitudes = np.array(process_amplitudes) 
+
+        model_tensor, process_mask, param_mask = fit_data.get_fit_tensor(f'{selection}_{category}')
+        param_array_masked = param_array[param_mask.astype(bool)]
+        param_array_masked = np.concatenate([[1, 0], 0.5*param_array_masked**2, 0.5*param_array_masked])
+        process_amplitudes_masked = process_amplitudes[process_mask.astype(bool)]
+
+        # build expectation from model_tensor
+        expected_pre = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1) # mixture model
+        expected_var = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1) # mixture model
+        expected_post = np.tensordot(model_tensor, param_array_masked, axes=1) # n.p. modification
+        expected_post = np.tensordot(expected_post.T, process_amplitudes_masked, axes=1) # mixture model
+
+
+	templates = self._selection_data[selection][category]['templates'] 
+
+        return outdata
+        
+
     def modify_template(self, templates, pdict, dataset, selection, category, sub_ds=None):
         '''
-        Modifies a single template based on all shape nuisance parameters save
-        in templates dataframe.  Only applies variation in the case that there
-        are a sufficient number fo events.
+        Updates 
         '''
-        nominal_template = templates['val'].values
-        if templates.shape[1] == 2: # no systematics generated
-            return nominal_template
-        else:
-
-            #t_new = np.zeros(nominal_template.shape)
-            #for pname in self._np_dict[selection][dataset]:
-            #    t_up, t_down = templates[f'{pname}_up'].values, templates[f'{pname}_down'].values 
-            #    dt = shape_morphing(pdict[pname], (nominal_template, t_up, t_down)) - nominal_template
-            #    #print(pname, dt)
-            #    t_new += dt
-            #t_new += nominal_template
-
-            morphing_data = self._selection_data[selection][category]['np_shapes']
-            if isinstance(sub_ds, type(None)):
-                if dataset in morphing_data.keys():
-                    morphing_templates = morphing_data[dataset] 
-                else:
-                    return nominal_template
-            else:
-                if sub_ds in morphing_data[dataset].keys():
-                    morphing_templates = morphing_data[dataset][sub_ds] 
-                else:
-                    return nominal_template
-
-            # get coefficients for quadratic morphing
-            sp = np.array(list(pdict.values()))
-            sp = sp[self._shape_mask]
-            coeff_up      = sp*(sp + 1)/2
-            coeff_down    = sp*(sp - 1)/2
-            coeff_nominal = (sp - 1)*(sp + 1)
-
-            # generate nominal template "replica" array
-            nominal_matrix = np.repeat(nominal_template, sp.size, axis=0)
-            nominal_matrix = nominal_matrix.reshape(morphing_templates[0].T.shape).T
-            
-            # calculate variation terms for the morphed template
-            t_up   = coeff_up[:,None]*morphing_templates[0]
-            t_down = coeff_down[:,None]*morphing_templates[1]
-            t_nom  = coeff_nominal[:,None]*nominal_matrix
-            dt  = (t_up + t_down - t_nom) - nominal_matrix
-            t_new = nominal_template + dt.sum(axis=0)
-
-            return t_new
+        pass
 
     # evaluation of objective functions
     def sub_objective(self, pdict, selection, category, cat_data, data,
@@ -584,19 +605,17 @@ class FitData(object):
 
         # calculate per category, per selection costs
         cost = 0
-        for selection in self._selections:
-            sdata = self.get_selection_data(selection)
-            for category, cat_data in sdata.items():
+        for category, template_data in self._category_data.items():
 
-                # remove 0 b tag category for ee and mumu channels#
-                if selection in ['ee', 'mumu'] and category == 'cat_gt2_eq0':
-                    continue
+            # remove 0 b tag category for ee and mumu channels#
+            if category in ['ee_cat_gt2_eq0', 'ee_cat_gt2_eq0']:
+                continue
 
-                # remove additional (WW & Z+jets) categories for emu channels#
-                if selection == 'emu' and category in ['cat_eq0_eq0_a', 'cat_eq1_eq0_a', 'cat_eq1_eq1_a']:
-                    continue
+            # remove additional (WW & Z+jets) categories for emu channels#
+            if selection == 'emu' and category in ['cat_eq0_eq0_a', 'cat_eq1_eq0_a', 'cat_eq1_eq1_a']:
+                continue
 
-                cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)
+            cost += self.sub_objective(pdict, selection, category, cat_data, data, cost_type, no_shape)
 
         # Add prior terms for nuisance parameters 
         for pname, p in pdict.items():
@@ -614,4 +633,3 @@ class FitData(object):
         #print(cost)
 
         return cost
-
