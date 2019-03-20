@@ -241,22 +241,23 @@ def set_default_style():
     matplotlib.rcParams.update(params)
 
 
-def add_lumi_text(ax, lumi, period):
-    ax.text(0.04, 0.9, r'$\bf CMS$', fontsize=30, transform=ax.transAxes)
-    ax.text(0.20, 0.9, r'$\it Preliminary $', fontsize=20, transform=ax.transAxes)
-
-    if period == 2012:
-        ax.text(0.60, 1.01, 
-                r'$\sf{19.7\,fb^{-1}}\,(\sqrt{\it{s}}=8\,\sf{TeV})$', 
-                fontsize=20, 
-                transform=ax.transAxes
-                )
-    elif period == 2016:
-        ax.text(0.60, 1.01, 
-                r'$\sf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\it{{s}}}}=13\,\sf{{TeV}})$'.format(lumi/1000.), 
-                fontsize=20, 
-                transform=ax.transAxes
-                )
+def add_lumi_text(ax, lumi):
+    ax.text(0.04, 0.9, r'$\mathbf{CMS}$', 
+            fontsize=30, 
+            fontname='Arial',
+            transform=ax.transAxes
+            )
+    ax.text(0.17, 0.9, r'$\mathit{Preliminary}$', 
+            fontsize=20, 
+            fontname='Arial',
+            transform=ax.transAxes
+            )
+    ax.text(0.60, 1.01, 
+            r'$\sf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\it{{s}}}}=13\,\sf{{TeV}})$'.format(lumi),
+            fontsize=20, 
+            fontname='Arial',
+            transform=ax.transAxes
+            )
 
 class DataManager():
     def __init__(self, input_dir, dataset_names, selection,

@@ -341,7 +341,9 @@ class SystematicTemplateGenerator():
 
         self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
 
-    def tau_misid_systematics(self, df):
+        return
+
+    def tau_j_misid_systematics(self, df):
         '''
         Generates morphing templates for tau mis ID as a function of tau pt.
         Binning is {20, 25, 25, 30, 40, 70, inf}.
@@ -359,6 +361,30 @@ class SystematicTemplateGenerator():
             h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, 'lepton2_pt', type='weight')
             self._df_sys[f'misid_tau_{ipt}_up'], self._df_sys[f'misid_tau_{ipt}_down'] = h_up, h_down
 
+        # tau misid flavor systematic
+        tau_misid_err = 0.05
+        h_up, _   = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 + tau_misid_err))
+        h_down, _ = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 - tau_misid_err))
+        self._df_sys[f'misid_tau_h_up'], self._df_sys[f'misid_tau_h_down'] = h_up, h_down
+
+        return
+
+    def tau_e_misid_systematics(self, df):
+        '''
+        Generates morphing templates for an electron misID'd as a hadronic tau. 
+        Parameters:
+        ===========
+        df: dataframe for target dataset with
+        '''
+        
+        # tau misid flavor systematic
+        tau_misid_err = 0.10
+        h_up, _   = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 + tau_misid_err))
+        h_down, _ = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 - tau_misid_err))
+        self._df_sys[f'misid_tau_e_up'], self._df_sys[f'misid_tau_e_down'] = h_up, h_down
+
+        return
+
     def tau_systematics(self, df):
         '''
         Systematics for correctly identified taus.  Just energy scale currently.
@@ -367,6 +393,12 @@ class SystematicTemplateGenerator():
         ===========
         df: dataframe for target dataset
         '''
+
+        # tau id efficiency systematic
+        tau_id_err = 0.05
+        h_up, _   = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 + tau_id_err))
+        h_down, _ = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 - tau_id_err))
+        self._df_sys[f'eff_tau_up'], self._df_sys[f'eff_tau_down'] = h_up, h_down
 
         ## tau energy scale
         for decay_mode in [0, 1, 10]:

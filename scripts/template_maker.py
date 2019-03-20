@@ -173,13 +173,15 @@ if __name__ == '__main__':
                                 if selection in ['ee', 'emu', 'etau', 'e4j']:
                                     syst_gen.electron_systematics(df)
 
-                                # tau misid 
+                                # tau misid (need to add e->tau fakes)
                                 if selection in ['etau', 'mutau']: 
                                     if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
-                                        syst_gen.tau_misid_systematics(df)
+                                        syst_gen.tau_j_misid_systematics(df)
                                     elif idecay in [7, 8, 9, 12, 15]:
                                         syst_gen.tau_systematics(df)
-
+                                    elif idecay in [1, 3, 6, 10, 11, 13]: #
+                                        syst_gen.tau_e_misid_systematics(df)
+                                    
                                 # theory systematics
                                 if label == 'ttbar':
                                     syst_gen.top_pt_systematics(df)
@@ -244,9 +246,11 @@ if __name__ == '__main__':
                         # tau misid 
                         if selection in ['etau', 'mutau']: 
                             if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
-                                syst_gen.tau_misid_systematics(df)
+                                syst_gen.tau_j_misid_systematics(df)
                             elif idecay in [7, 8, 9, 12, 15]:
                                 syst_gen.tau_systematics(df)
+                            elif idecay in [1, 3, 6, 10, 11, 13]: #
+                                syst_gen.tau_e_misid_systematics(df)
 
                         # theory systematics
                         syst_gen.theory_systematics(df, label, cat_items.njets, f'{cat_items.cut} and {c}')
