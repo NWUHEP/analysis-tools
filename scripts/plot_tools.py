@@ -242,22 +242,125 @@ def set_default_style():
 
 
 def add_lumi_text(ax, lumi):
-    ax.text(0.04, 0.9, r'$\mathbf{CMS}$', 
+    ax.text(0.03, 0.9, 'CMS', 
             fontsize=30, 
             fontname='Arial',
+            fontweight='bold',
             transform=ax.transAxes
             )
-    ax.text(0.17, 0.9, r'$\mathit{Preliminary}$', 
+    ax.text(0.14, 0.9, 'Preliminary', 
+            fontsize=20, 
+            fontname='Arial',
+            fontstyle='italic',
+            transform=ax.transAxes
+            )
+    ax.text(0.64, 1.01, 
+            r'$\mathsf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\mathit{{s}}}}=13\,\mathsf{{TeV}})$'.format(lumi),
             fontsize=20, 
             fontname='Arial',
             transform=ax.transAxes
             )
-    ax.text(0.60, 1.01, 
-            r'$\sf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\it{{s}}}}=13\,\sf{{TeV}})$'.format(lumi),
-            fontsize=20, 
-            fontname='Arial',
-            transform=ax.transAxes
+
+def fit_plot(bins, data_val, model_pre, model_post, model_var, 
+             xlabel      = 'x [a.u.]',
+             title       = None,
+             output_path = 'plots/fits/plot.png',
+             show        = False
+             ):
+    '''
+    Produces plot comparing pre/post-fit distributions to fitted data for
+    binned likelihood fits.
+
+    Parameters:
+    ===========
+    '''
+    fig, axes = plt.subplots(2, 1, figsize=(10, 10), facecolor='white', sharex=True, gridspec_kw={'height_ratios':[2,1]})
+    #fig.subplots_adjust(hspace=0) # doesn't work with tight layout
+
+    # get bin widths and central points
+    dx = (bins[1:] - bins[:-1])
+    dx = np.append(dx, dx[-1]) 
+    x  = bins + dx/2         
+
+    # unpack model data
+
+    # overlay data and model
+    ax = axes[0]
+    ax.errorbar(x, data_val/dx, np.sqrt(data_val)/dx, 
+                fmt='ko', 
+                capsize=0, 
+                elinewidth=2, 
+                label='data'
+                )
+    ax.plot(bins, model_pre/dx, 
+            drawstyle='steps-post', 
+            c='C0', 
+            linestyle='-', 
+            label='expected (prefit)'
             )
+    ax.plot(bins, model_post/dx, 
+            drawstyle='steps-post', 
+            c='C1', 
+            linestyle='--', 
+            label='expected (postfit)'
+            )
+    ax.fill_between(bins, (model_pre - np.sqrt(model_var))/dx, (model_pre + np.sqrt(model_var))/dx, 
+                    color='k', 
+                    step='post', 
+                    hatch='/', 
+                    alpha=0.2, 
+                    label=r'$\sigma_{\sf stat. exp.}$'
+                    )
+
+    ax.set_ylim(np.min(data_val/dx), 5.*np.max(data_val/dx))
+    ax.set_yscale('log')
+    ax.set_ylabel('Events / GeV')
+    ax.set_title(title, fontsize=20, loc='left', color='red')
+    add_lumi_text(ax, 35.9)
+    ax.legend()
+    ax.grid()
+
+    ax = axes[1]
+    ax.plot(bins[[0,-1]], [1, 1], 'k:')
+
+    ax.errorbar(x*(1-0.01), data_val/model_pre, np.sqrt(data_val)/model_pre, 
+            fmt='C0o', 
+            capsize=0, 
+            elinewidth=2, 
+            label='prefit'
+            )
+    ax.errorbar(x*(1+0.01), data_val/model_post, np.sqrt(data_val)/model_post, fmt='C1o', 
+            capsize=0, 
+            elinewidth=2, 
+            label='postfit'
+            )
+    ax.plot(bins, model_pre/model_post, drawstyle='steps-post', 
+            c='C0', 
+            linestyle='--', 
+            label='prefit/postfit'
+            )
+    ax.fill_between(bins, 1-np.sqrt(model_var)/model_pre, 1+np.sqrt(model_var)/model_pre, color='k', 
+            step='post', 
+            hatch='/', 
+            alpha=0.2, 
+            label='model_var'
+            )
+
+    ax.set_xlim(x[0]-dx[0]/2, x[-2]+dx[-2]/2)
+    ax.set_ylim(0.8, 1.2)
+    ax.set_ylabel('Obs./Exp.')
+    ax.set_xlabel(xlabel)
+    #ax.legend()
+    ax.grid()
+
+    plt.tight_layout(h_pad=0., rect=[0., 0., 1., 0.95])
+    plt.savefig(output_path)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return
 
 class DataManager():
     def __init__(self, input_dir, dataset_names, selection,
