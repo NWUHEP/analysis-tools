@@ -77,33 +77,33 @@ cuts = dict(
 tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90 \
                and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
-Category = namedtuple('Category', ['cut', 'selections', 'label', 'njets'])
+Category = namedtuple('Category', ['cut', 'jet_cut', 'selections', 'label', 'njets'])
 categories = dict(
                   #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
                   #cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
                   #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
                   #cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
 
-                  cat_eq0_eq0   = Category(f'n_jets == 0 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto', 0),
-                  cat_eq1_eq0   = Category(f'n_jets == 1 and n_bjets == 0 and {tau_dy_cut}', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto', 1),
-                  cat_gt2_eq0   = Category('n_jets >= 2 and n_bjets == 0',                   ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
-                  cat_eq1_eq1   = Category('n_jets == 1 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$', 1),
-                  cat_eq2_eq1   = Category('n_jets == 2 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$', 2),
-                  cat_gt3_eq1   = Category('n_jets >= 3 and n_bjets == 1',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$', 3),
-                  cat_eq2_gt2   = Category('n_jets == 2 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$', 2),
-                  cat_gt3_gt2   = Category('n_jets >= 3 and n_bjets >= 2',                   ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$', 3),
+                  cat_eq0_eq0   = Category(tau_dy_cut, 'n_jets == 0 and n_bjets == 0', ['etau', 'mutau'],                       '$N_{j} = 0, N_{b} = 0$, W veto',       0),
+                  cat_eq1_eq0   = Category(tau_dy_cut, 'n_jets == 1 and n_bjets == 0', ['etau', 'mutau'],                       '$N_{j} = 1, N_{b} = 0$, W veto',       1),
+                  cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau',                        'ee',                                   'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
+                  cat_eq1_eq1   = Category(None,       'n_jets == 1 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} = 1, N_{b} = 1$',               1),
+                  cat_eq2_eq1   = Category(None,       'n_jets == 2 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} = 2, N_{b} = 1$',               2),
+                  cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} \geq 3, N_{b} = 1$',            3),
+                  cat_eq2_gt2   = Category(None,       'n_jets == 2 and n_bjets >= 2', ['etau', 'mutau'],                       '$N_{j} = 2, N_{b} \geq 2$',            2),
+                  cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'],                       '$N_{j} \geq 3, N_{b} \geq 2$',         3),
 
-                  cat_eq0_eq0_a = Category('n_jets == 0 and n_bjets == 0',                   ['emu'], '$N_{j} = 0, N_{b} = 0$', 0),
-                  cat_eq1_eq0_a = Category('n_jets == 1 and n_bjets == 0',                   ['emu'], '$N_{j} = 1, N_{b} = 0$', 1),
-                  cat_eq1_eq1_a = Category('n_jets == 1 and n_bjets == 1',                   ['emu'], '$N_{j} = 1, N_{b} = 1$', 1),
-                  cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu'], '$N_{j} \geq 2, N_{b} = 1$', 2),
-                  cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$', 2),
+                  cat_eq0_eq0_a = Category(None,       'n_jets == 0 and n_bjets == 0', ['emu'], '$N_{j} = 0, N_{b} = 0$',       0),
+                  cat_eq1_eq0_a = Category(None,       'n_jets == 1 and n_bjets == 0', ['emu'], '$N_{j} = 1, N_{b} = 0$',       1),
+                  cat_eq1_eq1_a = Category(None,       'n_jets == 1 and n_bjets == 1', ['emu'], '$N_{j} = 1, N_{b} = 1$',       1),
+                  cat_gt2_eq1_a = Category(None,       'n_jets >= 2 and n_bjets == 1', ['emu'], '$N_{j} \geq 2, N_{b} = 1$',    2),
+                  cat_gt2_gt2_a = Category(None,       'n_jets >= 2 and n_bjets >= 2', ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$', 2),
 
-                  cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto', 2),
-                  cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
+                  cat_gt2_eq1_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets == 1', ['ee',   'mumu'],                        '$N_{j} \geq 2, N_{b} = 1$, Z veto',    2),
+                  cat_gt2_gt2_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets >= 2', ['ee',   'mumu'],                        '$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
 
-                  cat_gt4_eq1   = Category('n_jets >= 4 and n_bjets == 1',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} = 1$', 4),
-                  cat_gt4_gt2   = Category('n_jets >= 4 and n_bjets >= 2',                   ['e4j', 'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$', 4),
+                  cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'],                        '$N_{j} \geq 4, N_{b} = 1$',            4),
+                  cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'],                        '$N_{j} \geq 4, N_{b} \geq 2$',         4),
                   )
 
 def make_directory(file_path, clear=True):
@@ -242,26 +242,27 @@ def set_default_style():
 
 
 def add_lumi_text(ax, lumi):
-    ax.text(0.03, 0.9, 'CMS', 
-            fontsize=30, 
+    ax.text(0.03, 1.01, 'CMS', 
+            fontsize=25, 
             fontname='Arial',
             fontweight='bold',
             transform=ax.transAxes
             )
-    ax.text(0.14, 0.9, 'Preliminary', 
-            fontsize=20, 
+    ax.text(0.13, 1.01, 'Preliminary',
+            fontsize=15,
             fontname='Arial',
             fontstyle='italic',
             transform=ax.transAxes
             )
-    ax.text(0.64, 1.01, 
+    ax.text(0.64, 1.01,
             r'$\mathsf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\mathit{{s}}}}=13\,\mathsf{{TeV}})$'.format(lumi),
-            fontsize=20, 
+            fontsize=20,
             fontname='Arial',
             transform=ax.transAxes
             )
 
-def fit_plot(bins, data_val, model_pre, model_post, model_var, 
+def fit_plot(bins, data_val, model_pre, model_post, 
+             model_stat_err, model_syst_err,
              xlabel      = 'x [a.u.]',
              title       = None,
              output_path = 'plots/fits/plot.png',
@@ -298,27 +299,39 @@ def fit_plot(bins, data_val, model_pre, model_post, model_var,
             linestyle='-', 
             label='expected (prefit)'
             )
-    ax.plot(bins, model_post/dx, 
-            drawstyle='steps-post', 
-            c='C1', 
-            linestyle='--', 
+    ax.plot(bins, model_post/dx,
+            drawstyle='steps-post',
+            c='C1',
+            linestyle='--',
             label='expected (postfit)'
             )
-    ax.fill_between(bins, (model_pre - np.sqrt(model_var))/dx, (model_pre + np.sqrt(model_var))/dx, 
-                    color='k', 
-                    step='post', 
-                    hatch='/', 
-                    alpha=0.2, 
+    ax.fill_between(bins, (model_pre - model_stat_err)/dx, (model_pre + model_stat_err)/dx,
+                    color='grey',
+                    step='post',
+                    hatch='/',
+                    alpha=0.2,
                     label=r'$\sigma_{\sf stat. exp.}$'
                     )
+    ax.fill_between(bins, model_syst_err[0]/dx, model_syst_err[1]/dx,
+                    color='k',
+                    step='post',
+                    hatch='\\',
+                    alpha=0.2,
+                    label=r'$\sigma_{\sf syst. exp.}$'
+                    )
 
-    ax.set_ylim(np.min(data_val/dx), 5.*np.max(data_val/dx))
-    ax.set_yscale('log')
+    ax.set_ylim(np.min(data_val/dx), 1.25*np.max(data_val/dx))
+    #ax.set_yscale('log')
     ax.set_ylabel('Events / GeV')
-    ax.set_title(title, fontsize=20, loc='left', color='red')
+    ax.text(0.03, 0.94, title, 
+            fontsize=20, 
+            fontname='Arial', 
+            color='red', 
+            transform=ax.transAxes
+            )
     add_lumi_text(ax, 35.9)
     ax.legend()
-    ax.grid()
+    #ax.grid()
 
     ax = axes[1]
     ax.plot(bins[[0,-1]], [1, 1], 'k:')
@@ -339,28 +352,41 @@ def fit_plot(bins, data_val, model_pre, model_post, model_var,
             linestyle='--', 
             label='prefit/postfit'
             )
-    ax.fill_between(bins, 1-np.sqrt(model_var)/model_pre, 1+np.sqrt(model_var)/model_pre, color='k', 
+    ax.fill_between(bins, 1 - model_stat_err/model_pre, 1 + model_stat_err/model_pre, 
+            color='grey', 
             step='post', 
             hatch='/', 
             alpha=0.2, 
-            label='model_var'
+            label='$\sigma_{stat.}$'
             )
+    ax.fill_between(bins, model_syst_err[0]/model_pre, model_syst_err[1]/model_pre,
+                    color='k',
+                    step='post',
+                    hatch='\\',
+                    alpha=0.2,
+                    label=r'$\sigma_{\sf syst. exp.}$'
+                    )
 
     ax.set_xlim(x[0]-dx[0]/2, x[-2]+dx[-2]/2)
     ax.set_ylim(0.8, 1.2)
     ax.set_ylabel('Obs./Exp.')
     ax.set_xlabel(xlabel)
     #ax.legend()
-    ax.grid()
+    ax.grid(axis='y')
 
     plt.tight_layout(h_pad=0., rect=[0., 0., 1., 0.95])
     plt.savefig(output_path)
+
     if show:
         plt.show()
     else:
         plt.close()
 
     return
+
+def systematics_plot():
+    pass
+
 
 class DataManager():
     def __init__(self, input_dir, dataset_names, selection,

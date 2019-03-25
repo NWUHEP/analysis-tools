@@ -10,6 +10,95 @@ import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 import scripts.systematic_tools as st
 
+np.set_printoptions(precision=2)
+
+def get_binning(dm, feature, cuts, dataset='data', do_bbb=True):
+    '''
+    Gets binning for histogram templates.  By default uses Bayesian Block Binning.
+
+    Parameters:
+    ===========
+    dm: data manager instance
+    feature: --
+    cuts: --
+    do_bbb: use Bayesian Block binning
+    '''
+
+    df = dm.get_dataframe(dataset, cuts)
+    x = df[feature].values
+    if do_bbb:
+        # only consider 30k data point (more than that takes too long)
+        binning = bayesian_blocks(x[:30000], p0=0.00001)
+
+        if feature == 'dilepton1_pt_asym':
+            dxmin, dxmax = 0.01, 1
+        else:
+            dxmin, dxmax = 2, 1e9
+
+        dx      = np.abs(binning[1:] - binning[:-1])
+        mask    = np.logical_and(dx > dxmin, dx < dxmax)
+        mask    = np.concatenate(([True], mask))
+
+        if feature != 'dilepton1_pt_asym':
+            binning = np.around(binning[mask])
+
+    else:
+        hist_lut  = dm._lut_features.loc[feature]
+        binning   = np.linspace(hist_lut.xmin, hist_lut.xmax, hist_lut.n_bins)
+
+    return binning
+
+
+def make_templates(df, binning):
+
+    # get nominal template
+    x = df[feature].values
+    w = df['weight'].values
+    h, _ = np.histogram(x, bins = binning, weights = w)
+    hvar, _ = np.histogram(x, bins = binning, weights = w**2)
+
+    # save templates, statistical errors, and systematic variations
+    df_template = pd.DataFrame(dict(bins=binning[:-1], val=h, var=hvar))
+    df_template = df_template.set_index('bins')
+
+    return df_template
+    
+def make_morphing_templates(df, selection, dataset, feature, binning, h_nominal, cat_items):
+
+    # initialize systematics generator
+    syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, h_nominal)
+
+    # calculate jet systematic morphing w/o jet cut 
+    syst_gen.jes_systematics(df, cat_items.jet_cut)
+    syst_gen.btag_systematics(df, cat_items.jet_cut)
+
+    # apply jet cut for all other systematics
+    df = df.query(cat_items.jet_cut)
+    syst_gen.misc_systematics(df)
+    if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
+        syst_gen.muon_systematics(df)
+
+    if selection in ['ee', 'emu', 'etau', 'e4j']:
+        syst_gen.electron_systematics(df)
+
+    # tau misid (need to add e->tau fakes)
+    if selection in ['etau', 'mutau']: 
+        if dataset == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
+            syst_gen.tau_j_misid_systematics(df)
+        elif dataset == 'zjets_alt' or idecay in [7, 8, 9, 12, 15]:
+            syst_gen.tau_systematics(df)
+        elif idecay in [1, 3, 6, 10, 11, 13]: #
+            syst_gen.tau_e_misid_systematics(df)
+        
+    # theory systematics
+    if dataset in ['ttbar', 'zjets_alt']:
+        syst_gen.theory_systematics(df, dataset, cat_items.njets)
+
+        if dataset == 'ttbar':
+            syst_gen.top_pt_systematics(df)
+
+    return syst_gen.get_syst_dataframe()
+
 if __name__ == '__main__':
 
     # input arguments
@@ -38,10 +127,10 @@ if __name__ == '__main__':
                           ]
 
     # sigal samples are split according the decay of the W bosons
-    decay_map     = pd.read_csv('data/decay_map.csv').set_index('id')
-    mc_conditions = {decay_map.loc[i, 'decay']: f'gen_cat == {i}' for i in range(1, 22)}
+    decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    #selections = ['etau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -80,116 +169,61 @@ if __name__ == '__main__':
                              ncols      = 75,
                             ):
             cat_items = pt.categories[category]
+            if cat_items.cut is None:
+                full_cut = f'{cat_items.jet_cut}'
+            else:
+                full_cut = f'{cat_items.cut} and {cat_items.jet_cut}'
 
             ### calculate binning based on data sample
-            df_data = dm.get_dataframe('data', cat_items.cut)
-            if df_data.shape[0] == 0: continue
 
-            x = df_data[feature].values 
-            if args.bayesian_block:
-                #print('Calculating Bayesian block binning...')
-                binning = bayesian_blocks(x[:30000], p0=0.00001)
-
-                if feature == 'dilepton1_pt_asym':
-                    dxmin, dxmax = 0.01, 1
-                else:
-                    dxmin, dxmax = 2, 1e9
-
-                dx      = np.abs(binning[1:] - binning[:-1])
-                mask    = np.logical_and(dx > dxmin, dx < dxmax)
-                mask    = np.concatenate(([True], mask))
-
-                if feature != 'dilepton1_pt_asym':
-                    binning = np.around(binning[mask])
-
-                #print('Done!')
-                bin_range = None
-            else:
-                #print('Using user-defined binning...')
-                hist_lut  = dm._lut_features.loc[feature]
-                binning   = hist_lut.n_bins
-                bin_range = (hist_lut.xmin, hist_lut.xmax)
+            df_data = dm.get_dataframe('data', full_cut)
+            if df_data.shape[0] == 0:
+                continue
 
             # generate the data template
-            df_data = dm.get_dataframe('data', cat_items.cut)
-            h, b = np.histogram(df_data[feature],
-                                bins  = binning,
-                                range = bin_range,
-                                )
+            binning = get_binning(dm, feature, full_cut) 
+            h, b = np.histogram(df_data[feature], bins = binning)
 
             ### get signal and background templates
             templates = dict(data = dict(val = h, var = h))
             for label in labels:
-                if label in ['ttbar', 't', 'wjets', 'ww']: 
+                if label in ['ttbar', 't', 'ww', 'wjets']: 
                     # divide ttbar and tW samples into 21 decay modes and
                     # w+jets sample into 6 decay modes
 
                     mode_dict = dict()
-                    for n, c in mc_conditions.items():
-                        idecay = int(c.split()[-1])
-                        if label == 'wjets' and (idecay < 16): 
+                    count = 0
+                    for idecay, decay_data in decay_map.iterrows():
+                        count += 1
+                        if label == 'wjets' and (idecay < 16):
                             continue
 
-                        df = dm.get_dataframe(label, f'{cat_items.cut} and {c}')
-                        x = df[feature].values
-                        w = df['weight'].values
-                        h, _ = np.histogram(x,
-                                            bins    = binning,
-                                            range   = bin_range,
-                                            weights = w
-                                            )
+                        df = dm.get_dataframe(label, f'{full_cut} and gen_cat == {idecay}')
+                        df_template = make_templates(df, binning)
 
-                        hvar, _ = np.histogram(x,
-                                               bins    = binning,
-                                               range   = bin_range,
-                                               weights = w**2
-                                               )
-
-                        if label == 'wjets':
-                            n = n.rsplit('_', 1)[0]
-
-                        # save templates, statistical errors, and systematic variations
-                        df_temp = pd.DataFrame(dict(bins=binning[:-1], val=h, var=hvar))
-                        df_temp = df_temp.set_index('bins')
+                        # if template is empty, don't generate morphing templates
+                        if df_template['val'].sum() == 0:
+                            mode_dict[decay_data.decay] = df_template
+                            continue
                          
-                        ### produce morphing templates for shape systematics
-                        if np.any(h != 0):
-                            if np.sqrt(np.sum(hvar))/np.sum(h) < 0.05: 
+                        # produce morphing templates for shape systematics
+                        hval, herr = np.sum(df_template['val']), np.sqrt(np.sum(df_template['var']))
+                        #print(selection, category, label, decay_data.decay, hval, herr, herr/hval)
+                        if herr/hval > 0.1: 
+                            mode_dict[decay_data.decay] = df_template
+                            continue
 
-                                df = dm.get_dataframe(label, c)
-                                syst_gen = st.SystematicTemplateGenerator(selection, f'{label}_{n}', 
-                                                                          feature, binning, 
-                                                                          h, cat_items.cut, category)
-                                # don't apply jet cut for jet syst.
-                                syst_gen.jes_systematics(df)
-                                syst_gen.btag_systematics(df)
+                        if cat_items.cut is None:
+                            df = dm.get_dataframe(label, f'gen_cat == {idecay}')
+                        else:
+                            df = dm.get_dataframe(label, f'{cat_items.cut} and gen_cat == {idecay}')
 
-                                # apply jet cut for all other systematics
-                                df = df.query(cat_items.cut)
-                                syst_gen.misc_systematics(df)
-                                if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
-                                    syst_gen.muon_systematics(df)
-
-                                if selection in ['ee', 'emu', 'etau', 'e4j']:
-                                    syst_gen.electron_systematics(df)
-
-                                # tau misid (need to add e->tau fakes)
-                                if selection in ['etau', 'mutau']: 
-                                    if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
-                                        syst_gen.tau_j_misid_systematics(df)
-                                    elif idecay in [7, 8, 9, 12, 15]:
-                                        syst_gen.tau_systematics(df)
-                                    elif idecay in [1, 3, 6, 10, 11, 13]: #
-                                        syst_gen.tau_e_misid_systematics(df)
-                                    
-                                # theory systematics
-                                if label == 'ttbar':
-                                    syst_gen.top_pt_systematics(df)
-                                    syst_gen.theory_systematics(df, label, cat_items.njets, f'{cat_items.cut} and {c}')
-
-                                df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
-
-                        mode_dict[n] = df_temp
+                        df_syst = make_morphing_templates(df, selection, label, 
+                                                          feature, binning, 
+                                                          df_template['val'].values, 
+                                                          cat_items
+                                                          )
+                        mode_dict[decay_data.decay] = pd.concat([df_template, df_syst], axis=1)
 
                     templates[label] = mode_dict
 
@@ -197,67 +231,37 @@ if __name__ == '__main__':
                     if label not in dm._dataframes.keys():
                         continue
 
-                    x = dm.get_dataframe(label, cat_items.cut)[feature].values
-                    w = dm.get_dataframe(label, cat_items.cut)['weight'].values
+                    df = dm.get_dataframe(label, full_cut)
+                    df_template = make_templates(df, binning)
 
-                    h, _ = np.histogram(x,
-                                        bins    = binning,
-                                        range   = bin_range,
-                                        weights = w
-                                        )
+                    # if template is empty, don't generate morphing templates
+                    if np.all(df_template['val'] == 0):
+                        templates[label] = df_template
+                        continue
 
-                    hvar, _ = np.histogram(x,
-                                           bins    = binning,
-                                           range   = bin_range,
-                                           weights = w**2
-                                           )
+                    # produce morphing templates for shape systematics
+                    hval, herr = np.sum(df_template['val']), np.sqrt(np.sum(df_template['var']))
+                    #print(selection, category, label, hval, herr, herr/hval)
+                    if label != 'zjets_alt' or herr/hval > 0.1: 
+                        templates[label] = df_template
+                        continue
+
+                    if cat_items.cut is None:
+                        df = dm.get_dataframe(label)
+                    else:
+                        df = dm.get_dataframe(label, cat_items.cut)
+
+
+                    df_syst = make_morphing_templates(df, selection, label, 
+                                                      feature, binning, 
+                                                      df_template['val'].values, 
+                                                      cat_items
+                                                      )
 
                     if label == 'fakes_ss':
                         label = 'fakes'
 
-                    # save templates, statistical errors, and systematic variations
-                    df_temp = pd.DataFrame(dict(bins=binning[:-1], val=h, var=hvar))
-                    df_temp = df_temp.set_index('bins')
-
-                    ### produce morphing templates for shape systematics
-                    total_var = np.sqrt(np.sum(hvar))/np.sum(h)
-                    if label == 'zjets_alt' and np.abs(total_var) < 0.05: # only consider systematics if sigma_N/N < 5%
-
-                        df = dm.get_dataframe(label)
-                        syst_gen = st.SystematicTemplateGenerator(selection, f'{label}', 
-                                                                  feature, binning, 
-                                                                  h_nominal = h, 
-                                                                  cut = f'{cat_items.cut}', 
-                                                                  cut_name = category
-                                                                  )
-                        # don't apply jet cut for jet syst.
-                        syst_gen.jes_systematics(df)
-                        syst_gen.btag_systematics(df)
-
-                        # apply jet cut for all other systematics
-                        df = df.query(cat_items.cut)
-                        syst_gen.misc_systematics(df)
-                        if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
-                            syst_gen.muon_systematics(df)
-
-                        if selection in ['ee', 'emu', 'etau', 'e4j']:
-                            syst_gen.electron_systematics(df)
-
-                        # tau misid 
-                        if selection in ['etau', 'mutau']: 
-                            if label == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
-                                syst_gen.tau_j_misid_systematics(df)
-                            elif idecay in [7, 8, 9, 12, 15]:
-                                syst_gen.tau_systematics(df)
-                            elif idecay in [1, 3, 6, 10, 11, 13]: #
-                                syst_gen.tau_e_misid_systematics(df)
-
-                        # theory systematics
-                        syst_gen.theory_systematics(df, label, cat_items.njets, f'{cat_items.cut} and {c}')
-
-                        df_temp = pd.concat([df_temp, syst_gen.get_syst_dataframe()], axis=1)
-
-                    templates[label] = df_temp
+                    templates[label] = pd.concat([df_template, df_syst], axis=1)
 
             data[category] = dict(bins = binning, templates = templates)
 

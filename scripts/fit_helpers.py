@@ -15,53 +15,29 @@ import scripts.plot_tools as pt
 
 np.set_printoptions(precision=2)
 
-features = dict()
-features['mumu']  = 'lepton2_pt' # trailing muon pt
-features['ee']    = 'lepton2_pt' # trailing electron pt
-features['emu']   = 'trailing_lepton_pt' # like the name says
-features['mutau'] = 'lepton2_pt' # tau pt
-features['etau']  = 'lepton2_pt' # tau pt
-features['mu4j']  = 'lepton1_pt' # muon pt
-features['e4j']   = 'lepton1_pt' # electron pt
+fancy_labels = dict(
+                    mumu  = [r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$'],
+                    ee    = [r'$\sf p_{T,e}$', r'$\sf ee$'],
+                    emu   = [r'$\sf p_{T,trailing}$', r'$\sf e\mu$'],
+                    mutau = [r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$'],
+                    etau  = [r'$\sf p_{T,\tau}$', r'$\sf e\tau$'],
+                    mu4j  = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
+                    e4j   = [r'$\sf p_{T,e}$', r'$\sf e+jets$'],
+                    )
+features = dict(
+                mumu  = 'lepton2_pt', # trailing muon pt
+                ee    = 'lepton2_pt', # trailing electron pt
+                emu   = 'trailing_lepton_pt', # like the name says
+                mutau = 'lepton2_pt', # tau pt
+                etau  = 'lepton2_pt', # tau pt
+                mu4j  = 'lepton1_pt', # muon pt
+                e4j   = 'lepton1_pt', # electron pt
+                )
 
-fancy_labels = dict()
-fancy_labels['mumu']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$')
-fancy_labels['ee']    = (r'$\sf p_{T,e}$', r'$\sf ee$')
-fancy_labels['emu']   = (r'$\sf p_{T,trailing}$', r'$\sf e\mu$')
-fancy_labels['mutau'] = (r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$')
-fancy_labels['etau']  = (r'$\sf p_{T,\tau}$', r'$\sf e\tau$')
-fancy_labels['mu4j']  = (r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$')
-fancy_labels['e4j']   = (r'$\sf p_{T,e}$', r'$\sf e+jets$')
-
-def reduced_objective(p, mask, p_init):
-    masked_p = p_init.copy()
-    masked_p[mask] = p
-    return fit_data.objective(masked_p, data=toy_data, cost_type=cost_type)
-
-def shape_morphing(f, templates, order='quadratic'):
-    '''
-    Efficiency shape morphing for nuisance parameters.  
-
-    Parameters:
-    ===========
-    f: value of nuisance parameter
-    templates: triplet of (nominal, up, down) template variations
-    order: choose either a linear or quadratic variation of templates with nuisance parameter f
-    '''
-    t_nom  = templates[0]
-    t_up   = templates[1]
-    t_down = templates[2]
-
-    if order == 'linear':
-        t_eff = t_nom + f*(t_up - t_down)/2
-    elif order == 'quadratic':
-        t_eff = (f*(f - 1)/2)*t_down - (f - 1)*(f + 1)*t_nom + (f*(f + 1)/2)*t_up
-
-    np.set_printoptions(precision=2)
-    #print((f*(f - 1)/2), (f - 1)*(f + 1), (f*(f + 1)/2))
-
-    return t_eff
-
+#def reduced_objective(p, mask, p_init):
+#    masked_p = p_init.copy()
+#    masked_p[mask] = p
+#    return fit_data.objective(masked_p, data=toy_data, cost_type=cost_type)
 
 def signal_amplitudes(beta, br_tau, single_w = False):
     '''
@@ -148,7 +124,7 @@ def chi2_test(y1, y2, var1, var2):
 
 
 class FitData(object):
-    def __init__(self, path, selections, processes):
+    def __init__(self, path, selections, processes, process_cut=0):
         self._selections     = selections
         self._processes      = processes
         self._n_selections   = len(selections)
@@ -162,12 +138,12 @@ class FitData(object):
         # initialize branching fraction parameters
         self._beta_init   = np.array([0.108, 0.108, 0.108, 1 - 3*0.108])
         self._br_tau_init = np.array([0.1783, 0.1741, 0.6476])
-        self._ww_amp_init = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=False)
+        self._ww_amp_init = signal_amplitudes(self._beta_init, self._br_tau_init)
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
         # initialize fit data
-        self._initialize_fit_tensor()
-        self._cost_init = 0
+        self._initialize_fit_tensor(process_cut)
+        self._initialize_mc_stats_np()
 
     # initialization functions
     def _initialize_data(self, location, selection):
@@ -194,19 +170,28 @@ class FitData(object):
         df_params = df_params.set_index('name')
         df_params = df_params.astype({'err_init':float, 'val_init':float})
 
+        self._npoi       = df_params.query('type == "poi"').shape[0]
+        self._nnorm      = df_params.query('type == "norm"').shape[0]
+        self._nshape     = df_params.query('type == "shape"').shape[0]
         self._parameters = df_params
-        self._npoi   = df_params.query('type == "poi"').shape[0]
-        self._nnorm  = df_params.query('type == "norm"').shape[0]
-        self._nshape = df_params.query('type == "shape"').shape[0]
 
         return
 
-    def _initialize_fit_tensor(self):
+    def _initialize_mc_stats_np(self):
+        '''
+        Generates nuisance parameters to account for low MC stats.
+        '''
+        pass
+        #np_mc_stats = dict()
+        #for category, template_data in self._model_data.items():
+
+
+    def _initialize_fit_tensor(self, process_cut):
         '''
         This converts the data stored in the input dataframes into a numpy tensor of
         dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
         '''
-
+        
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
         for sel in self._selections:
@@ -215,9 +200,9 @@ class FitData(object):
                 templates = templates['templates']
                 data_val, data_var = templates['data']['val'], templates['data']['var']
                 
-                norm_matrix = []  
+                norm_mask  = []
                 process_mask = []
-                data_tensor = []
+                data_tensor  = []
                 for ds in self._processes:
 
                     # initialize mask for removing irrelevant processes
@@ -228,18 +213,19 @@ class FitData(object):
                             process_mask.extend(6*[0,])
                         else:
                             process_mask.append(0)
+
                         continue
                     else:
                         template = templates[ds]
                 
-                    if ds in ['zjets_alt', 'diboson']: # processes that are not subdivided
+                    if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
                         val, var = template['val'].values, template['var'].values
                         #print(ds, val/np.sqrt(data_var))
 
                         # determine whether process contribution is significant
                         # or should be masked (this should be studied for
                         # impact on poi to determine proper threshold)
-                        if val.sum()/np.sqrt(data_var.sum()) <= 0.1:
+                        if val.sum()/np.sqrt(data_var.sum()) <= process_cut:
                             process_mask.append(0)
                             continue
                         else:
@@ -266,7 +252,7 @@ class FitData(object):
 
                         process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                         data_tensor.append(process_array.T)
-                        norm_matrix.append(norm_vector)
+                        norm_mask.append(norm_vector)
 
                     elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
                         full_sum, reduced_sum = 0, 0
@@ -275,7 +261,7 @@ class FitData(object):
                             full_sum += val.sum()
 
                             # determine wheter process should be masked
-                            if val.sum()/np.sqrt(data_var.sum()) <= 0.1:
+                            if val.sum()/np.sqrt(data_var.sum()) <= process_cut:
                                 process_mask.append(0)
                                 continue
                             else:
@@ -285,7 +271,7 @@ class FitData(object):
                             norm_vector = []
                             for pname, param in params.iterrows():
                                 if param.type == 'shape' and param[sel]:
-                                    if f'{pname}_up' in sub_template.columns:
+                                    if f'{pname}_up' in sub_template.columns: 
                                         deff_plus  = sub_template[f'{pname}_up'].values - val
                                         deff_minus = sub_template[f'{pname}_down'].values - val
                                     else:
@@ -301,17 +287,22 @@ class FitData(object):
 
                             process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                             data_tensor.append(process_array.T)
-                            norm_matrix.append(norm_vector)
+                            norm_mask.append(norm_vector)
 
+                shape_mask = params.query('type == "shape"')[sel].values.astype(bool)
 
                 model_tensor = np.stack(data_tensor)
                 self._model_data[f'{sel}_{category}'] = dict(
                                                              data             = (data_val, data_var),
                                                              model            = model_tensor,
                                                              process_mask     = np.array(process_mask, dtype=bool),
-                                                             shape_param_mask = params.query('type == "shape"')[sel].values.astype(bool),
-                                                             norm_matrix      = np.stack(norm_matrix)
+                                                             shape_param_mask = shape_mask,
+                                                             norm_mask      = np.stack(norm_mask)
                                                              )
+
+                # initialize cost
+                self._cost_init = 0
+                self._cost_init = self.objective(self.get_params_init(as_array=True))
 
         return
  
@@ -354,7 +345,7 @@ class FitData(object):
 
         return outdata
 
-    def mixture_model(self, params, category):
+    def mixture_model(self, params, category, process_amplitudes=None):
         '''
         produces full mixture model
         '''
@@ -362,40 +353,39 @@ class FitData(object):
         # get the model data
         model_data = self.get_model_data(category)
 
-        # split parameters into poi, normalization, and shape
-        beta, br_tau = params[:4]*self._beta_init, params[4:7]*self._br_tau_init
+        # split parameters into poi, normalization and shape
         norm_params  = params[self._npoi:self._npoi + self._nnorm]
         shape_params = params[self._npoi + self._nnorm:]
 
         # update norm parameter array
-        norm_params = model_data['norm_matrix']*norm_params
-        norm_params[norm_params == 0] = 1 
+        norm_params = model_data['norm_mask']*norm_params
+        norm_params[norm_params == 0] = 1
+        norm_params = np.product(norm_params, axis=1)
 
         # apply shape parameter mask and build array for morphing
         shape_params_masked = shape_params[model_data['shape_param_mask']]
         shape_params_masked = np.concatenate([[1, 0], 0.5*shape_params_masked**2, 0.5*shape_params_masked])
 
-        # build the process array and apply mask (this could be improved)
-        process_amplitudes = [1, 1, 1] # zjets, fakes, diboson
-        process_amplitudes.extend(signal_amplitudes(beta, br_tau)/self._ww_amp_init) # ttbar, 
-        process_amplitudes.extend(signal_amplitudes(beta, br_tau)/self._ww_amp_init) # t
-        process_amplitudes.extend(signal_amplitudes(beta, br_tau)/self._ww_amp_init) # ww
-        process_amplitudes.extend(signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init) # wjets
-        process_amplitudes = np.array(process_amplitudes)
+        # get calculate process_amplitudes
+        if process_amplitudes is None:
+            beta, br_tau = params[:4], params[4:7]
+            ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
+            w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
+            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
 
-        process_amplitudes_masked = process_amplitudes[model_data['process_mask']]
-        process_amplitudes_masked = norm_params.T*process_amplitudes_masked
-        process_amplitudes_masked = np.product(process_amplitudes_masked, axis=0)
+        # mask the process amplitudes for this category
+        process_amplitudes_masked = norm_params.T*process_amplitudes[model_data['process_mask']]
 
-        # build expectation from model_tensor
+        # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
+        #model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
         model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
         model_val    = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
-        model_var    = None #np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
+        model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
 
         return model_val, model_var
         
-    def objective(self, params, cost_type='poisson', no_shape=False):
+    def objective(self, params, data=None, cost_type='poisson', no_shape=False, subtract_cost_init=False):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -409,55 +399,71 @@ class FitData(object):
         cost_type : either 'chi2' or 'poisson'
         mask : an array with same size as the input parameters for indicating parameters to fix
         no_shape : sums over all bins in input templates
+        subtract_cost_init: switches whether the initial cost value is subtracted
+                            from the computed cost (helps with large values of the cost function
+                            where only the gradient calculation is required)
         '''
-        
-        # unpack parameters here
-        pdict = dict(zip(self._parameters.index.values, params))
 
+        # build the process amplitudes (once per evaluation) 
+        beta, br_tau = params[:4], params[4:7]
+        ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
+        w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
+        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
+        
         # calculate per category, per selection costs
         cost = 0
-        for category, template_data in self._category_data.items():
+        for category, template_data in self._model_data.items():
 
             # omit categories from calculation of cost
             if category in [
                             'ee_cat_gt2_eq0', 'ee_cat_gt2_eq0', 
-                            'emu_cat_eq0_eq0_a', 'emu_cat_eq1_eq0_a', 
-                            'emu_cat_eq1_eq1_a'
+                            'mumu_cat_gt2_eq0', 'mumu_cat_gt2_eq0', 
+                            #'emu_cat_eq0_eq0_a', 'emu_cat_eq1_eq0_a', 'emu_cat_eq1_eq1_a'
                             ]:
                 continue
             
+
             # get the model and data templates
-            data_val, data_var   = template_data['data']
-            model_val, model_var = fh.mixture_model(params, category)
+            model_val, model_var = self.mixture_model(params, category, process_amplitudes)
+            if data is None:
+                data_val, data_var = template_data['data']
+            else:
+                data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
             if no_shape:
-                data_val    = np.sum(data_val)
+                data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
-                model_val   = np.sum(model_val)
+                model_val = np.sum(model_val)
                 model_var = np.sum(model_var)
 
             # calculate the cost
-            if cost_type == 'chi2':
-                mask = data_var > 0 # + model_var > 0
-                nll = (data_val[mask] - model_val[mask])**2 / (2*data_var[mask])# + model_var)
-            elif cost_type == 'poisson':
+            if cost_type == 'poisson':
                 mask = model_val > 0
                 nll = -data_val[mask]*np.log(model_val[mask]) + model_val[mask]
+            elif cost_type == 'chi2':
+                mask = data_var + model_var > 0
+                nll = 0.5*(data_val[mask] - model_val[mask])**2 / (data_var[mask] + model_var[mask])
 
             cost += nll.sum()
 
         # Add prior terms for nuisance parameters 
-        for pname, p in pdict.items():
-            p_chi2 = (p - self._parameters.loc[pname, 'val_init'])**2 / (2*self._parameters.loc[pname, 'err_init']**2)
+        pdict = dict(zip(self._parameters.index.values, params))
+
+        for ix, (pname, param_data) in enumerate(self._parameters.iterrows()):
+            if pname in ['beta_e', 'beta_mu', 'beta_tau', 'beta_h']:
+                continue
+
+            p_chi2 = (params[ix] - param_data['val_init'])**2 / (2*param_data['err_init']**2)
             cost += p_chi2
 
         # require that the branching fractions sum to 1
         beta  = params[:4]
-        cost += (1 - np.sum(beta))**2/(2e-9)  
+        cost += (1 - np.sum(beta))**2/(2e-9)
 
         # testing if this helps with precision
-        cost -= self._cost_init
+        if subtract_cost_init:
+            cost -= self._cost_init
 
         #print(params)
         #print(cost)

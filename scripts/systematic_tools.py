@@ -61,7 +61,7 @@ def les_morph(df, feature, bins, scale):
 
     return h_up, h_down
 
-def jet_scale(df, feature, bins, sys_type, jet_condition):
+def jet_scale(df, feature, bins, sys_type, jet_cut):
     '''
     Jet systematics are treated as shape systematics, but mostly vary depending
     on the jet/b tag multiplicity.  Nonetheless, it's easier to account for
@@ -70,18 +70,18 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
     '''
 
     if sys_type in ['ctag', 'mistag'] or 'btag' in sys_type:
-        up_condition   = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
-        down_condition = jet_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
+        up_condition   = jet_cut.replace('n_bjets', f'n_bjets_{sys_type}_up')
+        down_condition = jet_cut.replace('n_bjets', f'n_bjets_{sys_type}_down')
     else:
-        up_condition   = jet_condition.replace('n_jets', f'n_jets_{sys_type}_up')
+        up_condition   = jet_cut.replace('n_jets', f'n_jets_{sys_type}_up')
         up_condition   = up_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
 
-        down_condition = jet_condition.replace('n_jets', f'n_jets_{sys_type}_down')
+        down_condition = jet_cut.replace('n_jets', f'n_jets_{sys_type}_down')
         down_condition = down_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
 
-    h_nominal, _ = np.histogram(df.query(jet_condition)[feature], 
+    h_nominal, _ = np.histogram(df.query(jet_cut)[feature], 
                                 bins=bins, 
-                                weights=df.query(jet_condition).weight
+                                weights=df.query(jet_cut).weight
                                 )
 
     h_up, _   = np.histogram(df.query(up_condition)[feature], 
@@ -100,59 +100,18 @@ def jet_scale(df, feature, bins, sys_type, jet_condition):
     
     return h_up, h_down
 
-def theory_systematics(df_nominal, dm, feature, bins, sys_type, cut):
-    '''
-    Theory systematics are handled in two different ways: a subset of the
-    systematics are estimated from dedicated samples where a particular
-    generator parameter has been scale +/- 1 sigma from the nominal value.
-    These indclude,
-       * isr
-       * fsr
-       * ME+PS (hdamp)
-       * UE (tune)
-    Other systematics are calculated based on event level weights.  These include,
-       * PDF
-       * alpha_s
-       * QCD scale (mu_R and mu_F)
-    The variation due to normalization is divided out so that only the slope changes are present.
-    '''
-
-    if sys_type in ['isr', 'fsr', 'hdamp', 'tune']:
-        df_up     = dm.get_dataframe(f'ttbar_{sys_type}up', cut)
-        df_down   = dm.get_dataframe(f'ttbar_{sys_type}down', cut)
-
-        h_up, _   = np.histogram(df_up[feature], bins=bins, weights=df_up.weight)
-        h_down, _ = np.histogram(df_down[feature], bins=bins, weights=df_down.weight)
-    elif sys_type == 'pdf':
-        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*(1 + np.sqrt(df_nominal.pdf_var)/np.sqrt(100)))
-        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*(1 - np.sqrt(df_nominal.pdf_var)/np.sqrt(100)))
-    elif sys_type == 'mur':
-        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_up_nom)
-        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_down_nom)
-    elif sys_type == 'muf':
-        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_nom_up)
-        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_nom_down)
-    elif sys_type == 'mur_muf':
-        h_up, _   = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_up_up)
-        h_down, _ = np.histogram(df_nominal[feature], bins=bins, weights=df_nominal.weight*df_nominal.qcd_weight_down_down)
-
-    return h_up, h_down
-
 class SystematicTemplateGenerator():
-    def __init__(self, selection, label, feature, binning, h_nominal, cut, cut_name):
+    def __init__(self, selection, feature, binning, h_nominal):
         self._selection = selection
-        self._label     = label
         self._feature   = feature
         self._binning   = binning
         self._h         = h_nominal
-        self._cut       = cut
-        self._cut_name  = cut_name
         self._df_sys    = pd.DataFrame(dict(bins=binning[:-1]))
 
     def get_syst_dataframe(self):
         return self._df_sys.set_index('bins')
 
-    def jes_systematics(self, df):
+    def jes_systematics(self, df, jet_cut):
         '''
         Generates morpthing templates for: 
            * jet energy scale/resolution
@@ -165,10 +124,10 @@ class SystematicTemplateGenerator():
         jet_syst_list = [f'jes_{n}' for n in jec_source_names]
         jet_syst_list += ['jer']
         for syst_type in jet_syst_list:
-            h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
+            h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, jet_cut)
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
 
-    def btag_systematics(self, df):
+    def btag_systematics(self, df, jet_cut):
         '''
         Generates morpthing templates for: 
            * b tag efficiency systematics
@@ -181,7 +140,7 @@ class SystematicTemplateGenerator():
         btag_syst_list = [f'btag_{n}' for n in btag_source_names]
         btag_syst_list += ['ctag', 'mistag']
         for syst_type in btag_syst_list:
-            h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, self._cut)
+            h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, jet_cut)
             self._df_sys[f'{syst_type}_up'], self._df_sys[f'{syst_type}_down'] = h_up, h_down
 
 
@@ -279,7 +238,6 @@ class SystematicTemplateGenerator():
             df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
 
         self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
-
 
         return
 
@@ -403,6 +361,8 @@ class SystematicTemplateGenerator():
         ## tau energy scale
         for decay_mode in [0, 1, 10]:
             h_up, h_down = conditional_scaling(df, self._binning, 0.012, df.tau_decay_mode == decay_mode, 'lepton2_pt')
+
+            # a little hack to deal with missing data with pt < 20 GeV
             h_up[0] = 1.0025*self._h[0]
             h_down[0] = .9975*self._h[0]
 
@@ -430,7 +390,7 @@ class SystematicTemplateGenerator():
 
         return
 
-    def theory_systematics(self, df, label, njets, cut, dm_syst=None):
+    def theory_systematics(self, df, label, njets, dm_syst=None):
         '''
         Generates templates for theory systematics:
            * QCD scale
@@ -442,7 +402,6 @@ class SystematicTemplateGenerator():
         Parameters:
         ===========
         df: dataframe for target dataset 
-        cut: jet and W decay category cut
         label: name of dataset being run over
         njets: number of jets required
         dm_syst: data manager with dedicated ttbar samples for non-weight based systematics
@@ -451,7 +410,7 @@ class SystematicTemplateGenerator():
         bins = self._binning
         feature = self._feature
 
-        # PS variations
+        # PS variations (need to revisit this)
         #for sys_type in ['isr', 'fsr', 'hdamp', 'tune']:
         #    df_up     = dm.get_dataframe(f'ttbar_{sys_type}up', cut)
         #    df_down   = dm.get_dataframe(f'ttbar_{sys_type}down', cut)
@@ -506,62 +465,7 @@ class SystematicTemplateGenerator():
 
         w_up      = (df.weight/df.top_pt_weight)*(1 + 2*(df.top_pt_weight - 1))
         w_down    = (df.weight/df.top_pt_weight)
-        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up)
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down)
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum())
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down*(df.weight.sum()/w_down.sum()))
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
-
-    def template_overlays(self, h_up, h_down, systematic):
-        '''
-        Overlay nominal, variation up, and variation down templates.
-        '''
-
-        output_path = f'plots/systematics/{self._selection}/{self._label}'
-        pt.set_default_style()
-        pt.make_directory(output_path, clear=False)
-        fig, axes = plt.subplots(2, 1, figsize=(6, 6), facecolor='white', sharex=False, gridspec_kw={'height_ratios':[3,1]})
-        fig.subplots_adjust(hspace=0)
-
-        # get the histogram templates
-        h_nominal = self._h
-        h_nominal[h_nominal == 0] = 1e-9
-        h_up[h_up == 0] = 1e-9
-        h_down[h_down == 0] = 1e-9
-
-        # define the bins
-        bins = self._binning
-        dx = (bins[1:] - bins[:-1])/2
-        x = bins[:-1] + dx
-
-        ax = axes[0]
-        ax.plot(x, h_nominal/dx, drawstyle='steps-post', c='C1', linestyle='-', linewidth=1.)
-        ax.plot(x, h_up/dx,      drawstyle='steps-post', c='C0', linestyle='-', linewidth=1.)
-        ax.plot(x, h_down/dx,    drawstyle='steps-post', c='C2', linestyle='-', linewidth=1.)
-        ax.fill_between(x, h_up/dx, h_down/dx, color = 'C1', alpha=0.5, step='post')
-
-        ax.set_xlim(bins[0], bins[-2])
-        ax.set_ylim(0., 1.25*np.max(h_nominal/dx))
-        ax.legend(['nominal', r'$+\sigma$', r'$-\sigma$'])
-        ax.set_ylabel('Entries / GeV')
-        ax.set_title(fh.fancy_labels[self._selection][1])
-        ax.grid()
-
-        ax = axes[1]
-        y_up = h_up/h_nominal
-        y_down = h_down/h_nominal
-        ax.plot(x, y_up,   'C0', drawstyle='steps-post')
-        ax.plot(x, y_down, 'C2', drawstyle='steps-post')
-        ax.fill_between(x, y_up, y_down, color = 'C1', alpha=0.5, step='post')
-        ax.plot([bins[0], bins[-2]], [1, 1], 'C1--')
-
-        ax.set_xlim(bins[0], bins[-2])
-        ax.set_ylim(0.95*np.min([y_up.min(), y_down.min()]), 1.05*np.max([y_up.max(), y_down.max()]))
-        ax.set_xlabel(fh.fancy_labels[self._selection][0])
-        ax.set_ylabel(r'$\sf \frac{N^{\pm}}{N^{0}}$', fontsize=14)
-        ax.grid()
-        #ax.set_yscale('linear')
-
-        plt.tight_layout()
-        #plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.pdf')
-        plt.savefig(f'{output_path}/{systematic}_{self._cut_name}.png')
-        plt.close()
 
