@@ -63,7 +63,10 @@ def make_templates(df, binning):
 
     return df_template
     
-def make_morphing_templates(df, selection, dataset, feature, binning, h_nominal, cat_items):
+def make_morphing_templates(df, selection, label, feature, binning, h_nominal, cat_items):
+    
+    dataset = label[0]
+    decay_mode = label[1]
 
     # initialize systematics generator
     syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, h_nominal)
@@ -81,13 +84,13 @@ def make_morphing_templates(df, selection, dataset, feature, binning, h_nominal,
     if selection in ['ee', 'emu', 'etau', 'e4j']:
         syst_gen.electron_systematics(df)
 
-    # tau misid (need to add e->tau fakes)
-    if selection in ['etau', 'mutau']: 
-        if dataset == 'wjets' or idecay in [16, 17, 18, 19, 20, 21]:
-            syst_gen.tau_j_misid_systematics(df)
-        elif dataset == 'zjets_alt' or idecay in [7, 8, 9, 12, 15]:
+    # tau misid 
+    if selection in ['etau', 'mutau']:
+        if decay_mode in [7, 8, 12, 15] or dataset == 'zjets_alt':
             syst_gen.tau_systematics(df)
-        elif idecay in [1, 3, 6, 10, 11, 13]: #
+        elif decay_mode in [16, 17, 18, 19, 20, 21]:
+            syst_gen.tau_j_misid_systematics(df)
+        elif decay_mode in [1, 3, 6, 10, 11, 13]: #
             syst_gen.tau_e_misid_systematics(df)
         
     # theory systematics
@@ -129,8 +132,8 @@ if __name__ == '__main__':
     # sigal samples are split according the decay of the W bosons
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
 
-    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['etau']
+    #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['etau', 'mutau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -218,7 +221,7 @@ if __name__ == '__main__':
                         else:
                             df = dm.get_dataframe(label, f'{cat_items.cut} and gen_cat == {idecay}')
 
-                        df_syst = make_morphing_templates(df, selection, label, 
+                        df_syst = make_morphing_templates(df, selection, (label, idecay), 
                                                           feature, binning, 
                                                           df_template['val'].values, 
                                                           cat_items
@@ -252,7 +255,7 @@ if __name__ == '__main__':
                         df = dm.get_dataframe(label, cat_items.cut)
 
 
-                    df_syst = make_morphing_templates(df, selection, label, 
+                    df_syst = make_morphing_templates(df, selection, (label, None), 
                                                       feature, binning, 
                                                       df_template['val'].values, 
                                                       cat_items

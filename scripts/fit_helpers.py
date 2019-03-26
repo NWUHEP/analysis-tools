@@ -49,6 +49,7 @@ def signal_amplitudes(beta, br_tau, single_w = False):
     br_tau : tau branching fractions [br_e, br_mu, br_h]
     single_w : if process contains a single w decay
     '''
+
     if single_w:
         amplitudes = np.array([beta[0],  # e 
                                beta[1],  # mu
@@ -191,6 +192,23 @@ class FitData(object):
         This converts the data stored in the input dataframes into a numpy tensor of
         dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
         '''
+
+        #def np_templates():
+        #    for pname, param in params.iterrows():
+        #        if param.type == 'shape' and param[sel]:
+        #            if f'{pname}_up' in sub_template.columns and param['active'] and param[ds]: 
+        #                deff_plus  = sub_template[f'{pname}_up'].values - val
+        #                deff_minus = sub_template[f'{pname}_down'].values - val
+        #            else:
+        #                deff_plus  = np.zeros_like(val)
+        #                deff_minus = np.zeros_like(val)
+        #            delta_plus.append(deff_plus + deff_minus)
+        #            delta_minus.append(deff_plus - deff_minus)
+        #        elif param.type == 'norm':
+        #            if param[sel] and param[ds] and param['active']:
+        #                norm_vector.append(1)
+        #            else:
+        #                norm_vector.append(0)
         
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
@@ -235,7 +253,7 @@ class FitData(object):
                         norm_vector = []
                         for pname, param in params.iterrows():
                             if param.type == 'shape' and param[sel]:
-                                if f'{pname}_up' in template.columns:
+                                if f'{pname}_up' in template.columns and param['active'] and param[ds]:
                                     deff_plus  = template[f'{pname}_up'].values - val
                                     deff_minus = template[f'{pname}_down'].values - val
                                 else:
@@ -245,7 +263,7 @@ class FitData(object):
                                 delta_minus.append(deff_plus - deff_minus)
 
                             elif param.type == 'norm':
-                                if param[sel] and param[ds]:
+                                if param[sel] and param[ds] and param['active']:
                                     norm_vector.append(1)
                                 else:
                                     norm_vector.append(0)
@@ -271,7 +289,7 @@ class FitData(object):
                             norm_vector = []
                             for pname, param in params.iterrows():
                                 if param.type == 'shape' and param[sel]:
-                                    if f'{pname}_up' in sub_template.columns: 
+                                    if f'{pname}_up' in sub_template.columns and param['active'] and param[ds]: 
                                         deff_plus  = sub_template[f'{pname}_up'].values - val
                                         deff_minus = sub_template[f'{pname}_down'].values - val
                                     else:
@@ -280,7 +298,7 @@ class FitData(object):
                                     delta_plus.append(deff_plus + deff_minus)
                                     delta_minus.append(deff_plus - deff_minus)
                                 elif param.type == 'norm':
-                                    if param[sel] and param[ds]:
+                                    if param[sel] and param[ds] and param['active']:
                                         norm_vector.append(1)
                                     else:
                                         norm_vector.append(0)
@@ -385,7 +403,7 @@ class FitData(object):
 
         return model_val, model_var
         
-    def objective(self, params, data=None, cost_type='poisson', no_shape=False, subtract_cost_init=False):
+    def objective(self, params, data=None, cost_type='poisson', no_shape=False, subtract_cost_init=True):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -451,15 +469,13 @@ class FitData(object):
         pdict = dict(zip(self._parameters.index.values, params))
 
         for ix, (pname, param_data) in enumerate(self._parameters.iterrows()):
-            if pname in ['beta_e', 'beta_mu', 'beta_tau', 'beta_h']:
-                continue
 
             p_chi2 = (params[ix] - param_data['val_init'])**2 / (2*param_data['err_init']**2)
             cost += p_chi2
 
         # require that the branching fractions sum to 1
         beta  = params[:4]
-        cost += (1 - np.sum(beta))**2/(2e-9)
+        cost += (1 - np.sum(beta))**2/(2e-12)
 
         # testing if this helps with precision
         if subtract_cost_init:

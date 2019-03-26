@@ -465,7 +465,7 @@ class SystematicTemplateGenerator():
 
         w_up      = (df.weight/df.top_pt_weight)*(1 + 2*(df.top_pt_weight - 1))
         w_down    = (df.weight/df.top_pt_weight)
-        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum())
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
         h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down*(df.weight.sum()/w_down.sum()))
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
