@@ -34,11 +34,6 @@ features = dict(
                 e4j   = 'lepton1_pt', # electron pt
                 )
 
-#def reduced_objective(p, mask, p_init):
-#    masked_p = p_init.copy()
-#    masked_p[mask] = p
-#    return fit_data.objective(masked_p, data=toy_data, cost_type=cost_type)
-
 def signal_amplitudes(beta, br_tau, single_w = False):
     '''
     Returns an array of branching fractions for each signal channel.
@@ -174,6 +169,8 @@ class FitData(object):
         self._npoi       = df_params.query('type == "poi"').shape[0]
         self._nnorm      = df_params.query('type == "norm"').shape[0]
         self._nshape     = df_params.query('type == "shape"').shape[0]
+        self._pval_init  = df_params['val_init'].values
+        self._perr_init  = df_params['err_init'].values
         self._parameters = df_params
 
         return
@@ -318,9 +315,9 @@ class FitData(object):
                                                              norm_mask      = np.stack(norm_mask)
                                                              )
 
-                # initialize cost
-                self._cost_init = 0
-                self._cost_init = self.objective(self.get_params_init(as_array=True))
+        # initialize cost
+        self._cost_init = 0
+        self._cost_init = self.objective(self.get_params_init(as_array=True))
 
         return
  
@@ -465,13 +462,9 @@ class FitData(object):
 
             cost += nll.sum()
 
-        # Add prior terms for nuisance parameters 
-        pdict = dict(zip(self._parameters.index.values, params))
-
-        for ix, (pname, param_data) in enumerate(self._parameters.iterrows()):
-
-            p_chi2 = (params[ix] - param_data['val_init'])**2 / (2*param_data['err_init']**2)
-            cost += p_chi2
+        # Add prior constraint terms for nuisance parameters 
+        pi_param = (params - self._pval_init)**2 / (2*self._perr_init**2)
+        cost += pi_param.sum()
 
         # require that the branching fractions sum to 1
         beta  = params[:4]
