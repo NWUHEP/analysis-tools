@@ -393,14 +393,14 @@ class FitData(object):
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
-        #model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
-        model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
-        model_val    = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
-        model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
+        model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
+        #model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
+        #model_val    = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
+        model_var    = model_tensor[:,:,1].sum(axis=0) #np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
 
         return model_val, model_var
         
-    def objective(self, params, data=None, cost_type='poisson', no_shape=False, subtract_cost_init=True):
+    def objective(self, params, data=None, cost_type='poisson', no_shape=False, subtract_cost_init=False):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -473,8 +473,5 @@ class FitData(object):
         # testing if this helps with precision
         if subtract_cost_init:
             cost -= self._cost_init
-
-        #print(params)
-        #print(cost)
 
         return cost
