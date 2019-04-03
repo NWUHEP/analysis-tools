@@ -118,6 +118,11 @@ def chi2_test(y1, y2, var1, var2):
     chi2 = 0.5*(y1 - y2)**2/(var1 + var2)
     return chi2
 
+# modified objective for testing lepton universality
+def objective_lu(params, data, objective):
+    beta = params[0]
+    params_new = np.concatenate([[beta, beta, beta, 1 - 3*beta], params[1:]])
+    return objective(params_new, data)
 
 class FitData(object):
     def __init__(self, path, selections, processes, process_cut=0):
@@ -386,21 +391,26 @@ class FitData(object):
             beta, br_tau = params[:4], params[4:7]
             ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
             w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
-            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
+            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
 
-        # mask the process amplitudes for this category
-        process_amplitudes_masked = norm_params.T*process_amplitudes[model_data['process_mask']]
+        # mask the process amplitudes for this category and apply normalization parameters
+        process_amplitudes_masked = process_amplitudes[model_data['process_mask']]
+        process_amplitudes_masked = norm_params.T*process_amplitudes_masked
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
-        model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
-        #model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
-        #model_val    = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
-        model_var    = model_tensor[:,:,1].sum(axis=0) #np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
+        if False:
+            model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
+        else:
+            model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
+            model_val    = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
+
+        model_var    = model_tensor[:,:,1].sum(axis=0) 
+        #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
 
         return model_val, model_var
         
-    def objective(self, params, data=None, cost_type='poisson', no_shape=False, subtract_cost_init=False):
+    def objective(self, params, data=None, cost_type='poisson', no_shape=False):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -414,9 +424,6 @@ class FitData(object):
         cost_type : either 'chi2' or 'poisson'
         mask : an array with same size as the input parameters for indicating parameters to fix
         no_shape : sums over all bins in input templates
-        subtract_cost_init: switches whether the initial cost value is subtracted
-                            from the computed cost (helps with large values of the cost function
-                            where only the gradient calculation is required)
         '''
 
         # build the process amplitudes (once per evaluation) 
@@ -454,24 +461,23 @@ class FitData(object):
 
             # calculate the cost
             if cost_type == 'poisson':
-                mask = model_val > 0
+                mask = (model_val > 0) & (data_val > 0)
                 nll = -data_val[mask]*np.log(model_val[mask]) + model_val[mask]
+                nll += data_val[mask]*np.log(data_val[mask]) - data_val[mask]
             elif cost_type == 'chi2':
                 mask = data_var + model_var > 0
                 nll = 0.5*(data_val[mask] - model_val[mask])**2 / (data_var[mask] + model_var[mask])
 
             cost += nll.sum()
 
+        #print(cost)
+
         # Add prior constraint terms for nuisance parameters 
-        pi_param = (params - self._pval_init)**2 / (2*self._perr_init**2)
+        pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)
         cost += pi_param.sum()
 
         # require that the branching fractions sum to 1
         beta  = params[:4]
         cost += (1 - np.sum(beta))**2/(2e-12)
-
-        # testing if this helps with precision
-        if subtract_cost_init:
-            cost -= self._cost_init
 
         return cost

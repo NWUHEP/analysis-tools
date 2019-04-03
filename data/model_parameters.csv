@@ -22,7 +22,6 @@ xs_zjets_alt_alpha_s,Z norm. ($\alpha_{s}$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0
 xs_zjets_alt_qcd_scale_0,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 0$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
 xs_zjets_alt_qcd_scale_1,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 1$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
 xs_zjets_alt_qcd_scale_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
-xs_zjets_alt_qcd_scale_3,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} \geq 3$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
 eff_tau,$\epsilon_{\tau}$,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 misid_tau_e,$\sf e\rightarrow\tau$ ,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,0,0,0,0,0,0,0,1,1,0,0
 misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,1,0,0,0,0,0,0,1,1,0,0
@@ -44,6 +43,8 @@ escale_mu,$\mu$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0
 escale_tau_0,$\tau\rightarrow\pi$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 escale_tau_1,$\tau\rightarrow\pi\pi^{0}$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 escale_tau_10,$\tau\rightarrow\pi\pi\pi$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
+pileup,pileup,0,1,shape,1,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
+top_pt,"$p_{T,top}$",0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 btag_bfragmentation,b-tag: b frag.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
 btag_btempcorr,b-tag: b templ. corr.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
 btag_cb,b-tag:JP corr,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
@@ -82,5 +83,3 @@ jes_single_pion_ecal,JES: $\pi$ (ECAL),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1
 jes_single_pion_hcal,JES: $\pi$ (HCAL),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_time_pt_eta,JES: time $p_{T}/\eta$,0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_flavor_qcd,JES: flavor,0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-pileup,pileup,0,1,shape,1,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-top_pt,"$p_{T,top}$",0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1

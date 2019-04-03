@@ -176,7 +176,7 @@ def ratio_errors(num, sig_num, den, sig_den):
     '''
     ratio = num/den
     error = ratio*np.sqrt(sig_num**2/num**2 + sig_den**2/den**2)
-    return error 
+    return error
 
 
 def poisson_errors(bin_content, suppress_zero=False):
