@@ -75,15 +75,6 @@ if __name__ == '__main__':
         if selection in ['etau', 'mutau']:
             features.append('tau_decay_mode')
 
-    ### Cuts ###
-    if selection in ['e4j', 'mu4j']:
-        cut = 'n_jets >= 4 and n_bjets >= 1'
-    elif selection in ['emu', 'etau', 'mutau']:
-        cut = 'n_jets >= 0 and n_bjets >= 0'
-    else:
-        cut = 'n_jets >= 2 and n_bjets >= 0'
-    cut += ' and ' + pt.cuts[selection]
-            
     ### Get dataframes with features for each of the datasets ###
     output_path = f'plots/overlays/{selection}_{args.period}'
     pt.make_directory(output_path, clear=True)
@@ -93,12 +84,22 @@ if __name__ == '__main__':
                                   selection     = selection,
                                   period        = args.period,
                                   scale         = args.lumi,
-                                  cuts          = cut
+                                  cuts          = pt.cuts[selection]
                                  )
-    jet_cuts = {cat:cat_items.cut for cat, cat_items in pt.categories.items() if selection in cat_items.selections}
-    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=jet_cuts, do_string=True)
+
+    selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
+    cuts = dict()
+    for category in selection_categories:
+        cat_items = pt.categories[category]
+        if cat_items.cut is None:
+            cuts[category] = cat_items.jet_cut 
+        else:
+            cuts[category] = ' and '.join([cat_items.jet_cut, cat_items.cut]) 
+
+    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=cuts, do_string=True)
     table.transpose().to_latex(f'{output_path}/yields_{selection}.tex', escape=False)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
+
 
     ### Loop over features and make the plots ###
     plot_manager = pt.PlotManager(data_manager,
@@ -108,8 +109,6 @@ if __name__ == '__main__':
                                   output_path    = output_path,
                                   file_ext       = 'png'
                                  )
-
-    #plot_manager.make_overlays(features, do_ratio=True, overlay_style='errorbar')
 
     ### conditional overlays
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
@@ -145,22 +144,22 @@ if __name__ == '__main__':
                                            do_cms_text = True
                                           )
 
-    selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
     for category in tqdm(selection_categories,
                          desc       = 'plotting jet categories...',
                          unit_scale = True,
                          ncols      = 75,
                         ):
         cat_items = pt.categories[category]
+        #plot_manager.set_output_path(f'{output_path}/{category}_process')
+        #plot_manager.make_overlays(features, do_ratio=True, cut=cuts[category])
 
-        if selection in cat_items.selections:
-            plot_manager.set_output_path(f'{output_path}/{category}')
-            plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
-                                                   cut        = cat_items.cut,
-                                                   legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
-                                                   #c_colors   = list(decay_map.colors) + ['gray'],
-                                                   c_colors   = colors[:len(conditions) - 1] + ['gray'],
-                                                   aux_labels = bg_labels,
-                                                   do_ratio   = True,
-                                                   do_cms_text = True
-                                                  )
+        plot_manager.set_output_path(f'{output_path}/{category}_signal')
+        plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
+                                               cut        = cuts[category],
+                                               legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
+                                               #c_colors   = list(decay_map.colors) + ['gray'],
+                                               c_colors   = colors[:len(conditions) - 1] + ['gray'],
+                                               aux_labels = bg_labels,
+                                               do_ratio   = True,
+                                               do_cms_text = True
+                                              )

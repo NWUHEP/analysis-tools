@@ -119,10 +119,25 @@ def chi2_test(y1, y2, var1, var2):
     return chi2
 
 # modified objective for testing lepton universality
-def objective_lu(params, data, objective):
-    beta = params[0]
-    params_new = np.concatenate([[beta, beta, beta, 1 - 3*beta], params[1:]])
+def objective_lu(params, data, objective, type=1):
+    if type == 1:
+        beta = params[0]
+        params_new = np.concatenate([[beta, beta, beta, 1 - 3*beta], params[1:]])
+    elif type == 2:
+        beta_emu = params[0]
+        beta_tau = params[1]
+        params_new = np.concatenate([[beta_emu, beta_emu, beta_tau, 1 - 2*beta_emu - beta_tau], params[2:]])
     return objective(params_new, data)
+
+# Barlow-Beeston method for limited MC statistics
+def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
+    a = 1
+    b = exp_var/exp_val - 1
+    c = -1*data_val*exp_var/exp_val**2
+    beta_plus  = (-1*b + np.sqrt(b**2 - 4*a*c))/2
+    beta_minus = (-1*b - np.sqrt(b**2 - 4*a*c))/2
+
+    return beta_plus, beta_minus
 
 class FitData(object):
     def __init__(self, path, selections, processes, process_cut=0):
@@ -214,16 +229,21 @@ class FitData(object):
         
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
+        self._bin_np = dict()
         for sel in self._selections:
             category_tensor = []
             for category, templates in self.get_selection_data(sel).items():
                 templates = templates['templates']
                 data_val, data_var = templates['data']['val'], templates['data']['var']
-                
+                self._bin_np[f'{sel}_{category}'] = np.ones(data_val.size)
+
                 norm_mask  = []
                 process_mask = []
                 data_tensor  = []
                 for ds in self._processes:
+
+                    if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes':
+                        ds = 'fakes_ss'
 
                     # initialize mask for removing irrelevant processes
                     if ds not in templates.keys():
@@ -237,8 +257,13 @@ class FitData(object):
                         continue
                     else:
                         template = templates[ds]
+
+                        if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes_ss':
+                            ds = 'fakes'
+
                 
                     if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
+
                         val, var = template['val'].values, template['var'].values
                         #print(ds, val/np.sqrt(data_var))
 
@@ -365,7 +390,7 @@ class FitData(object):
 
         return outdata
 
-    def mixture_model(self, params, category, process_amplitudes=None):
+    def mixture_model(self, params, category, process_amplitudes=None, no_sum=False):
         '''
         produces full mixture model
         '''
@@ -399,18 +424,17 @@ class FitData(object):
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
-        if False:
-            model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
-        else:
-            model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
-            model_val    = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
+        model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
+        model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
+        if not no_sum:
+            model_val = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
 
         model_var    = model_tensor[:,:,1].sum(axis=0) 
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
 
         return model_val, model_var
         
-    def objective(self, params, data=None, cost_type='poisson', no_shape=False):
+    def objective(self, params, data=None, cost_type='poisson', no_shape=False, do_mc_stat=True):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -424,6 +448,7 @@ class FitData(object):
         cost_type : either 'chi2' or 'poisson'
         mask : an array with same size as the input parameters for indicating parameters to fix
         no_shape : sums over all bins in input templates
+        do_mc_stat: include bin-by-bin Barlow-Beeston parameters accounting for limited MC statistics
         '''
 
         # build the process amplitudes (once per evaluation) 
@@ -438,9 +463,10 @@ class FitData(object):
 
             # omit categories from calculation of cost
             if category in [
-                            'ee_cat_gt2_eq0', 'ee_cat_gt2_eq0', 
-                            'mumu_cat_gt2_eq0', 'mumu_cat_gt2_eq0', 
-                            #'emu_cat_eq0_eq0_a', 'emu_cat_eq1_eq0_a', 'emu_cat_eq1_eq1_a'
+                            'ee_cat_gt2_eq0', 'ee_cat_gt2_eq0',
+                            'mumu_cat_gt2_eq0', 'mumu_cat_gt2_eq0',
+                            #'emu_cat_eq0_eq0_a', 
+                            #'emu_cat_eq1_eq0_a', 'emu_cat_eq1_eq1_a'
                             ]:
                 continue
             
@@ -453,11 +479,28 @@ class FitData(object):
                 data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
-            if no_shape:
+            veto_list = [
+                         #'ee', 'mumu', 
+                         #'emu', 
+                         #'etau', 'mutau', 
+                         #'e4j', 'mu4j'
+                         ]
+            if no_shape or category.split('_')[0] in veto_list:
                 data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
                 model_val = np.sum(model_val)
                 model_var = np.sum(model_var)
+
+            # include effect of MC statisitcs (important that this is done
+            # AFTER no_shape condition so inputs are integrated over)
+            if do_mc_stat:
+                bin_amp = self._bin_np[category]
+                bin_amp = bb_objective_aux(bin_amp, data_val, model_val, model_var)[0]
+                model_val *= bin_amp
+                self._bin_np[category] = bin_amp
+                bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
+                cost += np.sum(bb_penalty)
+
 
             # calculate the cost
             if cost_type == 'poisson':
@@ -469,8 +512,6 @@ class FitData(object):
                 nll = 0.5*(data_val[mask] - model_val[mask])**2 / (data_var[mask] + model_var[mask])
 
             cost += nll.sum()
-
-        #print(cost)
 
         # Add prior constraint terms for nuisance parameters 
         pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)

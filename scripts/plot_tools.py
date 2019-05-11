@@ -8,7 +8,6 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 from scipy.stats import beta
-
 import matplotlib.pyplot as plt
 plt.ioff()
 
@@ -84,9 +83,10 @@ categories = dict(
                   #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
                   #cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
 
+                  cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
+
                   cat_eq0_eq0   = Category(tau_dy_cut, 'n_jets == 0 and n_bjets == 0', ['etau', 'mutau'],                       '$N_{j} = 0, N_{b} = 0$, W veto',       0),
                   cat_eq1_eq0   = Category(tau_dy_cut, 'n_jets == 1 and n_bjets == 0', ['etau', 'mutau'],                       '$N_{j} = 1, N_{b} = 0$, W veto',       1),
-                  cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau',                        'ee',                                   'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
                   cat_eq1_eq1   = Category(None,       'n_jets == 1 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} = 1, N_{b} = 1$',               1),
                   cat_eq2_eq1   = Category(None,       'n_jets == 2 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} = 2, N_{b} = 1$',               2),
                   cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} \geq 3, N_{b} = 1$',            3),
@@ -226,19 +226,24 @@ def set_default_style():
     import matplotlib
     np.set_printoptions(precision=3)
     matplotlib.style.use('default')
-    params = {
-              'axes.facecolor': 'white',
-              'axes.titlesize':'x-large',
-              'axes.labelsize'    : 19,
-              'xtick.labelsize'   : 16,
-              'ytick.labelsize'   : 16,
-              'figure.titlesize'  : 20,
-              'figure.figsize'    : (8, 8),
-              'legend.fontsize'   : 18,
-              'legend.numpoints'  : 1,
-              'font.serif': 'Arial'
-              }
-    matplotlib.rcParams.update(params)
+    rc_params = {
+                 'figure.figsize': (10, 10),
+                 'axes.labelsize': 20,
+                 'axes.facecolor': 'white',
+                 'axes.titlesize':'x-large',
+                 'legend.fontsize': 20,
+                 'xtick.labelsize':18,
+                 'ytick.labelsize':18,
+                 'font.size':18,
+                 'font.sans-serif':['Arial', 'sans-serif'],
+                 'mathtext.sf':'Arial',
+                 'mathtext.fontset':'custom',
+                 'mathtext.default':'regular',
+                 'lines.markersize':8.,
+                 'lines.linewidth':2.5,
+                }
+
+    matplotlib.rcParams.update(rc_params)
 
 
 def add_lumi_text(ax, lumi):
@@ -254,7 +259,7 @@ def add_lumi_text(ax, lumi):
             fontstyle='italic',
             transform=ax.transAxes
             )
-    ax.text(0.64, 1.01,
+    ax.text(0.62, 1.01,
             r'$\mathsf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\mathit{{s}}}}=13\,\mathsf{{TeV}})$'.format(lumi),
             fontsize=20,
             fontname='Arial',
@@ -262,6 +267,7 @@ def add_lumi_text(ax, lumi):
             )
 
 def fit_plot(bins, data_val, model_pre, model_post, 
+             templates, template_labels,
              model_stat_err, model_syst_err,
              xlabel      = 'x [a.u.]',
              title       = None,
@@ -275,7 +281,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
     Parameters:
     ===========
     '''
-    fig, axes = plt.subplots(2, 1, figsize=(10, 10), facecolor='white', sharex=True, gridspec_kw={'height_ratios':[2,1]})
+    fig, axes = plt.subplots(2, 1, figsize=(10, 12), facecolor='white', sharex=True, gridspec_kw={'height_ratios':[5,2]})
     #fig.subplots_adjust(hspace=0) # doesn't work with tight layout
 
     # get bin widths and central points
@@ -283,28 +289,72 @@ def fit_plot(bins, data_val, model_pre, model_post,
     dx = np.append(dx, dx[-1]) 
     x  = bins + dx/2         
 
+    ax = axes[0]
+
     # unpack model data
+    histsum = np.zeros(model_pre.size)
+    labels = []
+    colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
+    colors = colors[::-1]
+    count = 0
+    for label in template_labels[::-1]:
+        template = templates[label]
+        if label == 'Z':
+            color = 'r'
+        elif label == 'W':
+            color = 'g'
+        elif label == 'QCD':
+            color = 'C1'
+        elif label == 'VV (non-WW)':
+            color = 'C5'
+        elif 'other' in label:
+            color = 'gray'
+        else:
+            color = colors[count]
+            count += 1
+
+        ax.plot(bins, (histsum + template)/dx, 
+                drawstyle='steps-post', 
+                alpha=0.5,
+                color=color, 
+                linestyle=':', 
+                linewidth=1.5,
+                label='_nolegend_'
+                )
+        ax.fill_between(bins, histsum/dx, (histsum + template)/dx, 
+                        step='post',
+                        color=color, 
+                        alpha=0.8,
+                        label=label
+                        )
+        histsum += template
+
+        if 'tW' in label:
+            labels.append(label)
+
+    labels = labels[::-1]
+    labels.extend(['W', 'Z', 'VV (non-WW)'])
 
     # overlay data and model
-    ax = axes[0]
     ax.errorbar(x, data_val/dx, np.sqrt(data_val)/dx, 
                 fmt='ko', 
+                markersize=10,
                 capsize=0, 
                 elinewidth=2, 
                 label='data'
                 )
     ax.plot(bins, model_pre/dx, 
             drawstyle='steps-post', 
-            c='C0', 
-            linestyle='-', 
+            c='gray', 
+            linestyle='--', 
             label='expected (prefit)'
             )
-    ax.plot(bins, model_post/dx,
-            drawstyle='steps-post',
-            c='C1',
-            linestyle='--',
-            label='expected (postfit)'
-            )
+    #ax.plot(bins, model_post/dx,
+    #        drawstyle='steps-post',
+    #        c='C1',
+    #        linestyle='--',
+    #        label='expected (postfit)'
+    #        )
     ax.fill_between(bins, (model_pre - model_stat_err)/dx, (model_pre + model_stat_err)/dx,
                     color='grey',
                     step='post',
@@ -320,8 +370,8 @@ def fit_plot(bins, data_val, model_pre, model_post,
                     label=r'$\sigma_{\sf syst. exp.}$'
                     )
 
-    ax.set_ylim(np.min(data_val/dx), 1.25*np.max(data_val/dx))
-    #ax.set_yscale('log')
+    ax.set_yscale('log')
+    ax.set_ylim(0.1*np.min(data_val/dx), 10.*np.max(data_val/dx))
     ax.set_ylabel('Events / GeV')
     ax.text(0.03, 0.94, title, 
             fontsize=20, 
@@ -330,23 +380,29 @@ def fit_plot(bins, data_val, model_pre, model_post,
             transform=ax.transAxes
             )
     add_lumi_text(ax, 35.9)
-    ax.legend()
+    #ax.legend()
+    #ax.legend(labels + [r'$\sigma_{\sf stat.}$', r'$\sigma_{\sf syst.}$', 'Data'])
+
     #ax.grid()
 
     ax = axes[1]
     ax.plot(bins[[0,-1]], [1, 1], 'k:')
 
+    #ax.errorbar(x, data_val/model_pre, np.sqrt(data_val)/model_pre, 
     ax.errorbar(x*(1-0.01), data_val/model_pre, np.sqrt(data_val)/model_pre, 
-            fmt='C0o', 
-            capsize=0, 
-            elinewidth=2, 
-            label='prefit'
-            )
-    ax.errorbar(x*(1+0.01), data_val/model_post, np.sqrt(data_val)/model_post, fmt='C1o', 
-            capsize=0, 
-            elinewidth=2, 
-            label='postfit'
-            )
+                markersize=8,
+                fmt='ko', 
+                capsize=0, 
+                elinewidth=2, 
+                label='prefit'
+                )
+    ax.errorbar(x*(1+0.01), data_val/model_post, np.sqrt(data_val)/model_post, 
+                markersize=8,
+                fmt='C0o', 
+                capsize=0, 
+                elinewidth=2, 
+                label='postfit'
+                )
     ax.plot(bins, model_pre/model_post, drawstyle='steps-post', 
             c='C0', 
             linestyle='--', 
@@ -368,7 +424,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
                     )
 
     ax.set_xlim(x[0]-dx[0]/2, x[-2]+dx[-2]/2)
-    ax.set_ylim(0.8, 1.2)
+    ax.set_ylim(0.75, 1.25)
     ax.set_ylabel('Obs./Exp.')
     ax.set_xlabel(xlabel)
     #ax.legend()
@@ -506,6 +562,10 @@ class DataManager():
     def get_dataframes(self, dataset_names, concat=False, condition=''):
         dataframes = {}
         for dataset in dataset_names:
+            if dataset not in self._dataframes.keys():
+                print(f'Can not find {dataset} in datasets.')
+                continue
+
             df = self._dataframes[dataset]
             if condition == '':
                 dataframes[dataset] = df
@@ -633,10 +693,10 @@ class PlotManager():
 
     def make_overlays(self, features,
                       plot_data     = True,
-                      normed        = False,
+                      do_ratio      = True,
                       do_cms_text   = True,
-                      overlay_style = 'line',
-                      do_ratio      = False
+                      normed        = False,
+                      cut = None
                       ):
         dm = self._dm
         make_directory(self._output_path)
@@ -648,10 +708,10 @@ class PlotManager():
         ### initialize legend text ###
         legend_text = []
         legend_text.extend([lut_datasets.loc[label].text for label in self._stack_labels[::-1]])
-        #legend_text.extend([lut_datasets.loc[label].text for label in self._overlay_labels[::-1]])
 
         if len(self._stack_labels) > 0:
             legend_text.append('BG error')
+
         if plot_data:
             legend_text.append('Data')
 
@@ -667,104 +727,76 @@ class PlotManager():
 
             ### Get style data for the feature ###
             lut_entry = dm._lut_features.loc[feature]
+            if cut is None and lut_entry.condition == 'None':
+                cut = None
+            elif cut is None and lut_entry.condition != 'None':
+                cut = lut_entry.condition
+            elif cut is not None and lut_entry.condition == 'None':
+                cut = cut
+            else:
+                cut = f'({lut_entry.condition}) and ({cut})'
 
             ### initialize figure ###
             if do_ratio:
-                fig, axes = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios':[3,1]})
+                fig, axes = plt.subplots(2, 1, figsize=(10, 10), sharex=True, gridspec_kw={'height_ratios':[3,1]})
                 fig.subplots_adjust(hspace=0)
                 ax = axes[0]
             else:
                 fig, ax = plt.subplots(1, 1)
-            #legend_handles = []
 
             ### Get stack data and apply mask if necessary ###
-            y_min, y_max = 1e9, 0.
-            if len(self._stack_labels) > 0:
-                stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, lut_entry.condition)
-                stack, bins, p = ax.hist(stack_data, 
-                                         bins      = int(lut_entry.n_bins),
-                                         range     = (lut_entry.xmin, lut_entry.xmax),
-                                         color     = self._stack_colors,
-                                         alpha     = 1.,
-                                         linewidth = 0.5,
-                                         stacked   = True,
-                                         histtype  = 'stepfilled',
-                                         weights   = stack_weights
-                                        )
+            binning = np.linspace(lut_entry.xmin, lut_entry.xmax, lut_entry.n_bins+1)
+            stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, cut)
+            stack, _, _ = ax.hist(stack_data, 
+                                  bins      = binning,
+                                  color     = self._stack_colors,
+                                  alpha     = 1.,
+                                  linewidth = 1.,
+                                  stacked   = True,
+                                  histtype  = 'stepfilled',
+                                  weights   = stack_weights
+                                 )
 
-                ### Need to histogram the stack with the square of the weights to get the errors ### 
-                stack_noscale, _ = np.histogram(np.concatenate(stack_data),
-                                                bins    = int(lut_entry.n_bins),
-                                                range   = (lut_entry.xmin, lut_entry.xmax),
-                                                weights = np.concatenate(stack_weights)**2
-                                               )
-                stack_sum = stack[-1] if len(stack_data) > 1 else stack
-                stack_x   = (bins[1:] + bins[:-1])/2.
-                stack_err = np.sqrt(stack_noscale)
+            ### Need to histogram the stack with the square of the weights to get the errors ### 
+            stack_var, _ = np.histogram(np.concatenate(stack_data),
+                                            bins    = binning,
+                                            weights = np.concatenate(stack_weights)**2
+                                           )
 
-                if do_ratio:
-                    denominator = (stack_x, stack_sum, stack_err)
+            stack_x   = (binning[1:] + binning[:-1])/2.
+            stack_sum = stack[-1] if len(stack_data) > 1 else stack
+            stack_err = np.sqrt(stack_var)
 
-                no_blanks = stack_sum > 0
-                stack_sum, stack_x, stack_err = stack_sum[no_blanks], stack_x[no_blanks], stack_err[no_blanks]
-                eb = ax.errorbar(stack_x, stack_sum, yerr=stack_err, 
-                                 fmt        = 'none',
-                                 ecolor     = 'k',
-                                 capsize    = 0,
-                                 elinewidth = 10,
-                                 alpha      = 0.15
-                                )
-                if stack_sum.min() < y_min and stack_sum.min() > 0.:
-                    y_min = stack_sum.min() 
-                if stack_sum.max() > y_max:
-                    y_max = stack_sum.max() 
-                #legend_handles.append(eb[0])
+            ax.fill_between(stack_x, stack_sum-stack_err, stack_sum+stack_err,
+                            color = 'k',
+                            step = 'mid',
+                            alpha = 0.25,
+                            label = 'MC error',
+                           )
 
+            denominator = (stack_sum, stack_err)
 
             ### Get overlay data and apply mask if necessary ###
             if len(self._overlay_labels) > 0:
-                overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, self._overlay_labels, lut_entry.condition)
-                if overlay_style == 'line':
-                    hists, bins, p = ax.hist(overlay_data,
-                                             bins      = lut_entry.n_bins,
-                                             range     = (lut_entry.xmin, lut_entry.xmax),
-                                             color     = self._overlay_colors,
-                                             alpha     = 1.,
-                                             histtype  = 'step',
-                                             linewidth = 2.,
-                                             #linestyle = '--',
-                                             normed    = normed,
-                                             bottom    = 0 if y_max == 0 or not self._top_overlay else stack[-1],
-                                             weights   = overlay_weights
-                                            )
+                overlay_data, overlay_weights = get_data_and_weights(dataframes, feature, self._overlay_labels, cut)
+                hists, _, _ = ax.hist(overlay_data,
+                                         bins      = binning,
+                                         color     = self._overlay_colors,
+                                         alpha     = 1.,
+                                         histtype  = 'step',
+                                         linewidth = 2.,
+                                         normed    = normed,
+                                         bottom    = 0 if y_max == 0 or not self._top_overlay else stack[-1],
+                                         weights   = overlay_weights
+                                        )
 
-                    hists = np.array(hists).flatten()
-                    if hists.min() < y_min and hists.min() > 0.:
-                        y_min = hists.min()
-                    if hists.max() > y_max:
-                        y_max = hists.max()
-                    #legend_handles.append(p)
-                elif overlay_style == 'errorbar':
-                    bins = np.arange(lut_entry.xmin, lut_entry.xmax, (lut_entry.xmax - lut_entry.xmin)/lut_entry.n_bins)
-                    x, y, yerr = hist_to_errorbar(overlay_data, bins)
-                    if do_ratio:
-                        numerator = (x, y, yerr)
-
-                    x, y, yerr = x[y>0], y[y>0], yerr[y > 0]
-                    eb = ax.errorbar(x, y, yerr=yerr,
-                                  fmt        = 'bo',
-                                  capsize    = 0,
-                                  elinewidth = 2
-                                 )
 
             ### If there's data to overlay: apply feature condition and get
             ### datapoints plus errors
             if plot_data:
-                data, _ = get_data_and_weights(dataframes, feature, ['data'], lut_entry.condition)
-                bins = np.arange(lut_entry.xmin, lut_entry.xmax, (lut_entry.xmax - lut_entry.xmin)/lut_entry.n_bins)
-                x, y, yerr = hist_to_errorbar(data, bins)
-                if do_ratio:
-                    numerator = (x, y, yerr)
+                data, _ = get_data_and_weights(dataframes, feature, ['data'], cut)
+                x, y, yerr = hist_to_errorbar(data, binning)
+                numerator = (y, yerr)
 
                 x, y, yerr = x[y>0], y[y>0], yerr[y>0]
                 eb = ax.errorbar(x, y, yerr=yerr, 
@@ -772,36 +804,9 @@ class PlotManager():
                               capsize    = 0,
                               elinewidth = 2
                              )
-                if y.size > 0:
-                    if y.min() < y_min and y.min() > 0.:
-                        y_min = y.min()
-                    if y.max() > y_max:
-                        y_max = y.max() 
-                #legend_handles.append(eb[0])
 
             ### make the legend ###
             ax.legend(legend_text, loc=1)
-
-            ### labels and x limits ###
-            if do_ratio:
-                axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
-                axes[1].set_ylabel(r'Data/MC')
-                axes[1].set_ylim((0.5, 1.49))
-                axes[1].grid()
-
-                ### calculate ratios 
-                mask = (numerator[1] > 0) & (denominator[1] > 0)
-                 
-                ratio = numerator[1][mask]/denominator[1][mask]
-                error = ratio*np.sqrt(numerator[2][mask]**2/numerator[1][mask]**2 + denominator[2][mask]**2/denominator[1][mask]**2)
-                axes[1].errorbar(numerator[0][mask], ratio, yerr=error,
-                                 fmt = 'ko',
-                                 capsize = 0,
-                                 elinewidth = 2
-                                )
-                axes[1].plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
-            else:
-                ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
 
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
             ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
@@ -809,15 +814,44 @@ class PlotManager():
 
             ### Add lumi text ###
             if do_cms_text:
-                add_lumi_text(ax, dm._scale, dm._period)
+                add_lumi_text(ax, dm._scale/1000)
+
+            ### labels and x limits ###
+            if do_ratio:
+                ax_ratio = axes[1]
+                ax_ratio.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
+                ax_ratio.set_ylabel(r'Data/MC')
+                ax_ratio.set_ylim((0.5, 1.49))
+                ax_ratio.grid()
+
+                ### calculate ratios 
+                mask = (numerator[0] > 0) & (denominator[0] > 0)
+                num_val   = numerator[0][mask]
+                num_err   = numerator[1][mask]
+                denom_val = denominator[0][mask]
+                denom_err = denominator[1][mask]
+
+                ratio = num_val/denom_val
+                error = ratio*np.sqrt(num_err**2/num_val**2 + denom_err**2/denom_val**2)
+                ax_ratio.errorbar(stack_x[mask], ratio, yerr=error,
+                            fmt = 'ko',
+                            capsize = 0,
+                            elinewidth = 2
+                           )
+                ax_ratio.plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
+            else:
+                ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
 
             ### Make output directory if it does not exist ###
             make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
             make_directory('{0}/log/{1}'.format(self._output_path, lut_entry.category), False)
 
             ### Save output plot ###
+            plt.tight_layout(h_pad=0., rect=[0., 0., 1., 0.95])
+
             ### linear scale ###
-            ax.set_ylim((0., 1.6*y_max))
+            ymax, ymin = np.max(stack_sum), np.min(stack_sum)
+            ax.set_ylim((0., 1.5*ymax))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 
                                                         feature, 
@@ -826,7 +860,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim(0.05, 15.*y_max)
+            ax.set_ylim(np.max([0.1, ymin]), 15.*ymax)
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path,
                                                      lut_entry.category,
                                                      feature,
@@ -891,8 +925,8 @@ class PlotManager():
 
             ### Save output plot ###
             ### linear scale ###
-            y_max = np.max(hist)
-            ax.set_ylim((0., 1.8*y_max))
+            ymax, ymin = np.max(hist), np.min(hist)
+            ax.set_ylim((0., 1.5*ymax))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 
                                                         feature, 
@@ -901,7 +935,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim((0.1*np.min(hist), 15.*y_max))
+            ax.set_ylim(np.max([0.1, ymin]), 15.*ymax)
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 
@@ -1041,7 +1075,7 @@ class PlotManager():
 
             ### Add lumi text ###
             if do_cms_text:
-                add_lumi_text(ax, self._dm._scale, self._dm._period)
+                add_lumi_text(ax, self._dm._scale/1000)
 
             ### Make output directory if it does not exist ###
             make_directory(f'{self._output_path}/linear/{lut_entry.category}', False)
@@ -1052,8 +1086,8 @@ class PlotManager():
             fig.subplots_adjust(top=0.94)
 
             ### linear scale ###
-            y_max = np.max(hist)
-            ax.set_ylim((0., 1.5*y_max))
+            ymax, ymin = np.max(hist), np.min(hist)
+            ax.set_ylim((0., 1.5*ymax))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 
                                                         feature, 
@@ -1062,7 +1096,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim((0.1*abs(np.min(hist)), 15.*y_max))
+            ax.set_ylim(np.max([0.1, ymin]), 15.*ymax)
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 

@@ -8,13 +8,13 @@ br_tau_mu,$b_{\tau_{\mu}}$,0.1741,0.0004,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,
 br_tau_h,$b_{\tau_{h}}$,0.6476,0.001,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 lumi,$L_{int}$,1,0.025,norm,1,misc,misc.,1,1,1,1,1,1,0,1,1,1,1,1,1,1
 xs_diboson,VV norm. (non-WW),1,0.1,norm,1,misc,misc.,0,0,0,0,1,0,0,1,1,1,1,1,1,1
-xs_ww,WW norm.,1,0.1,norm,1,misc,misc.,0,0,0,0,0,1,0,1,1,1,1,1,1,1
+xs_ww,WW norm.,1,1,norm,1,misc,misc.,0,0,0,0,0,1,0,1,1,1,1,1,1,1
 xs_t,tW norm.,1,0.1,norm,1,misc,misc.,0,1,0,0,0,0,0,1,1,1,1,1,1,1
 xs_wjets,W norm.,1,0.1,norm,1,misc,misc.,0,0,0,1,0,0,0,1,1,1,1,1,1,1
 e_fakes,"QCD norm (e, iso)",1,0.1,norm,1,qcd,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,1,0
 mu_fakes,"QCD norm ($\mu$, iso)",1,0.1,norm,1,qcd,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,0,1
-e_fakes_ss,"QCD norm (e, ss)",1,0.1,norm,1,qcd,QCD estimate,0,0,0,0,0,0,1,0,0,0,1,0,0,0
-mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.1,norm,1,qcd,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,1,0,1
+e_fakes_ss,"QCD norm (e, ss)",1,0.1,norm,1,qcd,QCD estimate,0,0,0,0,0,0,1,0,1,0,1,0,0,0
+mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.1,norm,1,qcd,QCD estimate,0,0,0,0,0,0,1,0,1,0,0,1,0,1
 trigger_e,$e$ trigger,1,0.01,norm,1,reco_lepton,$\ell$ reco,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.005,norm,1,reco_lepton,$\ell$ reco,1,1,1,1,1,1,0,0,1,1,0,1,0,1
 xs_zjets_alt_pdf,Z norm. (PDF),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
@@ -22,12 +22,12 @@ xs_zjets_alt_alpha_s,Z norm. ($\alpha_{s}$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0
 xs_zjets_alt_qcd_scale_0,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 0$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
 xs_zjets_alt_qcd_scale_1,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 1$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
 xs_zjets_alt_qcd_scale_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
-eff_tau,$\epsilon_{\tau}$,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-misid_tau_e,$\sf e\rightarrow\tau$ ,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,0,0,0,0,0,0,0,1,1,0,0
-misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,1,0,0,0,0,0,0,1,1,0,0
 xs_ttbar_pdf,$t\bar{t}$ norm. (PDF),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_alpha_s,$t\bar{t}$ norm. ($\alpha_{s}$),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_qcd_scale,$t\bar{t}$ norm. ($\mu_{f}/\mu_{r}$),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+eff_tau,$\epsilon_{\tau}$,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
+misid_tau_e,$\sf e\rightarrow\tau$ ,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,0,0,0,0,0,0,0,1,1,0,0
+misid_tau_h,$\sf jet\rightarrow\tau$ (flavor),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,1,0,0,0,0,0,0,1,1,0,0
 misid_tau_0,$\sf jet\rightarrow\tau$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,1,0,1,0,0,0,0,1,1,0,0
 misid_tau_1,$\sf jet\rightarrow\tau$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,1,0,1,0,0,0,0,1,1,0,0
 misid_tau_2,$\sf jet\rightarrow\tau$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,0,1,0,1,0,0,0,0,1,1,0,0
