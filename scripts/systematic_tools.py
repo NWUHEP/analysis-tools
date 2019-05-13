@@ -151,6 +151,14 @@ class SystematicTemplateGenerator():
         bins = self._binning
         feature = self._feature
 
+        # electron pt-dependent efficiency systematic
+        pt_bins = [20, 25, 30, 40, 50, 65, np.inf]
+        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01] # statistical only
+        for ipt, pt_bin in enumerate(pt_bins[:-1]):
+            mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
+            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, feature, type='weight')
+            self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
+        
         if self._selection == 'ee':
 
             ## reco scale factor
@@ -248,6 +256,14 @@ class SystematicTemplateGenerator():
 
         bins = self._binning
         feature = self._feature
+
+        # pt-dependent efficiency systematic
+        pt_bins = [10, 20, 25, 30, 40, 50, 65, np.inf]
+        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01] # statistical only
+        for ipt, pt_bin in enumerate(pt_bins[:-1]):
+            mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
+            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, feature, type='weight')
+            self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
 
         ## id scale factor
         if self._selection == 'mumu':
