@@ -263,7 +263,6 @@ class SystematicTemplateGenerator():
         h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
 
         #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
-        #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
         self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
 
         ## iso scale factor (called "reco" in ntuples)
@@ -280,7 +279,6 @@ class SystematicTemplateGenerator():
         h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
 
         #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
-        #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
         self._df_sys['eff_iso_mu_up'], self._df_sys['eff_iso_mu_down'] = h_up, h_down
 
         ## muon energy scale
@@ -353,6 +351,14 @@ class SystematicTemplateGenerator():
         '''
 
         # tau id efficiency systematic
+        pt_bins = [20, 25, 30, 40, 50, 65, np.inf]
+        sigma   = [0.05, 0.05, 0.05, 0.05, 0.05, 0.05] # statistical only
+        for ipt, pt_bin in enumerate(pt_bins[:-1]):
+            mask = (df.lepton2_pt > pt_bin) & (df.lepton2_pt < pt_bins[ipt+1])
+            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, 'lepton2_pt', type='weight')
+            self._df_sys[f'eff_tau_{ipt}_up'], self._df_sys[f'eff_tau_{ipt}_down'] = h_up, h_down
+
+        # tau misid systematic
         tau_id_err = 0.05
         h_up, _   = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 + tau_id_err))
         h_down, _ = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 - tau_id_err))

@@ -158,6 +158,7 @@ class FitData(object):
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
         # initialize fit data
+        self.veto_list = [] # used to remove categories from fit
         self._initialize_fit_tensor(process_cut)
         self._initialize_mc_stats_np()
 
@@ -462,14 +463,8 @@ class FitData(object):
         for category, template_data in self._model_data.items():
 
             # omit categories from calculation of cost
-            if category in [
-                            'ee_cat_gt2_eq0', 'ee_cat_gt2_eq0',
-                            'mumu_cat_gt2_eq0', 'mumu_cat_gt2_eq0',
-                            #'emu_cat_eq0_eq0_a', 
-                            #'emu_cat_eq1_eq0_a', 'emu_cat_eq1_eq1_a'
-                            ]:
+            if category in self.veto_list:
                 continue
-            
 
             # get the model and data templates
             model_val, model_var = self.mixture_model(params, category, process_amplitudes)
@@ -479,13 +474,8 @@ class FitData(object):
                 data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
-            veto_list = [
-                         #'ee', 'mumu', 
-                         #'emu', 
-                         #'etau', 'mutau', 
-                         #'e4j', 'mu4j'
-                         ]
-            if no_shape or category.split('_')[0] in veto_list:
+            #veto_list = []
+            if no_shape: # or category.split('_')[0] in veto_list:
                 data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
                 model_val = np.sum(model_val)
@@ -500,7 +490,6 @@ class FitData(object):
                 self._bin_np[category] = bin_amp
                 bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
-
 
             # calculate the cost
             if cost_type == 'poisson':
@@ -520,5 +509,9 @@ class FitData(object):
         # require that the branching fractions sum to 1
         beta  = params[:4]
         cost += (1 - np.sum(beta))**2/(2e-12)
+
+        # require that all branching fractions are contained in [0, 1]
+        if np.any((beta <= 0.) | (beta >= 1.)):
+            cost = np.inf
 
         return cost

@@ -133,7 +133,7 @@ if __name__ == '__main__':
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
 
     #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['etau', 'mutau']
+    selections = ['mu4j']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')

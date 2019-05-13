@@ -424,7 +424,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
                     )
 
     ax.set_xlim(x[0]-dx[0]/2, x[-2]+dx[-2]/2)
-    ax.set_ylim(0.75, 1.25)
+    ax.set_ylim(0.5, 1.5)
     ax.set_ylabel('Obs./Exp.')
     ax.set_xlabel(xlabel)
     #ax.legend()
