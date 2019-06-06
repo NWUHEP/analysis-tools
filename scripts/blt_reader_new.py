@@ -77,8 +77,8 @@ if __name__ == '__main__':
 
 
     ### Configuration ###
-    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    #selections  = ['emu']
+    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    selections  = ['emu']
     do_data     = True
     do_mc       = True
     do_syst     = False
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets']
+    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww_qg', 't', 'wjets']
 
     dataset_list = []
     if do_data:
@@ -104,12 +104,7 @@ if __name__ == '__main__':
                         #'ttbar_inclusive_herwig'
                         ]
 
-    #dataset_list = [
-    #                #'zjets_m-50_alt', 'zjets_m-50', 
-    #                #'z1jets_m-50', 'z2jets_m-50', 'z3jets_m-50', 'z4jets_m-50',
-    #                #'ttbar_lep', 
-    #                #'muon_2016H'
-    #                ]
+    dataset_list = ['ww_qq'] 
 
     ### Initialize multiprocessing queue and processes
     pool = Pool(processes = min(12, args.nprocesses))
@@ -127,7 +122,7 @@ if __name__ == '__main__':
             # get the tree and make sure that it's not empty
             tree_name = f'{selection}/bltTree_{dataset}'
             tree      = root_file.Get(f'{selection}/bltTree_{dataset}')
-            n_entries  = tree.GetEntriesFast()
+            n_entries = tree.GetEntriesFast()
             if n_entries == 0: 
                 continue
 

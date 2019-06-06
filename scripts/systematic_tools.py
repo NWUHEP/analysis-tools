@@ -153,7 +153,7 @@ class SystematicTemplateGenerator():
 
         # electron pt-dependent efficiency systematic
         pt_bins = [20, 25, 30, 40, 50, 65, np.inf]
-        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01] # statistical only
+        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
         for ipt, pt_bin in enumerate(pt_bins[:-1]):
             mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
             h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, feature, type='weight')
@@ -258,8 +258,8 @@ class SystematicTemplateGenerator():
         feature = self._feature
 
         # pt-dependent efficiency systematic
-        pt_bins = [10, 20, 25, 30, 40, 50, 65, np.inf]
-        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01] # statistical only
+        pt_bins = [10, 15, 20, 25, 30, 40, 50, 65, np.inf]
+        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01] # statistical only
         for ipt, pt_bin in enumerate(pt_bins[:-1]):
             mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
             h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, feature, type='weight')

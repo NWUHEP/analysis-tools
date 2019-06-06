@@ -141,8 +141,15 @@ def fill_event_vars(tree, dataset):
                     trigger_weight      = tree.triggerWeight,
                     pileup_weight       = tree.puWeight,
                     top_pt_weight       = tree.topPtWeight,
-                    event_weight        = tree.eventWeight,
+                    z_pt_weight         = tree.zPtWeight,
+                    ww_pt_weight        = tree.wwPtWeight,
+                    event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
 
+                    # uncertainties
+                    ww_pt_scale_up   = tree.wwPtScaleUp,
+                    ww_pt_scale_down = tree.wwPtScaleDown,
+                    ww_pt_resum_up   = tree.wwPtResumUp,
+                    ww_pt_resum_down = tree.wwPtResumDown,
                     lepton1_reco_var = tree.leptonOneRecoVar,
                     lepton2_reco_var = tree.leptonTwoRecoVar,
                     lepton1_id_var   = tree.leptonOneIDVar,

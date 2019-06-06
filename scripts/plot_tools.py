@@ -35,7 +35,7 @@ dataset_dict = dict(
                                 'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
                                 'qcd_ht2000'
                                 ],
-                    ww       = ['ww'],
+                    ww_qg    = ['ww_qq', 'ww_gg'],
                     diboson  = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
                     fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
@@ -48,13 +48,13 @@ dataset_dict = dict(
                     )
 
 selection_dataset_dict = dict(
-                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
-                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
-                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
-                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
-                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
-                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
-                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
+                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson'],
+                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson'],
+                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes_ss'],
+                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes_ss'],
+                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes_ss'],
+                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes'],
+                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes'],
                               )
 
 cuts = dict(
@@ -104,7 +104,7 @@ categories = dict(
 
                   cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'],                        '$N_{j} \geq 4, N_{b} = 1$',            4),
                   cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'],                        '$N_{j} \geq 4, N_{b} \geq 2$',         4),
-                  )
+                 )
 
 def make_directory(file_path, clear=True):
     if not os.path.exists(file_path):
@@ -213,7 +213,7 @@ def get_data_and_weights(dataframes, feature, labels, condition):
         if label not in dataframes.keys():
             continue
 
-        if condition == 'None':
+        if condition == '':
             df = dataframes[label]
         else:
             df = dataframes[label].query(condition)
@@ -533,6 +533,9 @@ class DataManager():
                 else:
                     scale /= init_count
 
+                #if dataset == 'ww':
+                #    df.loc[:, 'weight'] /= df['ww_pt_weight']
+
                 df.loc[:, 'weight'] *= scale
 
             ### combined datasets if required ###
@@ -549,6 +552,8 @@ class DataManager():
         if 'data' in dataframes.keys():
             df = dataframes['data']
             dataframes['data'] = df.drop_duplicates(subset=['run_number', 'event_number'])
+
+
 
         self._dataframes = dataframes
 
@@ -696,7 +701,6 @@ class PlotManager():
                       do_ratio      = True,
                       do_cms_text   = True,
                       normed        = False,
-                      cut = None
                       ):
         dm = self._dm
         make_directory(self._output_path)
@@ -727,14 +731,7 @@ class PlotManager():
 
             ### Get style data for the feature ###
             lut_entry = dm._lut_features.loc[feature]
-            if cut is None and lut_entry.condition == 'None':
-                cut = None
-            elif cut is None and lut_entry.condition != 'None':
-                cut = lut_entry.condition
-            elif cut is not None and lut_entry.condition == 'None':
-                cut = cut
-            else:
-                cut = f'({lut_entry.condition}) and ({cut})'
+            cut = lut_entry.condition if lut_entry.condition != 'None' else ''
 
             ### initialize figure ###
             if do_ratio:

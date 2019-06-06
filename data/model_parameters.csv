@@ -3,9 +3,9 @@ beta_e,$\beta_{e}$,0.108,0.108,poi,1,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 beta_mu,$\beta_{\mu}$,0.108,0.108,poi,1,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 beta_tau,$\beta_{\tau}$,0.108,0.108,poi,1,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 beta_h,$\beta_{h}$,0.676,0.676,poi,1,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
-br_tau_e,$b_{\tau_{e}}$,0.1783,0.0004,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
-br_tau_mu,$b_{\tau_{\mu}}$,0.1741,0.0004,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
-br_tau_h,$b_{\tau_{h}}$,0.6476,0.001,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_e,$b_{\tau_{e}}$,0.1773,0.0004,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_mu,$b_{\tau_{\mu}}$,0.1731,0.0004,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_h,$b_{\tau_{h}}$,0.6496,0.001,poi,1,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 lumi,$L_{int}$,1,0.025,norm,1,misc,misc.,1,1,1,1,1,1,0,1,1,1,1,1,1,1
 xs_diboson,VV norm. (non-WW),1,0.1,norm,1,misc,misc.,0,0,0,0,1,0,0,1,1,1,1,1,1,1
 xs_ww,WW norm.,1,1,norm,1,misc,misc.,0,0,0,0,0,1,0,1,1,1,1,1,1,1
@@ -25,6 +25,7 @@ xs_zjets_alt_qcd_scale_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,shape,1,misc
 xs_ttbar_pdf,$t\bar{t}$ norm. (PDF),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_alpha_s,$t\bar{t}$ norm. ($\alpha_{s}$),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_qcd_scale,$t\bar{t}$ norm. ($\mu_{f}/\mu_{r}$),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+eff_tau,$\epsilon_{\tau}$,0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_0,$\epsilon_{\tau}$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_1,$\epsilon_{\tau}$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_2,$\epsilon_{\tau}$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
@@ -42,24 +43,22 @@ misid_tau_5,$\sf jet\rightarrow\tau$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$
 escale_tau_0,$\tau\rightarrow\pi$ ES,0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 escale_tau_1,$\tau\rightarrow\pi\pi^{0}$ ES,0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 escale_tau_10,$\tau\rightarrow\pi\pi\pi$ ES,0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_id_e,"$\epsilon_{e,id}$",0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,1,0,1,0
 eff_reco_e,"$\epsilon_{e,reco}$",0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,1,0,1,0
-eff_e_0,$epsilon_{e}$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_e_1,$epsilon_{e}$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_e_2,$epsilon_{e}$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_e_3,$epsilon_{e}$ ($40 \leq p_{T} < 50$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_e_4,$epsilon_{e}$ ($50 \leq p_{T} < 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_e_5,$epsilon_{e}$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_id_mu,"$\epsilon_{\mu,id}$",0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
-eff_iso_mu,"$\epsilon_{\mu,iso}$",0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
-eff_mu_0,$\epsilon_{\mu}$ ($10 \leq p_{T} < 20$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_mu_1,$\epsilon_{\mu}$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_mu_2,$\epsilon_{\mu}$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_mu_3,$\epsilon_{\mu}$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_mu_4,$\epsilon_{\mu}$ ($40 \leq p_{T} < 50$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_mu_5,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
-eff_mu_6,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
+eff_e_0,$epsilon_{e}$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+eff_e_1,$epsilon_{e}$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+eff_e_2,$epsilon_{e}$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+eff_e_3,$epsilon_{e}$ ($40 \leq p_{T} < 50$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+eff_e_4,$epsilon_{e}$ ($50 \leq p_{T} < 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+eff_e_5,$epsilon_{e}$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
 escale_e,$e$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+eff_iso_mu,"$\epsilon_{\mu,iso}$",0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
+eff_mu_0,$\epsilon_{\mu}$ ($10 \leq p_{T} < 20$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
+eff_mu_1,$\epsilon_{\mu}$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
+eff_mu_2,$\epsilon_{\mu}$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
+eff_mu_3,$\epsilon_{\mu}$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
+eff_mu_4,$\epsilon_{\mu}$ ($40 \leq p_{T} < 50$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
+eff_mu_5,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
+eff_mu_6,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 escale_mu,$\mu$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 top_pt,"$p_{T,top}$",0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1

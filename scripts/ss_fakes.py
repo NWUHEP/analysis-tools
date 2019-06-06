@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    sim_labels = ['diboson', 'ww', 'wjets', 'zjets_alt', 't', 'ttbar']
+    sim_labels = ['diboson', 'ww_qg', 'wjets', 'zjets_alt', 't', 'ttbar']
 
     ### Get dataframes with features for each of the datasets ###
     input_dir = f'{args.input}/{args.selection}_{args.period}'

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import argparse
 import pandas as pd
 from tqdm import tqdm
@@ -33,7 +34,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['diboson', 'ww', 'zjets_alt', 'wjets', 't', 'ttbar']
+    model_labels = ['diboson', 'ww_qg', 'zjets_alt', 'wjets', 't', 'ttbar']
 
     if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
@@ -75,6 +76,26 @@ if __name__ == '__main__':
         if selection in ['etau', 'mutau']:
             features.append('tau_decay_mode')
 
+    # cuts for relevant categories
+    selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
+    cuts = dict()
+    for category in selection_categories:
+        cat_items = pt.categories[category]
+        if cat_items.cut is None:
+            cuts[category] = cat_items.jet_cut
+        else:
+            cuts[category] = ' and '.join([cat_items.jet_cut, cat_items.cut])
+
+    if selection == 'emu':
+        cuts['inclusive'] = f'({pt.cuts[selection]}) and n_jets >= 0'
+    elif selection in ['ee', 'mumu']:
+        cuts['inclusive'] = f'({pt.cuts[selection]}) and n_jets >= 2 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
+    elif selection in ['etau', 'mutau']:
+        cuts['inclusive'] = f'({pt.cuts[selection]}) and (n_jets >= 0)'
+    elif selection in ['e4j', 'mu4j']:
+        cuts['inclusive'] = f'({pt.cuts[selection]}) and (n_jets >= 4 and n_bjets >= 1)'
+
+
     ### Get dataframes with features for each of the datasets ###
     output_path = f'plots/overlays/{selection}_{args.period}'
     pt.make_directory(output_path, clear=True)
@@ -84,31 +105,23 @@ if __name__ == '__main__':
                                   selection     = selection,
                                   period        = args.period,
                                   scale         = args.lumi,
-                                  cuts          = pt.cuts[selection]
+                                  cuts          = cuts['inclusive']
                                  )
-
-    selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
-    cuts = dict()
-    for category in selection_categories:
-        cat_items = pt.categories[category]
-        if cat_items.cut is None:
-            cuts[category] = cat_items.jet_cut 
-        else:
-            cuts[category] = ' and '.join([cat_items.jet_cut, cat_items.cut]) 
 
     table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=cuts, do_string=True)
     table.transpose().to_latex(f'{output_path}/yields_{selection}.tex', escape=False)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
-
 
     ### Loop over features and make the plots ###
     plot_manager = pt.PlotManager(data_manager,
                                   features       = features,
                                   stack_labels   = model_labels,
                                   top_overlay    = False,
-                                  output_path    = output_path,
+                                  output_path    = f'{output_path}/no_split',
                                   file_ext       = 'png'
                                  )
+
+    plot_manager.make_overlays(features)
 
     ### conditional overlays
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
@@ -135,7 +148,7 @@ if __name__ == '__main__':
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
     plot_manager.set_output_path(f'{output_path}/inclusive')
-    plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
+    plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww_qg'], conditions,
                                            cut         = inclusive_cut,
                                            legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
                                            c_colors    = colors[:len(conditions) - 1] + ['gray'],
@@ -154,7 +167,7 @@ if __name__ == '__main__':
         #plot_manager.make_overlays(features, do_ratio=True, cut=cuts[category])
 
         plot_manager.set_output_path(f'{output_path}/{category}_signal')
-        plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
+        plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww_qg'], conditions,
                                                cut        = cuts[category],
                                                legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
                                                #c_colors   = list(decay_map.colors) + ['gray'],

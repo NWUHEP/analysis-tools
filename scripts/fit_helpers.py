@@ -138,6 +138,7 @@ def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
     beta_minus = (-1*b - np.sqrt(b**2 - 4*a*c))/2
 
     return beta_plus, beta_minus
+        
 
 class FitData(object):
     def __init__(self, path, selections, processes, process_cut=0):
@@ -160,7 +161,13 @@ class FitData(object):
         # initialize fit data
         self.veto_list = [] # used to remove categories from fit
         self._initialize_fit_tensor(process_cut)
-        self._initialize_mc_stats_np()
+
+        # minimization cache
+        self.initialize_minimization_cache()
+
+        # initialize cost (do this last)
+        self._cost_init = 0
+        self._cost_init = self.objective(self.get_params_init(as_array=True))
 
     # initialization functions
     def _initialize_data(self, location, selection):
@@ -187,6 +194,7 @@ class FitData(object):
         df_params = df_params.set_index('name')
         df_params = df_params.astype({'err_init':float, 'val_init':float})
 
+        self._nparams    = df_params.shape[0]
         self._npoi       = df_params.query('type == "poi"').shape[0]
         self._nnorm      = df_params.query('type == "norm"').shape[0]
         self._nshape     = df_params.query('type == "shape"').shape[0]
@@ -195,15 +203,6 @@ class FitData(object):
         self._parameters = df_params
 
         return
-
-    def _initialize_mc_stats_np(self):
-        '''
-        Generates nuisance parameters to account for low MC stats.
-        '''
-        pass
-        #np_mc_stats = dict()
-        #for category, template_data in self._model_data.items():
-
 
     def _initialize_fit_tensor(self, process_cut):
         '''
@@ -231,9 +230,11 @@ class FitData(object):
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
         self._bin_np = dict()
+        self._categories = []
         for sel in self._selections:
             category_tensor = []
             for category, templates in self.get_selection_data(sel).items():
+                self._categories.append(f'{sel}_{category}') 
                 templates = templates['templates']
                 data_val, data_var = templates['data']['val'], templates['data']['var']
                 self._bin_np[f'{sel}_{category}'] = np.ones(data_val.size)
@@ -346,11 +347,14 @@ class FitData(object):
                                                              norm_mask      = np.stack(norm_mask)
                                                              )
 
-        # initialize cost
-        self._cost_init = 0
-        self._cost_init = self.objective(self.get_params_init(as_array=True))
-
         return
+
+    def initialize_minimization_cache(self):
+        '''
+        Used for debugging minimization and analyzing per bin statistical n.p. and cost
+        '''
+        self._cache = {cat:dict(cost = 0, np_bb = 0) for cat in self._categories}
+        #self._cache['np_cost'] = 0
  
     # getter functions
     def get_selection_data(self, selection):
@@ -391,7 +395,7 @@ class FitData(object):
 
         return outdata
 
-    def mixture_model(self, params, category, process_amplitudes=None, no_sum=False):
+    def mixture_model(self, params, category, process_amplitudes=None, no_sum=False, randomize=False):
         '''
         produces full mixture model
         '''
@@ -432,6 +436,9 @@ class FitData(object):
 
         model_var    = model_tensor[:,:,1].sum(axis=0) 
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
+
+        if randomize:
+            model_val += np.sqrt(model_var)*np.random.randn(model_var.size)
 
         return model_val, model_var
         
@@ -491,6 +498,8 @@ class FitData(object):
                 bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
 
+                self._cache[category]['bb_penalty'] = bb_penalty
+
             # calculate the cost
             if cost_type == 'poisson':
                 mask = (model_val > 0) & (data_val > 0)
@@ -500,11 +509,13 @@ class FitData(object):
                 mask = data_var + model_var > 0
                 nll = 0.5*(data_val[mask] - model_val[mask])**2 / (data_var[mask] + model_var[mask])
 
+            self._cache[category]['cost'] = nll
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
         pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)
         cost += pi_param.sum()
+        #self._cache['np_cost'] = pi_param
 
         # require that the branching fractions sum to 1
         beta  = params[:4]

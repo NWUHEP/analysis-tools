@@ -147,9 +147,9 @@ if __name__ == '__main__':
             data_labels = ['muon']
         elif selection == 'emu':
             data_labels = ['electron', 'muon']
+
         labels = pt.selection_dataset_dict[selection]
         datasets = [d for l in data_labels + labels for d in pt.dataset_dict[l]]
-
         dm = pt.DataManager(input_dir     = ntuple_dir,
                             dataset_names = datasets,
                             selection     = selection,
@@ -190,7 +190,7 @@ if __name__ == '__main__':
             ### get signal and background templates
             templates = dict(data = dict(val = h, var = h))
             for label in labels:
-                if label in ['ttbar', 't', 'ww', 'wjets']: 
+                if label in ['ttbar', 't', 'ww_qg', 'wjets']: 
                     # divide ttbar and tW samples into 21 decay modes and
                     # w+jets sample into 6 decay modes
 
