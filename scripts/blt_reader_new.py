@@ -77,11 +77,11 @@ if __name__ == '__main__':
 
 
     ### Configuration ###
-    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['emu']
-    do_data     = True
-    do_mc       = True
-    do_syst     = False
+    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    #selections  = ['emu']
+    do_data     = False
+    do_mc       = False
+    do_syst     = True
     period      = 2016
 
     # configure datasets to run over
@@ -103,8 +103,6 @@ if __name__ == '__main__':
                         'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
                         #'ttbar_inclusive_herwig'
                         ]
-
-    dataset_list = ['ww_qq'] 
 
     ### Initialize multiprocessing queue and processes
     pool = Pool(processes = min(12, args.nprocesses))

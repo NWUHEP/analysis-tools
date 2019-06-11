@@ -249,7 +249,7 @@ class FitData(object):
 
                     # initialize mask for removing irrelevant processes
                     if ds not in templates.keys():
-                        if ds in ['ttbar', 't', 'ww']:
+                        if ds in ['ttbar', 't', 'ww_qg']:
                             process_mask.extend(21*[0,])
                         elif ds == 'wjets':
                             process_mask.extend(6*[0,])
@@ -301,7 +301,7 @@ class FitData(object):
                         data_tensor.append(process_array.T)
                         norm_mask.append(norm_vector)
 
-                    elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
+                    elif ds in ['ttbar', 't', 'ww_qg', 'wjets']: # datasets with sub-templates
                         full_sum, reduced_sum = 0, 0
                         for sub_ds, sub_template in template.items():
                             val, var = sub_template['val'].values, sub_template['var'].values
@@ -354,7 +354,7 @@ class FitData(object):
         Used for debugging minimization and analyzing per bin statistical n.p. and cost
         '''
         self._cache = {cat:dict(cost = 0, np_bb = 0) for cat in self._categories}
-        #self._cache['np_cost'] = 0
+        self._np_cost = 0
  
     # getter functions
     def get_selection_data(self, selection):
@@ -387,7 +387,7 @@ class FitData(object):
             if ds == 'data':
                 continue 
 
-            if ds in ['ttbar', 't', 'ww', 'wjets']:
+            if ds in ['ttbar', 't', 'ww_qg', 'wjets']:
                 for sub_ds, sub_template in template.items():
                     outdata += sub_template['val'].values
             else:
@@ -515,7 +515,7 @@ class FitData(object):
         # Add prior constraint terms for nuisance parameters 
         pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)
         cost += pi_param.sum()
-        #self._cache['np_cost'] = pi_param
+        self._np_cost = pi_param
 
         # require that the branching fractions sum to 1
         beta  = params[:4]

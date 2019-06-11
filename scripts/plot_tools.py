@@ -380,10 +380,10 @@ def fit_plot(bins, data_val, model_pre, model_post,
             transform=ax.transAxes
             )
     add_lumi_text(ax, 35.9)
-    #ax.legend()
+    ax.legend()
     #ax.legend(labels + [r'$\sigma_{\sf stat.}$', r'$\sigma_{\sf syst.}$', 'Data'])
 
-    #ax.grid()
+    ax.grid()
 
     ax = axes[1]
     ax.plot(bins[[0,-1]], [1, 1], 'k:')

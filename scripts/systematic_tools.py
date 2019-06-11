@@ -150,15 +150,8 @@ class SystematicTemplateGenerator():
         '''
         bins = self._binning
         feature = self._feature
+        pt_bins = [20, 25, 30, 40, 50, 60, np.inf]
 
-        # electron pt-dependent efficiency systematic
-        pt_bins = [20, 25, 30, 40, 50, 65, np.inf]
-        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
-        for ipt, pt_bin in enumerate(pt_bins[:-1]):
-            mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
-            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, feature, type='weight')
-            self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
-        
         if self._selection == 'ee':
 
             ## reco scale factor
@@ -174,8 +167,8 @@ class SystematicTemplateGenerator():
 
             ## id/iso scale factor
             w_nominal = df.weight/(df['lepton1_id_weight']*df['lepton2_id_weight'])
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
 
@@ -183,6 +176,14 @@ class SystematicTemplateGenerator():
             #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
             self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
 
+            # electron pt-dependent efficiency systematic
+            for ipt, pt_bin in enumerate(pt_bins[:-1]):
+                mask = abs(df.trailing_lepton_flavor) == 11
+                mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
+                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])
+                h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
+                self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
+        
         elif self._selection in ['etau', 'e4j']:
 
             ## reco scale factor
@@ -220,16 +221,25 @@ class SystematicTemplateGenerator():
             #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
             self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
 
-            ## id/iso scale factor
-            w_nominal = df.weight/df['lepton2_id_weight']
-            w_up      = w_nominal*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
-            w_down    = w_nominal*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
-            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
-            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            ## id/iso scale factor 
+            mask      = abs(df.leading_lepton_flavor) == 11
+            df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton2_id_weight'] + np.sqrt(df.loc[mask, 'lepton2_id_var']))/df.loc[mask, 'lepton2_id_weight']
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
+            df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton2_id_weight'] - np.sqrt(df.loc[mask, 'lepton2_id_var']))/(df.loc[mask, 'lepton2_id_weight'] + np.sqrt(df.loc[mask, 'lepton2_id_var']))
+            h_down, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
+            df.loc[mask, 'weight'] *= df.loc[mask, 'lepton2_id_weight']/(df.loc[mask, 'lepton2_id_weight'] - np.sqrt(df.loc[mask, 'lepton2_id_var']))
 
             #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
             #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
             self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = h_up, h_down
+
+            # electron pt-dependent efficiency systematic
+            for ipt, pt_bin in enumerate(pt_bins[:-1]):
+                mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1]) & (abs(df.trailing_lepton_flavor) == 11)
+                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])
+                h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
+                self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
+        
 
         ## electron energy scale
         scale = 0.002 # need reference
@@ -256,46 +266,83 @@ class SystematicTemplateGenerator():
 
         bins = self._binning
         feature = self._feature
-
-        # pt-dependent efficiency systematic
         pt_bins = [10, 15, 20, 25, 30, 40, 50, 65, np.inf]
-        sigma   = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01] # statistical only
-        for ipt, pt_bin in enumerate(pt_bins[:-1]):
-            mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
-            h_up, h_down = conditional_scaling(df, self._binning, sigma[ipt], mask, feature, type='weight')
-            self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
 
-        ## id scale factor
         if self._selection == 'mumu':
-            w_nominal = df.weight/(df['lepton1_id_weight']*df['lepton2_id_weight'])
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] + np.sqrt(df['lepton2_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))*(df['lepton2_id_weight'] - np.sqrt(df['lepton2_id_var']))
-        elif self._selection in ['mutau', 'mu4j', 'emu']:
-            w_nominal = df.weight/df['lepton1_id_weight']
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
 
-        h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
-        h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
-
-        #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
-        self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
-
-        ## iso scale factor (called "reco" in ntuples)
-        if self._selection == 'mumu':
+            ## iso scale factor (called "reco" in ntuples)
             w_nominal = df.weight/(df['lepton1_reco_weight']*df['lepton2_reco_weight'])
             w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] + np.sqrt(df['lepton2_reco_var']))
             w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] - np.sqrt(df['lepton2_reco_var']))
-        elif self._selection in ['mutau', 'mu4j', 'emu']:
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self._df_sys['eff_iso_mu_up'], self._df_sys['eff_iso_mu_down'] = h_up, h_down
+
+            ## id scale factor (lead muon)
+            w_nominal = df.weight/df['lepton1_id_weight']
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
+
+            # muon pt-dependent efficiency systematic
+            for ipt, pt_bin in enumerate(pt_bins[:-1]):
+                mask = abs(df.trailing_lepton_flavor) == 13
+                mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
+                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])
+                h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
+                self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
+
+
+        elif self._selection in ['mutau', 'mu4j']:
+            ## iso scale factor (called "reco" in ntuples)
             w_nominal = df.weight/df['lepton1_reco_weight']
             w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))
             w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self._df_sys['eff_iso_mu_up'], self._df_sys['eff_iso_mu_down'] = h_up, h_down
 
-        h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
-        h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            ## id scale factor (lead muon)
+            w_nominal = df.weight/df['lepton1_id_weight']
+            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
+            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
 
-        #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
-        self._df_sys['eff_iso_mu_up'], self._df_sys['eff_iso_mu_down'] = h_up, h_down
+        elif self._selection == 'emu':
+            ## reco scale factor
+            w_nominal = df.weight/df['lepton1_reco_weight']
+            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))
+            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
+            self._df_sys['eff_reco_mu_up'], self._df_sys['eff_reco_mu_down'] = h_up, h_down
+
+            ## id/iso scale factor 
+            mask      = abs(df.leading_lepton_flavor) == 13
+            df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton1_id_weight'] + np.sqrt(df.loc[mask, 'lepton1_id_var']))/df.loc[mask, 'lepton1_id_weight']
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
+            df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton1_id_weight'] - np.sqrt(df.loc[mask, 'lepton1_id_var']))/(df.loc[mask, 'lepton1_id_weight'] + np.sqrt(df.loc[mask, 'lepton1_id_var']))
+            h_down, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
+            df.loc[mask, 'weight'] *= df.loc[mask, 'lepton1_id_weight']/(df.loc[mask, 'lepton1_id_weight'] - np.sqrt(df.loc[mask, 'lepton1_id_var']))
+
+            #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
+            #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
+            self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
+
+            # electron pt-dependent efficiency systematic
+            for ipt, pt_bin in enumerate(pt_bins[:-1]):
+                mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1]) & (abs(df.trailing_lepton_flavor) == 13)
+                scale = np.sqrt(df.loc[mask, 'lepton1_id_var'])
+                h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
+                self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
+
 
         ## muon energy scale
         scale = 0.002 # need reference
