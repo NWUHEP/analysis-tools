@@ -35,7 +35,7 @@ dataset_dict = dict(
                                 'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
                                 'qcd_ht2000'
                                 ],
-                    ww_qg    = ['ww_qq', 'ww_gg'],
+                    ww       = ['ww_qq', 'ww_gg'],
                     diboson  = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
                     fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
@@ -45,16 +45,16 @@ dataset_dict = dict(
                                 'electron_2016H_fakes'
                                 ],
                     fakes_ss = ['fakes_ss']
-                    )
+                   )
 
 selection_dataset_dict = dict(
-                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson'],
-                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson'],
-                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes_ss'],
-                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes_ss'],
-                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes_ss'],
-                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes'],
-                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww_qg', 'diboson', 'fakes'],
+                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
+                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
+                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
+                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
                               )
 
 cuts = dict(
@@ -507,10 +507,6 @@ class DataManager():
             if self._cuts != '':
                 df = df.query(self._cuts).copy()
 
-            ### only keep certain features ###
-            if self._features is not None:
-                df = df[self._features + ['weight']]
-
             init_count        = self._event_counts[dataset][0]
             lut_entry         = self._lut_datasets.loc[dataset]
             label             = lut_entry.label
@@ -538,6 +534,10 @@ class DataManager():
 
                 df.loc[:, 'weight'] *= scale
 
+            ### only keep certain features ###
+            if self._features is not None:
+                df = df[[f for f in self._features if f in df.columns]]
+
             ### combined datasets if required ###
             if self._combine:
                 if label not in dataframes.keys():
@@ -552,8 +552,6 @@ class DataManager():
         if 'data' in dataframes.keys():
             df = dataframes['data']
             dataframes['data'] = df.drop_duplicates(subset=['run_number', 'event_number'])
-
-
 
         self._dataframes = dataframes
 
@@ -625,7 +623,7 @@ class DataManager():
             for dataset in dataset_names:
                 df = dataframes[dataset]
                 if condition != '' and condition != 'preselection':
-                    df = df.query(condition).copy()
+                    df = df.query(condition)
 
                 if mc_scale:
                     n   = df.weight.sum()

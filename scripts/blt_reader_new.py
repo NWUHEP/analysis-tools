@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww_qg', 't', 'wjets']
+    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets']
 
     dataset_list = []
     if do_data:

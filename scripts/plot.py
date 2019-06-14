@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     selection = args.selection
     data_labels  = ['muon', 'electron']
-    model_labels = ['diboson', 'ww_qg', 'zjets_alt', 'wjets', 't', 'ttbar']
+    model_labels = ['diboson', 'ww', 'zjets_alt', 'wjets', 't', 'ttbar']
 
     if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
     plot_manager.set_output_path(f'{output_path}/inclusive')
-    plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww_qg'], conditions,
+    plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                            cut         = inclusive_cut,
                                            legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
                                            c_colors    = colors[:len(conditions) - 1] + ['gray'],
@@ -167,7 +167,7 @@ if __name__ == '__main__':
         #plot_manager.make_overlays(features, do_ratio=True, cut=cuts[category])
 
         plot_manager.set_output_path(f'{output_path}/{category}_signal')
-        plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww_qg'], conditions,
+        plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                                cut        = cuts[category],
                                                legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
                                                #c_colors   = list(decay_map.colors) + ['gray'],

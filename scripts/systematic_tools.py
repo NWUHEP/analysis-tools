@@ -100,6 +100,23 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     
     return h_up, h_down
 
+def ttbar_systematics(h_nominal, dm, cut):
+    '''
+    Account for systematics due to modeling of ttbar.
+    '''
+    syst_names = ['isr', 'fsr', 'hdamp', 'tune']
+    for syst in syst_names:
+        df_up     = dm.get_dataframe(f'ttbar_{syst}up', cut)
+        df_down   = dm.get_dataframe(f'ttbar_{syst}down', cut)
+        h_up, _   = np.histogram(df_up[self._feature], bins=self._binning, weights=df_up.weight)
+        h_down, _ = np.histogram(df_down[self._feature], bins=self._binning, weights=df_down.weight)
+
+        if syst == 'fsr':
+            h_up   = h_nominal + (h_up - h_nominal)/np.sqrt(2)
+            h_down = h_nominal + (h_down - h_nominal)/np.sqrt(2)
+
+        self._df_sys[f'{syst}_up'], self._df_sys[f'{syst}_down'] = h_up, h_down
+
 class SystematicTemplateGenerator():
     def __init__(self, selection, feature, binning, h_nominal):
         self._selection = selection
@@ -166,7 +183,7 @@ class SystematicTemplateGenerator():
             self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
 
             ## id/iso scale factor
-            w_nominal = df.weight/(df['lepton1_id_weight']*df['lepton2_id_weight'])
+            w_nominal = df.weight/df['lepton1_id_weight']
             w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
             w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
@@ -178,9 +195,8 @@ class SystematicTemplateGenerator():
 
             # electron pt-dependent efficiency systematic
             for ipt, pt_bin in enumerate(pt_bins[:-1]):
-                mask = abs(df.trailing_lepton_flavor) == 11
                 mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
-                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])
+                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])/df.loc[mask, 'lepton2_id_weight']
                 h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
                 self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
         
@@ -222,11 +238,11 @@ class SystematicTemplateGenerator():
             self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
 
             ## id/iso scale factor 
-            mask      = abs(df.leading_lepton_flavor) == 11
+            mask = abs(df.lead_lepton_flavor) == 11
             df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton2_id_weight'] + np.sqrt(df.loc[mask, 'lepton2_id_var']))/df.loc[mask, 'lepton2_id_weight']
-            h_up, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
+            h_up, _ = np.histogram(df[feature], bins=bins, weights=df['weight'])
             df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton2_id_weight'] - np.sqrt(df.loc[mask, 'lepton2_id_var']))/(df.loc[mask, 'lepton2_id_weight'] + np.sqrt(df.loc[mask, 'lepton2_id_var']))
-            h_down, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=df['weight'])
             df.loc[mask, 'weight'] *= df.loc[mask, 'lepton2_id_weight']/(df.loc[mask, 'lepton2_id_weight'] - np.sqrt(df.loc[mask, 'lepton2_id_var']))
 
             #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
@@ -236,10 +252,9 @@ class SystematicTemplateGenerator():
             # electron pt-dependent efficiency systematic
             for ipt, pt_bin in enumerate(pt_bins[:-1]):
                 mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1]) & (abs(df.trailing_lepton_flavor) == 11)
-                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])
+                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])/df.loc[mask, 'lepton2_id_weight']
                 h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
                 self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
-        
 
         ## electron energy scale
         scale = 0.002 # need reference
@@ -256,8 +271,6 @@ class SystematicTemplateGenerator():
             df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
 
         self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
-
-        return
 
     def muon_systematics(self, df):
         '''
@@ -288,9 +301,8 @@ class SystematicTemplateGenerator():
 
             # muon pt-dependent efficiency systematic
             for ipt, pt_bin in enumerate(pt_bins[:-1]):
-                mask = abs(df.trailing_lepton_flavor) == 13
-                mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1])
-                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])
+                mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1]) 
+                scale = np.sqrt(df.loc[mask, 'lepton2_id_var'])/df.loc[mask, 'lepton2_id_weight']
                 h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
                 self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
 
@@ -325,7 +337,7 @@ class SystematicTemplateGenerator():
             self._df_sys['eff_reco_mu_up'], self._df_sys['eff_reco_mu_down'] = h_up, h_down
 
             ## id/iso scale factor 
-            mask      = abs(df.leading_lepton_flavor) == 13
+            mask      = abs(df.lead_lepton_flavor) == 13
             df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton1_id_weight'] + np.sqrt(df.loc[mask, 'lepton1_id_var']))/df.loc[mask, 'lepton1_id_weight']
             h_up, _   = np.histogram(df[feature], bins=bins, weights=df['weight'])
             df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton1_id_weight'] - np.sqrt(df.loc[mask, 'lepton1_id_var']))/(df.loc[mask, 'lepton1_id_weight'] + np.sqrt(df.loc[mask, 'lepton1_id_var']))
@@ -336,10 +348,10 @@ class SystematicTemplateGenerator():
             #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
             self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
 
-            # electron pt-dependent efficiency systematic
+            # muon pt-dependent efficiency systematic
             for ipt, pt_bin in enumerate(pt_bins[:-1]):
                 mask = (df[feature] > pt_bin) & (df[feature] < pt_bins[ipt+1]) & (abs(df.trailing_lepton_flavor) == 13)
-                scale = np.sqrt(df.loc[mask, 'lepton1_id_var'])
+                scale = np.sqrt(df.loc[mask, 'lepton1_id_var'])/df.loc[mask, 'lepton1_id_weight']
                 h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
                 self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
 
@@ -359,8 +371,6 @@ class SystematicTemplateGenerator():
             df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
 
         self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
-
-        return
 
     def tau_j_misid_systematics(self, df):
         '''
@@ -386,8 +396,6 @@ class SystematicTemplateGenerator():
         h_down, _ = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 - tau_misid_err))
         self._df_sys[f'misid_tau_h_up'], self._df_sys[f'misid_tau_h_down'] = h_up, h_down
 
-        return
-
     def tau_e_misid_systematics(self, df):
         '''
         Generates morphing templates for an electron misID'd as a hadronic tau. 
@@ -401,8 +409,6 @@ class SystematicTemplateGenerator():
         h_up, _   = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 + tau_misid_err))
         h_down, _ = np.histogram(df.lepton2_pt, bins=self._binning, weights=df.weight*(1 - tau_misid_err))
         self._df_sys[f'misid_tau_e_up'], self._df_sys[f'misid_tau_e_down'] = h_up, h_down
-
-        return
 
     def tau_systematics(self, df):
         '''
@@ -439,8 +445,6 @@ class SystematicTemplateGenerator():
             #self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = y_up, y_down
             self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up, h_down
 
-        return
-
     def misc_systematics(self, df):
         '''
         Generates templates for:
@@ -456,8 +460,6 @@ class SystematicTemplateGenerator():
         # pileup
         h_up, h_down = pileup_morph(df, feature, bins)
         self._df_sys['pileup_up'], self._df_sys['pileup_down'] = h_up, h_down
-
-        return
 
     def theory_systematics(self, df, label, njets, dm_syst=None):
         '''
@@ -517,14 +519,14 @@ class SystematicTemplateGenerator():
         else: # split processes where ME influences jet multiplicity (Z, W, etc.)
             self._df_sys[f'xs_{label}_qcd_scale_{njets}_up'], self._df_sys[f'xs_{label}_qcd_scale_{njets}_down'] = h_up, h_down
 
-        return
-
     def top_pt_systematics(self, df):
         '''
         Variation from reweighting the top quark pt spectrum in ttbar events
-        (https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting).  The
-        nominal case is with the weights, down variation is no weight, up
-        variation is twice the nominal weight.
+        (https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting).  Not sure
+        what exactly I'm supposed to do here.  My understanding is there are
+        two cases: no weight and with weight.  Effectively, this will mean
+        there is an up variation (weighted) and nominal case (no weight), but
+        no downward variation. \shrug 
 
         Parameters:
         ===========
@@ -532,9 +534,27 @@ class SystematicTemplateGenerator():
         cut: jet category
         '''
 
-        w_up      = (df.weight/df.top_pt_weight)*(1 + 2*(df.top_pt_weight - 1))
-        w_down    = (df.weight/df.top_pt_weight)
+        w_up      = df.weight*df.top_pt_weight
+        w_down    = df.weight
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
         h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down*(df.weight.sum()/w_down.sum()))
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
+
+    def ww_pt_systematics(self, df):
+        '''
+        '''
+        
+        # scale variation
+        w_up      = df.weight*df.ww_pt_scale_up
+        w_down    = df.weight*df.ww_pt_scale_up
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up)
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down)
+        self._df_sys['ww_scale_up'], self._df_sys['ww_scale_down'] = h_up, h_down
+
+        # resum variation
+        w_up      = df.weight*df.ww_pt_resum_up
+        w_down    = df.weight*df.ww_pt_resum_up
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up)
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down)
+        self._df_sys['ww_resum_up'], self._df_sys['ww_resum_down'] = h_up, h_down
 

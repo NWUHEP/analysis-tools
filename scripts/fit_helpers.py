@@ -249,7 +249,7 @@ class FitData(object):
 
                     # initialize mask for removing irrelevant processes
                     if ds not in templates.keys():
-                        if ds in ['ttbar', 't', 'ww_qg']:
+                        if ds in ['ttbar', 't', 'ww']:
                             process_mask.extend(21*[0,])
                         elif ds == 'wjets':
                             process_mask.extend(6*[0,])
@@ -301,7 +301,7 @@ class FitData(object):
                         data_tensor.append(process_array.T)
                         norm_mask.append(norm_vector)
 
-                    elif ds in ['ttbar', 't', 'ww_qg', 'wjets']: # datasets with sub-templates
+                    elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
                         full_sum, reduced_sum = 0, 0
                         for sub_ds, sub_template in template.items():
                             val, var = sub_template['val'].values, sub_template['var'].values
@@ -336,15 +336,12 @@ class FitData(object):
                             data_tensor.append(process_array.T)
                             norm_mask.append(norm_vector)
 
-                shape_mask = params.query('type == "shape"')[sel].values.astype(bool)
-
-                model_tensor = np.stack(data_tensor)
                 self._model_data[f'{sel}_{category}'] = dict(
                                                              data             = (data_val, data_var),
-                                                             model            = model_tensor,
+                                                             model            = np.stack(data_tensor),
                                                              process_mask     = np.array(process_mask, dtype=bool),
-                                                             shape_param_mask = shape_mask,
-                                                             norm_mask      = np.stack(norm_mask)
+                                                             shape_param_mask = params.query('type == "shape"')[sel].values.astype(bool),
+                                                             norm_mask        = np.stack(norm_mask)
                                                              )
 
         return
@@ -387,7 +384,7 @@ class FitData(object):
             if ds == 'data':
                 continue 
 
-            if ds in ['ttbar', 't', 'ww_qg', 'wjets']:
+            if ds in ['ttbar', 't', 'ww', 'wjets']:
                 for sub_ds, sub_template in template.items():
                     outdata += sub_template['val'].values
             else:

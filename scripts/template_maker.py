@@ -9,6 +9,7 @@ from skhep.modeling import bayesian_blocks
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 import scripts.systematic_tools as st
+from scripts.blt_reader import jec_source_names, btag_source_names
 
 np.set_printoptions(precision=2)
 
@@ -48,7 +49,6 @@ def get_binning(dm, feature, cuts, dataset='data', do_bbb=True):
 
     return binning
 
-
 def make_templates(df, binning):
 
     # get nominal template
@@ -63,13 +63,11 @@ def make_templates(df, binning):
 
     return df_template
     
-def make_morphing_templates(df, selection, label, feature, binning, h_nominal, cat_items):
+def make_morphing_templates(df, label, syst_gen, cat_items):
     
-    dataset = label[0]
+    dataset    = label[0]
     decay_mode = label[1]
-
-    # initialize systematics generator
-    syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, h_nominal)
+    selection  = syst_gen._selection
 
     # calculate jet systematic morphing w/o jet cut 
     syst_gen.jes_systematics(df, cat_items.jet_cut)
@@ -90,7 +88,7 @@ def make_morphing_templates(df, selection, label, feature, binning, h_nominal, c
             syst_gen.tau_systematics(df)
         elif decay_mode in [16, 17, 18, 19, 20, 21]:
             syst_gen.tau_j_misid_systematics(df)
-        elif decay_mode in [1, 3, 6, 10, 11, 13]: #
+        elif decay_mode in [1, 3, 6, 10, 11, 13]:
             syst_gen.tau_e_misid_systematics(df)
         
     # theory systematics
@@ -99,6 +97,15 @@ def make_morphing_templates(df, selection, label, feature, binning, h_nominal, c
 
         if dataset == 'ttbar':
             syst_gen.top_pt_systematics(df)
+
+            if cat_items.cut == None:
+                cut = f'gen_cat == {decay_mode} and {cat_items.jet_cut}'
+            else:
+                cut = f'gen_cat == {decay_mode} and {cat_items.jet_cut} and {cat_items.cut}'
+
+    # ww pt
+    if dataset == 'ww' and selection == 'emu':
+        syst_gen.ww_pt_systematics(df)
 
     return syst_gen.get_syst_dataframe()
 
@@ -132,8 +139,42 @@ if __name__ == '__main__':
     # sigal samples are split according the decay of the W bosons
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
 
+    # features to keep in memory
+    feature_list = [
+                    'lepton1_pt', 'lepton2_pt', 
+                    'lead_lepton_pt','trailing_lepton_pt',
+                    'n_jets', 'n_bjets', 'n_pu',
+
+                    'gen_cat', 'weight',
+                    'lepton1_reco_weight', 'lepton2_reco_weight', 
+                    'lepton1_id_weight', 'lepton2_id_weight',
+                    'trigger_weight', 'pileup_weight', 'top_pt_weight',
+                    'z_pt_weight', 'ww_pt_weight', 'event_weight', 
+
+                    'qcd_weight_nominal', 'qcd_weight_nom_up', 'qcd_weight_nom_down',
+                    'qcd_weight_up_nom', 'qcd_weight_up_up', 'qcd_weight_down_nom',
+                    'qcd_weight_down_down', 'pdf_var', 'alpha_s_err' 
+
+                    'ww_pt_scale_up', 'ww_pt_scale_down', 'ww_pt_resum_up',
+                    'ww_pt_resum_down', 'lepton1_reco_var', 'lepton2_reco_var',
+
+                    'lepton1_id_var', 'lepton2_id_var',
+                    'lepton1_reco_var', 'lepton2_reco_var',
+
+                    'n_jets_jer_up', 'n_jets_jer_down',
+                    'n_bjets_jer_up', 'n_bjets_jer_down',
+                    'n_bjets_ctag_up', 'n_bjets_ctag_down',
+                    'n_bjets_mistag_up', 'n_bjets_mistag_down'
+                   ]
+    feature_list += [f'n_jets_jes_{n}_up' for n in jec_source_names]
+    feature_list += [f'n_jets_jes_{n}_down' for n in jec_source_names]
+    feature_list += [f'n_bjets_jes_{n}_up' for n in jec_source_names]
+    feature_list += [f'n_bjets_jes_{n}_down' for n in jec_source_names]
+    feature_list += [f'n_bjets_btag_{n}_up' for n in btag_source_names]
+    feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
+
     #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['ee', 'mumu']
+    selections = ['mu4j']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -147,22 +188,6 @@ if __name__ == '__main__':
             data_labels = ['muon']
         elif selection == 'emu':
             data_labels = ['electron', 'muon']
-
-        labels = pt.selection_dataset_dict[selection]
-        datasets = [d for l in data_labels + labels for d in pt.dataset_dict[l]]
-        dm = pt.DataManager(input_dir     = ntuple_dir,
-                            dataset_names = datasets,
-                            selection     = selection,
-                            scale         = 35.9e3,
-                            cuts          = pt.cuts[selection],
-                            )
-
-        #dm_syst = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics/{selection}_2016',
-        #                         dataset_names = datasets_ttbar_syst,
-        #                         selection     = selection,
-        #                         scale         = 35.9e3,
-        #                         cuts          = pt.cuts[selection]
-        #                         )
 
         data = dict()
         selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
@@ -178,6 +203,13 @@ if __name__ == '__main__':
                 full_cut = f'{cat_items.cut} and {cat_items.jet_cut}'
 
             ### calculate binning based on data sample
+            datasets = [d for l in data_labels for d in pt.dataset_dict[l]]
+            dm = pt.DataManager(input_dir     = ntuple_dir,
+                                dataset_names = datasets,
+                                selection     = selection,
+                                scale         = 35.9e3,
+                                cuts          = pt.cuts[selection],
+                               )
 
             df_data = dm.get_dataframe('data', full_cut)
             if df_data.shape[0] == 0:
@@ -189,8 +221,16 @@ if __name__ == '__main__':
 
             ### get signal and background templates
             templates = dict(data = dict(val = h, var = h))
-            for label in labels:
-                if label in ['ttbar', 't', 'ww_qg', 'wjets']: 
+            for label in pt.selection_dataset_dict[selection]:
+                dm = pt.DataManager(input_dir     = ntuple_dir,
+                                    dataset_names = pt.dataset_dict[label],
+                                    selection     = selection,
+                                    scale         = 35.9e3,
+                                    cuts          = pt.cuts[selection],
+                                    features      = feature_list
+                                   )
+
+                if label in ['ttbar', 't', 'ww', 'wjets']: 
                     # divide ttbar and tW samples into 21 decay modes and
                     # w+jets sample into 6 decay modes
 
@@ -221,11 +261,11 @@ if __name__ == '__main__':
                         else:
                             df = dm.get_dataframe(label, f'{cat_items.cut} and gen_cat == {idecay}')
 
-                        df_syst = make_morphing_templates(df, selection, (label, idecay), 
-                                                          feature, binning, 
-                                                          df_template['val'].values, 
-                                                          cat_items
-                                                          )
+
+                        # initialize systematics generator
+                        syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, df_template['val'].values)
+
+                        df_syst = make_morphing_templates(df, (label, idecay), syst_gen, cat_items)
                         mode_dict[decay_data.decay] = pd.concat([df_template, df_syst], axis=1)
 
                     templates[label] = mode_dict
@@ -255,11 +295,8 @@ if __name__ == '__main__':
                         df = dm.get_dataframe(label, cat_items.cut)
 
 
-                    df_syst = make_morphing_templates(df, selection, (label, None), 
-                                                      feature, binning, 
-                                                      df_template['val'].values, 
-                                                      cat_items
-                                                      )
+                    syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, df_template['val'].values)
+                    df_syst = make_morphing_templates(df, (label, None), syst_gen, cat_items)
 
                     if label == 'fakes_ss':
                         label = 'fakes'
@@ -267,6 +304,25 @@ if __name__ == '__main__':
                     templates[label] = pd.concat([df_template, df_syst], axis=1)
 
             data[category] = dict(bins = binning, templates = templates)
+
+        # Additional ttbar-specific systematics
+#        dm = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics/{selection}_2016',
+#                            dataset_names = datasets_ttbar_syst,
+#                            selection     = selection,
+#                            scale         = 35.9e3,
+#                            cuts          = f'{pt.cuts[selection]} and {full_cut}',
+#                            features      = feature_list
+#                           )
+#        for category in tqdm(selection_categories,
+#                             desc       = 'binning jet categories...',
+#                             unit_scale = True,
+#                             ncols      = 75,
+#                            ):
+#            cat_items = pt.categories[category]
+#            if cat_items.cut is None:
+#                full_cut = f'{cat_items.jet_cut}'
+#            else:
+#                full_cut = f'{cat_items.cut} and {cat_items.jet_cut}'
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)
