@@ -25,7 +25,7 @@ xs_zjets_alt_qcd_scale_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,shape,1,misc
 xs_ttbar_pdf,$t\bar{t}$ norm. (PDF),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_alpha_s,$t\bar{t}$ norm. ($\alpha_{s}$),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_qcd_scale,$t\bar{t}$ norm. ($\mu_{f}/\mu_{r}$),0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-eff_tau,$\epsilon_{\tau}$,0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
+eff_tau_id,$\epsilon_{\tau}$,0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_0,$\epsilon_{\tau}$ ($20 \leq p_{T} < 25$),0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_1,$\epsilon_{\tau}$ ($25 \leq p_{T} < 30$),0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_2,$\epsilon_{\tau}$ ($30 \leq p_{T} < 40$),0,1,shape,1,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
@@ -69,8 +69,9 @@ fsr,FSR,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 hdamp,ME-PS,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 tune,UE/MPI,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
-ww_resum,WW $p_{T}$ (renorm),0,1,shape,1,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
-z_pt,Z $p_{T}$,0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
+ww_resum,WW $p_{T}$ (resum),0,1,shape,1,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
+z_pt,Z $p_{T}$,0,1,shape,0,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
+top_pt,t $p_{T}$,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 btag_bfragmentation,b-tag: b frag.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
 btag_btempcorr,b-tag: b templ. corr.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
 btag_cb,b-tag:JP corr,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1

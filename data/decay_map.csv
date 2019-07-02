@@ -1,21 +1,21 @@
-id,decay,fancy_label,colors,sig_twotau,sig_onetau,sig_notau,ee,mumu,emu,etau,mutau,e4j,mu4j
-1,we_we,$\sf t\bar{t}/tW/WW\rightarrow ee$,#3182bd,0,0,1,1,0,0,0,0,0,0
-2,wmu_wmu,$\sf t\bar{t}/tW/WW\rightarrow \mu\mu$,#e6550d,0,0,1,0,1,0,0,0,0,0
-3,we_wmu,$\sf t\bar{t}/tW/WW\rightarrow e\mu$,#31a354,0,0,1,0,0,1,0,0,0,0
+id,decay,fancy_label,colors,dileptonic,semileptonic,hadronic,ee,mumu,emu,etau,mutau,e4j,mu4j
+1,we_we,$\sf t\bar{t}/tW/WW\rightarrow ee$,#3182bd,1,0,0,1,0,0,0,0,0,0
+2,wmu_wmu,$\sf t\bar{t}/tW/WW\rightarrow \mu\mu$,#e6550d,1,0,0,0,1,0,0,0,0,0
+3,we_wmu,$\sf t\bar{t}/tW/WW\rightarrow e\mu$,#31a354,1,0,0,0,0,1,0,0,0,0
 4,wtau_e_wtau_e,$\sf t\bar{t}/tW/WW\rightarrow \tau_{e}\tau_{e}$,#6baed6,1,0,0,1,0,0,0,0,0,0
 5,wtau_mu_wtau_mu,$\sf t\bar{t}/tW/WW\rightarrow \tau_{\mu}\tau_{\mu}$,#fd8d3c,1,0,0,0,1,0,0,0,0,0
 6,wtau_e_wtau_mu,$\sf t\bar{t}/tW/WW\rightarrow \tau_{e}\tau_{\mu}$,#74c476,1,0,0,0,0,1,0,0,0,0
 7,wtau_e_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow \tau_{e}\tau_{h}$,#756bb1,1,0,0,0,0,0,1,0,1,0
 8,wtau_mu_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow \tau_{\mu}\tau_{h}$,#636363,1,0,0,0,0,0,0,1,0,1
 9,wtau_h_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow \tau_{h}\tau_{h}$,k,1,0,0,0,0,0,0,0,0,0
-10,we_wtau_e,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{e}$,#9ecae1,0,1,0,1,0,0,0,0,0,0
-11,we_wtau_mu,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{\mu}$,#a1d99b,0,1,0,0,0,1,0,0,0,0
-12,we_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{h}$,#9e9ac8,0,1,0,0,0,0,1,0,1,0
-13,wmu_wtau_e,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{e}$,#c7e9c0,0,1,0,0,0,1,0,0,0,0
-14,wmu_wtau_mu,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{\mu}$,#fdae6b,0,1,0,0,1,0,0,0,0,0
-15,wmu_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{h}$,#969696,0,1,0,0,0,0,0,1,0,1
-16,we_wh,$\sf t\bar{t}/tW/WW\rightarrow eh$,#bcbddc,0,0,1,0,0,0,1,0,1,0
-17,wmu_wh,$\sf t\bar{t}/tW/WW\rightarrow \mu h$,#bdbdbd,0,0,1,0,0,0,0,1,0,1
+10,we_wtau_e,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{e}$,#9ecae1,1,0,0,1,0,0,0,0,0,0
+11,we_wtau_mu,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{\mu}$,#a1d99b,1,0,0,0,0,1,0,0,0,0
+12,we_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{h}$,#9e9ac8,1,0,0,0,0,0,1,0,1,0
+13,wmu_wtau_e,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{e}$,#c7e9c0,1,0,0,0,0,1,0,0,0,0
+14,wmu_wtau_mu,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{\mu}$,#fdae6b,1,0,0,0,1,0,0,0,0,0
+15,wmu_wtau_h,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{h}$,#969696,1,0,0,0,0,0,0,1,0,1
+16,we_wh,$\sf t\bar{t}/tW/WW\rightarrow eh$,#bcbddc,0,1,0,0,0,0,1,0,1,0
+17,wmu_wh,$\sf t\bar{t}/tW/WW\rightarrow \mu h$,#bdbdbd,0,1,0,0,0,0,0,1,0,1
 18,wtau_e_wh,$\sf t\bar{t}/tW/WW\rightarrow \tau_{e} h$,#dadaeb,0,1,0,0,0,0,1,0,1,0
 19,wtau_mu_wh,$\sf t\bar{t}/tW/WW\rightarrow \tau_{\mu} h$,#d9d9d9,0,1,0,0,0,0,0,1,0,1
 20,wtau_h_wh,$\sf t\bar{t}/tW/WW\rightarrow \tau_{h} h$,k,0,1,0,0,0,0,0,0,0,0

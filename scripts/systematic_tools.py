@@ -100,22 +100,23 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     
     return h_up, h_down
 
-def ttbar_systematics(h_nominal, dm, cut):
+def ttbar_systematics(h_nominal, dm, cut, df_syst, feature, binning):
     '''
     Account for systematics due to modeling of ttbar.
     '''
+
     syst_names = ['isr', 'fsr', 'hdamp', 'tune']
     for syst in syst_names:
         df_up     = dm.get_dataframe(f'ttbar_{syst}up', cut)
         df_down   = dm.get_dataframe(f'ttbar_{syst}down', cut)
-        h_up, _   = np.histogram(df_up[self._feature], bins=self._binning, weights=df_up.weight)
-        h_down, _ = np.histogram(df_down[self._feature], bins=self._binning, weights=df_down.weight)
+        h_up, _   = np.histogram(df_up[feature], bins=binning, weights=df_up.weight)
+        h_down, _ = np.histogram(df_down[feature], bins=binning, weights=df_down.weight)
 
         if syst == 'fsr':
             h_up   = h_nominal + (h_up - h_nominal)/np.sqrt(2)
             h_down = h_nominal + (h_down - h_nominal)/np.sqrt(2)
 
-        self._df_sys[f'{syst}_up'], self._df_sys[f'{syst}_down'] = h_up, h_down
+        df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
 class SystematicTemplateGenerator():
     def __init__(self, selection, feature, binning, h_nominal):
@@ -172,22 +173,20 @@ class SystematicTemplateGenerator():
         if self._selection == 'ee':
 
             ## reco scale factor
-            w_nominal = df.weight/(df['lepton1_reco_weight']*df['lepton2_reco_weight'])
-            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] + np.sqrt(df['lepton2_reco_var']))
-            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))*(df['lepton2_reco_weight'] - np.sqrt(df['lepton2_reco_var']))
-            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
-            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            w_up      = df['weight']*(1 + np.sqrt(df['lepton1_reco_var'])/df['lepton1_reco_weight'])*(1 + np.sqrt(df['lepton2_reco_var'])/df['lepton2_reco_weight'])
+            w_down    = df['weight']*(1 - np.sqrt(df['lepton1_reco_var'])/df['lepton1_reco_weight'])*(1 - np.sqrt(df['lepton2_reco_var'])/df['lepton2_reco_weight'])
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up.values)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down.values)
 
             #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
             #self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = y_up, y_down
             self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
 
             ## id/iso scale factor
-            w_nominal = df.weight/df['lepton1_id_weight']
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
-            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
-            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+            w_up      = df['weight']*(1 + np.sqrt(df['lepton1_id_var'])/df['lepton1_id_weight'])
+            w_down    = df['weight']*(1 - np.sqrt(df['lepton1_id_var'])/df['lepton1_id_weight'])
+            h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up.values)
+            h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down.values)
 
             #y_up, y_down = variation_template_smoothing(self._binning, self._h, h_up, h_down)
             #self._df_sys['eff_id_e_up'], self._df_sys['eff_id_e_down'] = y_up, y_down
@@ -238,7 +237,7 @@ class SystematicTemplateGenerator():
             self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
 
             ## id/iso scale factor 
-            mask = abs(df.lead_lepton_flavor) == 11
+            mask = (abs(df.lead_lepton_flavor) == 11)
             df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton2_id_weight'] + np.sqrt(df.loc[mask, 'lepton2_id_var']))/df.loc[mask, 'lepton2_id_weight']
             h_up, _ = np.histogram(df[feature], bins=bins, weights=df['weight'])
             df.loc[mask, 'weight'] *= (df.loc[mask, 'lepton2_id_weight'] - np.sqrt(df.loc[mask, 'lepton2_id_var']))/(df.loc[mask, 'lepton2_id_weight'] + np.sqrt(df.loc[mask, 'lepton2_id_var']))
@@ -309,17 +308,15 @@ class SystematicTemplateGenerator():
 
         elif self._selection in ['mutau', 'mu4j']:
             ## iso scale factor (called "reco" in ntuples)
-            w_nominal = df.weight/df['lepton1_reco_weight']
-            w_up      = w_nominal*(df['lepton1_reco_weight'] + np.sqrt(df['lepton1_reco_var']))
-            w_down    = w_nominal*(df['lepton1_reco_weight'] - np.sqrt(df['lepton1_reco_var']))
+            w_up      = df['weight']*(1 + np.sqrt(df['lepton1_reco_var'])/df['lepton1_reco_weight'])
+            w_down    = df['weight']*(1 - np.sqrt(df['lepton1_reco_var'])/df['lepton1_reco_weight'])
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self._df_sys['eff_iso_mu_up'], self._df_sys['eff_iso_mu_down'] = h_up, h_down
 
             ## id scale factor (lead muon)
-            w_nominal = df.weight/df['lepton1_id_weight']
-            w_up      = w_nominal*(df['lepton1_id_weight'] + np.sqrt(df['lepton1_id_var']))
-            w_down    = w_nominal*(df['lepton1_id_weight'] - np.sqrt(df['lepton1_id_var']))
+            w_up      = df['weight']*(1 + np.sqrt(df['lepton1_id_var'])/df['lepton1_id_weight'])
+            w_down    = df['weight']*(1 - np.sqrt(df['lepton1_id_var'])/df['lepton1_id_weight'])
             h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self._df_sys['eff_id_mu_up'], self._df_sys['eff_id_mu_down'] = h_up, h_down
@@ -481,14 +478,6 @@ class SystematicTemplateGenerator():
         bins = self._binning
         feature = self._feature
 
-        # PS variations (need to revisit this)
-        #for sys_type in ['isr', 'fsr', 'hdamp', 'tune']:
-        #    df_up     = dm.get_dataframe(f'ttbar_{sys_type}up', cut)
-        #    df_down   = dm.get_dataframe(f'ttbar_{sys_type}down', cut)
-
-        #    h_up, _   = np.histogram(df_up[feature], bins=bins, weights=df_up.weight)
-        #    h_down, _ = np.histogram(df_down[feature], bins=bins, weights=df_down.weight)
-
         # pdf variations
         pdf_err = 0.01
         h_up, _   = np.histogram(df[feature], bins=bins, weights=df.weight*(1 + pdf_err))
@@ -535,26 +524,30 @@ class SystematicTemplateGenerator():
         '''
 
         w_up      = df.weight*df.top_pt_weight
-        w_down    = df.weight
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down*(df.weight.sum()/w_down.sum()))
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=df.weight)
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):
         '''
+        Applies resummatiion and scale variation uncertainties to qq->WW
+        sample.  (Be careful to only apply the variation to the qq production
+        and not gg!)
         '''
-        
+       
         # scale variation
-        w_up      = df.weight*df.ww_pt_scale_up
-        w_down    = df.weight*df.ww_pt_scale_up
-        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up)
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down)
+        weights[mask] *= df.loc[mask, 'ww_pt_scale_up']
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)
+        weights[mask] *= df.loc[mask, 'ww_pt_scale_down']/df.loc[mask, 'ww_pt_scale_up']
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights)
+        weights[mask] /= df.loc[mask, 'ww_pt_scale_down']
         self._df_sys['ww_scale_up'], self._df_sys['ww_scale_down'] = h_up, h_down
 
         # resum variation
-        w_up      = df.weight*df.ww_pt_resum_up
-        w_down    = df.weight*df.ww_pt_resum_up
-        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up)
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=w_down)
+        weights[mask] *= df.loc[mask, 'ww_pt_resum_up']
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)
+        weights[mask] *= df.loc[mask, 'ww_pt_resum_down']/df.loc[mask, 'ww_pt_resum_up']
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights)
+        weights[mask] /= df.loc[mask, 'ww_pt_resum_down']
         self._df_sys['ww_resum_up'], self._df_sys['ww_resum_down'] = h_up, h_down
 

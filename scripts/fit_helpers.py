@@ -153,8 +153,8 @@ class FitData(object):
         self._initialize_parameters()
 
         # initialize branching fraction parameters
-        self._beta_init   = np.array([0.108, 0.108, 0.108, 1 - 3*0.108])
-        self._br_tau_init = np.array([0.1783, 0.1741, 0.6476])
+        self._beta_init   = self._pval_init[:4]
+        self._br_tau_init = self._pval_init[4:7]
         self._ww_amp_init = signal_amplitudes(self._beta_init, self._br_tau_init)
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
@@ -431,7 +431,8 @@ class FitData(object):
         if not no_sum:
             model_val = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
 
-        model_var    = model_tensor[:,:,1].sum(axis=0) 
+        #print(model_val)
+        model_var = model_tensor[:,:,1].sum(axis=0) 
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
 
         if randomize:

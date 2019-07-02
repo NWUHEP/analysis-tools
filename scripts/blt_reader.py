@@ -178,7 +178,9 @@ def fill_event_vars(tree, dataset):
         # generator weights and systematics
         out_dict['gen_weight'] = tree.genWeight
         out_dict['n_partons']  = tree.nPartons
-        if dataset in ['ttbar_inclusive', 'zjets_m-10to50_alt', 'zjets_m-50_alt']:
+        if dataset in ['ttbar_lep', 'ttbar_semilep', 'ttbar_inclusive', 
+                       'zjets_m-10to50_alt', 'zjets_m-50_alt'
+                      ]:
             out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
             out_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
             out_dict['qcd_weight_nom_down']  = tree.qcdWeights[2]

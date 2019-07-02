@@ -21,7 +21,7 @@ dataset_dict = dict(
                                 'electron_2016E', 'electron_2016F', 'electron_2016G', 
                                 'electron_2016H'
                                 ],
-                    ttbar    = ['ttbar_inclusive'], #'ttbar_lep', 'ttbar_semilep',
+                    ttbar    = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
                     t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'],
@@ -313,17 +313,17 @@ def fit_plot(bins, data_val, model_pre, model_post,
             color = colors[count]
             count += 1
 
-        ax.plot(bins, (histsum + template)/dx, 
-                drawstyle='steps-post', 
+        ax.plot(bins, (histsum + template)/dx,
+                drawstyle='steps-post',
                 alpha=0.5,
-                color=color, 
-                linestyle=':', 
+                color=color,
+                linestyle='-',
                 linewidth=1.5,
                 label='_nolegend_'
                 )
-        ax.fill_between(bins, histsum/dx, (histsum + template)/dx, 
+        ax.fill_between(bins, histsum/dx, (histsum + template)/dx,
                         step='post',
-                        color=color, 
+                        color=color,
                         alpha=0.8,
                         label=label
                         )
@@ -336,17 +336,17 @@ def fit_plot(bins, data_val, model_pre, model_post,
     labels.extend(['W', 'Z', 'VV (non-WW)'])
 
     # overlay data and model
-    ax.errorbar(x, data_val/dx, np.sqrt(data_val)/dx, 
-                fmt='ko', 
+    ax.errorbar(x, data_val/dx, np.sqrt(data_val)/dx,
+                fmt='ko',
                 markersize=10,
-                capsize=0, 
-                elinewidth=2, 
+                capsize=0,
+                elinewidth=2,
                 label='data'
                 )
-    ax.plot(bins, model_pre/dx, 
-            drawstyle='steps-post', 
-            c='gray', 
-            linestyle='--', 
+    ax.plot(bins, model_pre/dx,
+            drawstyle='steps-post',
+            c='gray',
+            linestyle='--',
             label='expected (prefit)'
             )
     #ax.plot(bins, model_post/dx,
@@ -380,7 +380,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
             transform=ax.transAxes
             )
     add_lumi_text(ax, 35.9)
-    ax.legend()
+    ax.legend(fontsize=14)
     #ax.legend(labels + [r'$\sigma_{\sf stat.}$', r'$\sigma_{\sf syst.}$', 'Data'])
 
     ax.grid()
@@ -510,7 +510,7 @@ class DataManager():
             init_count        = self._event_counts[dataset][0]
             lut_entry         = self._lut_datasets.loc[dataset]
             label             = lut_entry.label
-            df.loc[:,'label'] = df.shape[0]*[label, ]
+            #df.loc[:,'label'] = df.shape[0]*[label, ] # needed? will this break stuff downstream ???
 
             ### update weights with lumi scale factors ###
             if label == 'data':
@@ -534,9 +534,28 @@ class DataManager():
 
                 df.loc[:, 'weight'] *= scale
 
+            ### if combining ttbar samples
+            if label == 'ttbar':
+                if dataset == 'ttbar_inclusive':
+                    # rescale leptonic component
+                    init_count_lep = self._event_counts['ttbar_lep'][0]
+                    df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
+
+                    # rescale semileptonic component
+                    init_count_semilep = self._event_counts['ttbar_semilep'][0]
+                    df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_lep + 0.438048*init_count)
+
+                elif dataset == 'ttbar_lep':
+                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
+
+                elif dataset == 'ttbar_semilep':
+                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
+
             ### only keep certain features ###
             if self._features is not None:
-                df = df[[f for f in self._features if f in df.columns]]
+                df = df[[f for f in self._features + ['weight', 'run_number', 'event_number'] if f in df.columns]]
 
             ### combined datasets if required ###
             if self._combine:
@@ -623,7 +642,7 @@ class DataManager():
             for dataset in dataset_names:
                 df = dataframes[dataset]
                 if condition != '' and condition != 'preselection':
-                    df = df.query(condition)
+                    df = df.query(condition).copy()
 
                 if mc_scale:
                     n   = df.weight.sum()
@@ -805,6 +824,7 @@ class PlotManager():
 
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
             ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
+            ax.tick_params(axis='both', which='both', direction='in', length=5)
             ax.grid()
 
             ### Add lumi text ###
@@ -834,6 +854,7 @@ class PlotManager():
                             elinewidth = 2
                            )
                 ax_ratio.plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
+                ax.tick_params(axis='both', which='both', direction='in', length=5)
             else:
                 ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
 
