@@ -123,6 +123,8 @@ if __name__ == '__main__':
 
     plot_manager.make_overlays(features)
 
+    sys.exit()
+
     ### conditional overlays
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
     decay_map = decay_map.query(f'{selection} == 1')

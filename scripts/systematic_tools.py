@@ -535,6 +535,11 @@ class SystematicTemplateGenerator():
         and not gg!)
         '''
        
+        # temporary fix for ww scaling until variation are changed from 0 to 1
+        # upstream
+        mask    = df.ww_pt_scale_up != 0.
+        weights = df.weight.values
+
         # scale variation
         weights[mask] *= df.loc[mask, 'ww_pt_scale_up']
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)

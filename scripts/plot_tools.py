@@ -21,7 +21,7 @@ dataset_dict = dict(
                                 'electron_2016E', 'electron_2016F', 'electron_2016G', 
                                 'electron_2016H'
                                 ],
-                    ttbar    = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
+                    ttbar    = ['ttbar_inclusive'],# 'ttbar_lep', 'ttbar_semilep'],
                     t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'],
@@ -99,11 +99,12 @@ categories = dict(
                   cat_gt2_eq1_a = Category(None,       'n_jets >= 2 and n_bjets == 1', ['emu'], '$N_{j} \geq 2, N_{b} = 1$',    2),
                   cat_gt2_gt2_a = Category(None,       'n_jets >= 2 and n_bjets >= 2', ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$', 2),
 
-                  cat_gt2_eq1_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets == 1', ['ee',   'mumu'],                        '$N_{j} \geq 2, N_{b} = 1$, Z veto',    2),
-                  cat_gt2_gt2_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets >= 2', ['ee',   'mumu'],                        '$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
+                  cat_gt2_eq1_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets == 1', ['ee',   'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto',    2),
+                  cat_gt2_gt2_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets >= 2', ['ee',   'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
 
-                  cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'],                        '$N_{j} \geq 4, N_{b} = 1$',            4),
-                  cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'],                        '$N_{j} \geq 4, N_{b} \geq 2$',         4),
+                  cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} = 1$',            4),
+                  cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$',         4),
+                  #cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['mu4j'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
                  )
 
 def make_directory(file_path, clear=True):
@@ -535,23 +536,23 @@ class DataManager():
                 df.loc[:, 'weight'] *= scale
 
             ### if combining ttbar samples
-            if label == 'ttbar':
-                if dataset == 'ttbar_inclusive':
-                    # rescale leptonic component
-                    init_count_lep = self._event_counts['ttbar_lep'][0]
-                    df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
+            #if label == 'ttbar':
+            #    if dataset == 'ttbar_inclusive':
+            #        # rescale leptonic component
+            #        init_count_lep = self._event_counts['ttbar_lep'][0]
+            #        df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
 
-                    # rescale semileptonic component
-                    init_count_semilep = self._event_counts['ttbar_semilep'][0]
-                    df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_lep + 0.438048*init_count)
+            #        # rescale semileptonic component
+            #        init_count_semilep = self._event_counts['ttbar_semilep'][0]
+            #        df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_lep + 0.438048*init_count)
 
-                elif dataset == 'ttbar_lep':
-                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-                    df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
+            #    elif dataset == 'ttbar_lep':
+            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
 
-                elif dataset == 'ttbar_semilep':
-                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-                    df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
+            #    elif dataset == 'ttbar_semilep':
+            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
             ### only keep certain features ###
             if self._features is not None:
