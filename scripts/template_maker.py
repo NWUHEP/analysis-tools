@@ -91,6 +91,9 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
             syst_gen.tau_j_misid_systematics(df)
         elif decay_mode in [1, 3, 6, 10, 11, 13]:
             syst_gen.tau_e_misid_systematics(df)
+    #elif selection in ['e4j', 'mu4j']: # add (1 - eff) for l+jet categories
+    #    if decay_mode in [7, 8, 12, 15]:
+    #        syst_gen.tau_systematics(df)
         
     # theory systematics
     if dataset in ['ttbar', 'zjets_alt']:
@@ -330,7 +333,9 @@ if __name__ == '__main__':
             for idecay, decay_data in decay_map.iterrows():
                 df_syst = data[category]['templates']['ttbar'][decay_data.decay]
                 binning = data[category]['bins']
-                st.ttbar_systematics(df_syst['val'], dm, f'{full_cut} and gen_cat == {idecay}', df_syst, feature, binning)
+                st.ttbar_systematics(df_syst['val'], dm, 
+                                     f'{full_cut} and gen_cat == {idecay}', 
+                                     idecay, df_syst, feature, binning)
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)

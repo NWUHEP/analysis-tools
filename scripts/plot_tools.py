@@ -527,6 +527,7 @@ class DataManager():
                     scale *= df.gen_weight
                     neg_count = self._event_counts[dataset][9]
                     scale /= init_count - 2*neg_count
+                    #scale *= 1.06 # removes normalization effect of Z pt reweighting
                 else:
                     scale /= init_count
 
@@ -540,11 +541,11 @@ class DataManager():
             #    if dataset == 'ttbar_inclusive':
             #        # rescale leptonic component
             #        init_count_lep = self._event_counts['ttbar_lep'][0]
-            #        df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
+            #        df.loc[df.gen_cat <= 15, 'weight'] *= init_count/(init_count_lep + 0.104976*init_count)
 
             #        # rescale semileptonic component
             #        init_count_semilep = self._event_counts['ttbar_semilep'][0]
-            #        df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_lep + 0.438048*init_count)
+            #        df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= init_count/(init_count_lep + 0.438048*init_count)
 
             #    elif dataset == 'ttbar_lep':
             #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]

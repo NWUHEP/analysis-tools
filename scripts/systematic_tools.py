@@ -100,13 +100,22 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     
     return h_up, h_down
 
-def ttbar_systematics(h_nominal, dm, cut, df_syst, feature, binning):
+def ttbar_systematics(h_nominal, dm, cut, decay_mode, df_syst, feature, binning):
     '''
     Account for systematics due to modeling of ttbar.
     '''
 
     syst_names = ['isr', 'fsr', 'hdamp', 'tune']
     for syst in syst_names:
+
+        # corrections for FSR sample
+        #k_down, k_up = 1., 1.
+        if syst == 'fsr' and dm._selection in ['etau', 'mutau', 'e4j', 'mu4j']:
+            if decay_mode in [7, 8, 12, 15]: #real taus
+                k_down, k_up = 0.96, 1.02
+            elif decay_mode in [16, 17, 18, 19, 20, 21]: #fake taus
+                k_down, k_up = 0.72, 1.27
+
         df_up     = dm.get_dataframe(f'ttbar_{syst}up', cut)
         df_down   = dm.get_dataframe(f'ttbar_{syst}down', cut)
         h_up, _   = np.histogram(df_up[feature], bins=binning, weights=df_up.weight)
