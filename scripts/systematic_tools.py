@@ -100,7 +100,7 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     
     return h_up, h_down
 
-def ttbar_systematics(h_nominal, dm, cut, decay_mode, df_syst, feature, binning):
+def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning):
     '''
     Account for systematics due to modeling of ttbar.
     '''
@@ -108,22 +108,26 @@ def ttbar_systematics(h_nominal, dm, cut, decay_mode, df_syst, feature, binning)
     syst_names = ['isr', 'fsr', 'hdamp', 'tune']
     for syst in syst_names:
 
-        # corrections for FSR sample
-        #k_down, k_up = 1., 1.
-        if syst == 'fsr' and dm._selection in ['etau', 'mutau', 'e4j', 'mu4j']:
-            if decay_mode in [7, 8, 12, 15]: #real taus
-                k_down, k_up = 0.96, 1.02
-            elif decay_mode in [16, 17, 18, 19, 20, 21]: #fake taus
-                k_down, k_up = 0.72, 1.27
-
         df_up     = dm.get_dataframe(f'ttbar_{syst}up', cut)
         df_down   = dm.get_dataframe(f'ttbar_{syst}down', cut)
         h_up, _   = np.histogram(df_up[feature], bins=binning, weights=df_up.weight)
         h_down, _ = np.histogram(df_down[feature], bins=binning, weights=df_down.weight)
 
         if syst == 'fsr':
-            h_up   = h_nominal + (h_up - h_nominal)/np.sqrt(2)
-            h_down = h_nominal + (h_down - h_nominal)/np.sqrt(2)
+            # corrections for FSR sample
+            k_down, k_up = 1., 1.
+            if dm._selection in ['etau', 'mutau']:
+                if decay_mode in [7, 8, 12, 15]: #real taus
+                    k_down, k_up = 1.02, 0.96
+                elif decay_mode in [16, 17, 18, 19]: #fake taus
+                    k_down, k_up = 1.27, 0.72
+
+            h_nominal = df_syst['val'].values
+            #print(h_up, h_nominal, h_down, sep='\n', end='\n--\n')
+
+            h_up   = (h_nominal + (h_up - h_nominal)/np.sqrt(2))/k_up
+            h_down = (h_nominal + (h_down - h_nominal)/np.sqrt(2))/k_down
+            #print(h_up, h_nominal, h_down, sep='\n', end='\n--\n')
 
         df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
@@ -534,7 +538,7 @@ class SystematicTemplateGenerator():
 
         w_up      = df.weight*df.top_pt_weight
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=df.weight)
+        h_down, _ = 2*self._h - h_up
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):

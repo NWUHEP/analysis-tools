@@ -107,7 +107,6 @@ if __name__ == '__main__':
                                   scale         = args.lumi,
                                   cuts          = cuts['inclusive']
                                  )
-
     table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=cuts, do_string=True)
     table.transpose().to_latex(f'{output_path}/yields_{selection}.tex', escape=False)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')

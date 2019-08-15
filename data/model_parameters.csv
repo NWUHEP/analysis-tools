@@ -65,7 +65,7 @@ eff_mu_7,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$\ell$ reco,
 escale_mu,$\mu$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 isr,ISR,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-fsr,FSR,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+fsr,FSR,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 hdamp,ME-PS,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 tune,UE/MPI,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0

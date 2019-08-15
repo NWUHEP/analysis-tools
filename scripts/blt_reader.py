@@ -603,6 +603,8 @@ def pickle_ntuple(tree, dataset, output_path, selection):
     ntuple = fill_ntuple(tree, dataset, selection)
     df     = pd.DataFrame(ntuple)
     df     = df.query('weight != 0')
+
+    # save output
     df.to_pickle(f'{output_path}/ntuple_{dataset_name}.pkl')
 
 if __name__ == '__main__':

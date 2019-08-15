@@ -35,6 +35,21 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
 
     df = pd.DataFrame(ntuple)
     df = df.query('weight != 0') # remove deadweight
+
+    # set datatypes for columns
+    infile = 'data/plotting_lut.xlsx'
+    features_default = pd.read_excel(infile,
+                                         sheet_name='variables',
+                                         index_col='variable_name'
+                                        ).dropna(how='all')
+    features_selection = pd.read_excel(infile,
+                                        sheet_name=f'variables_{selection}',
+                                        index_col='variable_name'
+                                       ).dropna(how='all')
+    feature_lut = pd.concat([features_default, features_selection], sort=True)
+    dtype_dict = {c: (np.dtype(feature_lut.loc[c, 'dtype']) if c in feature_lut.index else np.dtype('float32')) for c in df.columns}
+    df = df.astype(dtype_dict)
+
     if df.shape[0] > 0:
         df.to_pickle(f'{output_path}/{dataset}_{ix[0]}.pkl')
     root_file.Close()
@@ -78,15 +93,15 @@ if __name__ == '__main__':
 
     ### Configuration ###
     selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    #selections  = ['emu']
-    do_data     = True
+    #selections  = ['etau']
+    do_data     = False
     do_mc       = True
     do_syst     = False
     period      = 2016
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets']
+    mc_labels    = ['zjets_ext'] #'ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets']
 
     dataset_list = []
     if do_data:
@@ -215,6 +230,6 @@ if __name__ == '__main__':
             file_list = os.listdir(dataset_path)
             if len(file_list) > 0: 
                 df_concat = pd.concat([pd.read_pickle(f'{dataset_path}/{filename}') for filename in file_list])
-                df_concat.to_pickle(f'{input_path}/ntuple_{dataset}.pkl')
+                df_concat.reset_index(drop=True).to_pickle(f'{input_path}/ntuple_{dataset}.pkl')
         
             shutil.rmtree(dataset_path) 

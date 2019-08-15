@@ -180,7 +180,7 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['mu4j']
+    #selections = ['mutau', 'etau']
     pt.make_directory(f'{args.output}')
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -330,12 +330,17 @@ if __name__ == '__main__':
             else:
                 full_cut = f'{cat_items.cut} and {cat_items.jet_cut}'
 
+            print(category)
             for idecay, decay_data in decay_map.iterrows():
-                df_syst = data[category]['templates']['ttbar'][decay_data.decay]
                 binning = data[category]['bins']
-                st.ttbar_systematics(df_syst['val'], dm, 
-                                     f'{full_cut} and gen_cat == {idecay}', 
-                                     idecay, df_syst, feature, binning)
+                df_syst = data[category]['templates']['ttbar'][decay_data.decay]
+                
+                print(decay_data.decay)
+                if np.sqrt(df_syst['var'].sum())/df_syst['val'].sum() < 0.1:
+                    st.ttbar_systematics(dm, df_syst, 
+                                         f'{full_cut} and gen_cat == {idecay}',
+                                         idecay, feature, binning
+                                        )
 
         # write the templates and morphing templates to file
         pickle.dump(data, outfile)

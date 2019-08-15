@@ -15,36 +15,38 @@ from tqdm import tqdm
 tqdm.monitor_interval = 0
 
 dataset_dict = dict(
-                    muon     = ['muon_2016B', 'muon_2016C', 'muon_2016D', 
-                                'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'],
-                    electron = ['electron_2016B', 'electron_2016C', 'electron_2016D', 
-                                'electron_2016E', 'electron_2016F', 'electron_2016G', 
-                                'electron_2016H'
-                                ],
-                    ttbar    = ['ttbar_inclusive'],# 'ttbar_lep', 'ttbar_semilep'],
-                    t        = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
-                    wjets    = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
+                    muon      = ['muon_2016B', 'muon_2016C', 'muon_2016D', 
+                                 'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'],
+                    electron  = ['electron_2016B', 'electron_2016C', 'electron_2016D', 
+                                 'electron_2016E', 'electron_2016F', 'electron_2016G', 
+                                 'electron_2016H'
+                                 ],
+                    ttbar     = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
+                    #ttbar     = ['ttbar_lep', 'ttbar_semilep'],
+                    t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
+                    wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'],
-                    zjets    = ['zjets_m-50',  'zjets_m-10to50',
-                                'z1jets_m-50', 'z1jets_m-10to50',
-                                'z2jets_m-50', 'z2jets_m-10to50',
-                                'z3jets_m-50', 'z3jets_m-10to50',
-                                'z4jets_m-50', 'z4jets_m-10to50'
-                                ],
-                    qcd      = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500',
-                                'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
-                                'qcd_ht2000'
-                                ],
-                    ww       = ['ww_qq', 'ww_gg'],
-                    diboson  = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
-                    fakes    = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
-                                'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
-                                'muon_2016H_fakes'
-                                'electron_2016B_fakes', 'electron_2016C_fakes', 'electron_2016D_fakes', 
-                                'electron_2016E_fakes', 'electron_2016F_fakes', 'electron_2016G_fakes', 
-                                'electron_2016H_fakes'
-                                ],
-                    fakes_ss = ['fakes_ss']
+                    zjets_ext = ['z0jets_alt', 'z1jets_alt', 'z2jets_alt'],
+                    zjets     = ['zjets_m-50',  'zjets_m-10to50',
+                                 'z1jets_m-50', 'z1jets_m-10to50',
+                                 'z2jets_m-50', 'z2jets_m-10to50',
+                                 'z3jets_m-50', 'z3jets_m-10to50',
+                                 'z4jets_m-50', 'z4jets_m-10to50'
+                                 ],
+                    qcd       = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500',
+                                 'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
+                                 'qcd_ht2000'
+                                 ],
+                    ww        = ['ww_qq', 'ww_gg'],
+                    diboson   = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
+                    fakes     = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
+                                 'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
+                                 'muon_2016H_fakes'
+                                 'electron_2016B_fakes', 'electron_2016C_fakes', 'electron_2016D_fakes', 
+                                 'electron_2016E_fakes', 'electron_2016F_fakes', 'electron_2016G_fakes', 
+                                 'electron_2016H_fakes'
+                                 ],
+                    fakes_ss  = ['fakes_ss']
                    )
 
 selection_dataset_dict = dict(
@@ -493,7 +495,7 @@ class DataManager():
                             desc       = 'Loading dataframes',
                             unit_scale = True,
                             ncols      = 75,
-                            total      = len(self._dataset_names)
+                            total      = len(self._dataset_names),
                             ):
 
             fname = f'{self._input_dir}/ntuple_{dataset}.pkl'
@@ -531,29 +533,26 @@ class DataManager():
                 else:
                     scale /= init_count
 
-                #if dataset == 'ww':
-                #    df.loc[:, 'weight'] /= df['ww_pt_weight']
-
                 df.loc[:, 'weight'] *= scale
 
             ### if combining ttbar samples
-            #if label == 'ttbar':
-            #    if dataset == 'ttbar_inclusive':
-            #        # rescale leptonic component
-            #        init_count_lep = self._event_counts['ttbar_lep'][0]
-            #        df.loc[df.gen_cat <= 15, 'weight'] *= init_count/(init_count_lep + 0.104976*init_count)
+            if label == 'ttbar':
+                if dataset == 'ttbar_inclusive':
+                    # rescale leptonic component
+                    init_count_lep = self._event_counts['ttbar_lep'][0]
+                    df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
 
-            #        # rescale semileptonic component
-            #        init_count_semilep = self._event_counts['ttbar_semilep'][0]
-            #        df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= init_count/(init_count_lep + 0.438048*init_count)
+                    # rescale semileptonic component
+                    init_count_semilep = self._event_counts['ttbar_semilep'][0]
+                    df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_semilep + 0.438048*init_count)
 
-            #    elif dataset == 'ttbar_lep':
-            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
+                elif dataset == 'ttbar_lep':
+                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
 
-            #    elif dataset == 'ttbar_semilep':
-            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
+                elif dataset == 'ttbar_semilep':
+                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
             ### only keep certain features ###
             if self._features is not None:
@@ -649,7 +648,7 @@ class DataManager():
                 if mc_scale:
                     n   = df.weight.sum()
                     var_stat = np.sum(df.weight**2)
-                    sigma_xs = 0.1 if dataset in ['zjets_alt', 'diboson'] else 0.05
+                    sigma_xs = 0. #0.1 if dataset in ['zjets_alt', 'diboson'] else 0.05
                     var_syst = (sigma_xs**2 + 0.025**2)*n**2
                     err = np.sqrt(var_stat + var_syst)
                     
@@ -684,7 +683,7 @@ class DataManager():
         else:
             labels = dataset_names
 
-        table = pd.DataFrame(table, index=labels+['background'])
+        table = pd.DataFrame(table, index=labels+['expected'])
         return table
 
 

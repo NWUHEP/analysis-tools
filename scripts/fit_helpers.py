@@ -119,11 +119,11 @@ def chi2_test(y1, y2, var1, var2):
     return chi2
 
 # modified objective for testing lepton universality
-def objective_lu(params, data, objective, type=1):
-    if type == 1:
+def objective_lu(params, data, objective, test_type=1):
+    if test_type == 1:
         beta = params[0]
         params_new = np.concatenate([[beta, beta, beta, 1 - 3*beta], params[1:]])
-    elif type == 2:
+    elif test_type == 2:
         beta_emu = params[0]
         beta_tau = params[1]
         params_new = np.concatenate([[beta_emu, beta_emu, beta_tau, 1 - 2*beta_emu - beta_tau], params[2:]])
@@ -229,7 +229,8 @@ class FitData(object):
         
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
-        self._bin_np = dict()
+        self._bin_np     = dict()
+        self._rnum_cache = dict()
         self._categories = []
         for sel in self._selections:
             category_tensor = []
@@ -238,6 +239,7 @@ class FitData(object):
                 templates = templates['templates']
                 data_val, data_var = templates['data']['val'], templates['data']['var']
                 self._bin_np[f'{sel}_{category}'] = np.ones(data_val.size)
+                self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
 
                 norm_mask  = []
                 process_mask = []
@@ -436,11 +438,17 @@ class FitData(object):
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
 
         if randomize:
-            model_val += np.sqrt(model_var)*np.random.randn(model_var.size)
+            model_val += np.sqrt(model_var)*self._rnum_cache[category]
 
         return model_val, model_var
         
-    def objective(self, params, data=None, cost_type='poisson', no_shape=False, do_mc_stat=True):
+    def objective(self, params, 
+                  data                = None,
+                  cost_type           = 'poisson',
+                  no_shape            = False,
+                  do_mc_stat          = True,
+                  randomize_templates = False
+                 ):
         '''
         Cost function for MC data model.  This version has no background
         compononent and is intended for fitting toy data generated from the signal
@@ -452,7 +460,6 @@ class FitData(object):
                  fractions, all successive ones are nuisance parameters.
         data : dataset to be fitted
         cost_type : either 'chi2' or 'poisson'
-        mask : an array with same size as the input parameters for indicating parameters to fix
         no_shape : sums over all bins in input templates
         do_mc_stat: include bin-by-bin Barlow-Beeston parameters accounting for limited MC statistics
         '''
@@ -472,7 +479,7 @@ class FitData(object):
                 continue
 
             # get the model and data templates
-            model_val, model_var = self.mixture_model(params, category, process_amplitudes)
+            model_val, model_var = self.mixture_model(params, category, process_amplitudes, randomize=randomize_templates)
             if data is None:
                 data_val, data_var = template_data['data']
             else:
@@ -488,15 +495,15 @@ class FitData(object):
 
             # include effect of MC statisitcs (important that this is done
             # AFTER no_shape condition so inputs are integrated over)
+            bin_amp = self._bin_np[category]
             if do_mc_stat:
-                bin_amp = self._bin_np[category]
                 bin_amp = bb_objective_aux(bin_amp, data_val, model_val, model_var)[0]
-                model_val *= bin_amp
-                self._bin_np[category] = bin_amp
                 bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
 
                 self._cache[category]['bb_penalty'] = bb_penalty
+
+            model_val *= bin_amp
 
             # calculate the cost
             if cost_type == 'poisson':
