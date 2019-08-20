@@ -535,7 +535,7 @@ class DataManager():
 
                 df.loc[:, 'weight'] *= scale
 
-            ### if combining ttbar samples
+            ### combining ttbar samples
             if label == 'ttbar':
                 if dataset == 'ttbar_inclusive':
                     # rescale leptonic component

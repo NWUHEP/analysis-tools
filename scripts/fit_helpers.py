@@ -159,7 +159,7 @@ class FitData(object):
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
         # initialize fit data
-        self.veto_list = [] # used to remove categories from fit
+        self.veto_list = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0'] # used to remove categories from fit
         self._initialize_fit_tensor(process_cut)
 
         # minimization cache
@@ -377,7 +377,7 @@ class FitData(object):
     # model building
     def model_sums(self, selection, category):
         '''
-        This sums overall datasets/sub_datasets in selection_data for the given category.
+        This sums over all datasets/sub_datasets in selection_data for the given category.
         '''
 
         templates = self._selection_data[selection][category]['templates'] 
@@ -462,6 +462,7 @@ class FitData(object):
         cost_type : either 'chi2' or 'poisson'
         no_shape : sums over all bins in input templates
         do_mc_stat: include bin-by-bin Barlow-Beeston parameters accounting for limited MC statistics
+        randomize_templates: displaces the prediction in each bin by a fixed, random amount.
         '''
 
         # build the process amplitudes (once per evaluation) 
@@ -495,15 +496,16 @@ class FitData(object):
 
             # include effect of MC statisitcs (important that this is done
             # AFTER no_shape condition so inputs are integrated over)
-            bin_amp = self._bin_np[category]
             if do_mc_stat:
+                bin_amp = self._bin_np[category]
                 bin_amp = bb_objective_aux(bin_amp, data_val, model_val, model_var)[0]
+                model_val *= bin_amp
+                self._bin_np[category] = bin_amp 
                 bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
 
                 self._cache[category]['bb_penalty'] = bb_penalty
 
-            model_val *= bin_amp
 
             # calculate the cost
             if cost_type == 'poisson':

@@ -129,6 +129,10 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning):
             h_down = (h_nominal + (h_down - h_nominal)/np.sqrt(2))/k_down
             #print(h_up, h_nominal, h_down, sep='\n', end='\n--\n')
 
+        # average over bins (not enough statistics to quantify shape effects)
+        h_up = (h_up.sum()/h_nominal.sum())*h_nominal
+        h_down = (h_down.sum()/h_nominal.sum())*h_nominal
+
         df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
 class SystematicTemplateGenerator():
