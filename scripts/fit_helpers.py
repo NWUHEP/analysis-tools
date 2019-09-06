@@ -129,6 +129,11 @@ def objective_lu(params, data, objective, test_type=1):
         params_new = np.concatenate([[beta_emu, beta_emu, beta_tau, 1 - 2*beta_emu - beta_tau], params[2:]])
     return objective(params_new, data)
 
+def reduced_objective(params, data, params_fixed, mask, objective):
+    new_params = params_fixed.copy()
+    new_params[mask] = params
+    return objective(new_params, data) 
+
 # Barlow-Beeston method for limited MC statistics
 def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
     a = 1
@@ -236,9 +241,9 @@ class FitData(object):
             category_tensor = []
             for category, templates in self.get_selection_data(sel).items():
                 self._categories.append(f'{sel}_{category}') 
-                templates = templates['templates']
-                data_val, data_var = templates['data']['val'], templates['data']['var']
-                self._bin_np[f'{sel}_{category}'] = np.ones(data_val.size)
+                templates                             = templates['templates']
+                data_val, data_var                    = templates['data']['val'], templates['data']['var']
+                self._bin_np[f'{sel}_{category}']     = np.ones(data_val.size)
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
 
                 norm_mask  = []
@@ -394,9 +399,24 @@ class FitData(object):
 
         return outdata
 
-    def mixture_model(self, params, category, process_amplitudes=None, no_sum=False, randomize=False):
+    def mixture_model(self, params, category, 
+                      process_amplitudes=None, 
+                      no_sum=False, 
+                      randomize=False
+                      ):
         '''
-        produces full mixture model
+        Outputs mixture and associated variance for a given category.
+
+        Parameters:
+        ===========
+        params: parameter values for model
+        category: description of lepton/jet/b tag category
+        process_amplitudes: if signal process amplitudes have been calculated
+            they can be passed in, otherwise calculates values based on input
+            parameters
+        no_sum: (default False) if set to True, will not sum across the process dimension
+        randomize: (default False) if set to True, will randomly displace
+            individual bin normalizations based on the cached values.  
         '''
 
         # get the model data
@@ -500,6 +520,7 @@ class FitData(object):
                 bin_amp = self._bin_np[category]
                 bin_amp = bb_objective_aux(bin_amp, data_val, model_val, model_var)[0]
                 model_val *= bin_amp
+
                 self._bin_np[category] = bin_amp 
                 bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
