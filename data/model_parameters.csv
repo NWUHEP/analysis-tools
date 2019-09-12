@@ -64,49 +64,49 @@ eff_mu_6,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,reco_lepton,$\ell$ 
 eff_mu_7,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 escale_mu,$\mu$ ES,0,1,shape,1,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-isr,ISR,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-fsr,FSR,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-hdamp,ME-PS,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-tune,UE/MPI,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+isr,ISR,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+fsr,FSR,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+hdamp,ME-PS,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+tune,UE/MPI,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 ww_resum,WW $p_{T}$ (resum),0,1,shape,1,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
-z_pt,Z $p_{T}$,0,1,shape,0,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
-top_pt,t $p_{T}$,0,1,shape,0,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-btag_bfragmentation,b-tag: b frag.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_btempcorr,b-tag: b templ. corr.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_cb,b-tag:JP corr,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_cfragmentation,b-tag: c frag.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_dmux,b-tag: $\sf D\rightarrow\mu$ X BR,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_gluonsplitting,b-tag: gluon splitting,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_jes,b-tag: JES,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_jetaway,b-tag: away jet tag,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_ksl,b-tag:$K_{s}^{0} (\Lambda)$ prod.,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_l2c,b-tag: I/c ratio,0,1,shape,1,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_ltothers,b-tag: LT others,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_mudr,b-tag: muon $\Delta R$,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_mupt,b-tag: muon $p_{T}$,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_ptrel,b-tag: muon $p_{T}$ (rel.),0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_sampledependence,b-tag: sample dependence,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_pileup,b-tag: pileup,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-btag_statistic,b-tag: stat.,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-ctag,b-tag: c-tag,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-mistag,b-tag: mistag,0,1,shape,1,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jer,JER,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_abs_scale,JES: absolute scale,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_abs_stat,JES: absolute stat,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_fragmentation,JES: fragmentation,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_abs_mpf_bias,JES: mpf bias,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_pileup_data_mc,JES: pileup data/MC,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_pileup_pt_bb,JES: pileup $p_{T}$ (bb),0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_pileup_pt_ec1,JES: pileup $p_{T}$ (ec),0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_pileup_pt_ref,JES: pileup $p_{T}$ (ref),0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_bal,JES: rel. balance,0,1,shape,1,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_jer_ec1,JES: rel. JER (ec),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_pt_bb,JES: rel. $p_{T}$ (bb),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_pt_ec1,JES: rel. $p_{T}$ (ec),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_stat_fsr,JES: rel. stat. FSR,0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_stat_ec,JES: rel. stat. (ec),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_single_pion_ecal,JES: $\pi$ (ECAL),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_single_pion_hcal,JES: $\pi$ (HCAL),0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_time_pt_eta,JES: time $p_{T}/\eta$,0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_flavor_qcd,JES: flavor,0,1,shape,1,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+z_pt,Z $p_{T}$,0,1,shape,1,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
+top_pt,t $p_{T}$,0,1,shape,1,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+btag_bfragmentation,b-tag: b frag.,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_btempcorr,b-tag: b templ. corr.,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_cb,b-tag:JP corr,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_cfragmentation,b-tag: c frag.,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_dmux,b-tag: $\sf D\rightarrow\mu$ X BR,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_gluonsplitting,b-tag: gluon splitting,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_jes,b-tag: JES,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_jetaway,b-tag: away jet tag,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_ksl,b-tag:$K_{s}^{0} (\Lambda)$ prod.,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_l2c,b-tag: I/c ratio,0,1,shape,0,btag_1,b tag (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_ltothers,b-tag: LT others,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_mudr,b-tag: muon $\Delta R$,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_mupt,b-tag: muon $p_{T}$,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_ptrel,b-tag: muon $p_{T}$ (rel.),0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_sampledependence,b-tag: sample dependence,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_pileup,b-tag: pileup,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+btag_statistic,b-tag: stat.,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+ctag,b-tag: c-tag,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+mistag,b-tag: mistag,0,1,shape,0,btag_2,b tag (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jer,JER,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_scale,JES: absolute scale,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_stat,JES: absolute stat,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_fragmentation,JES: fragmentation,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_mpf_bias,JES: mpf bias,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_data_mc,JES: pileup data/MC,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_pt_bb,JES: pileup $p_{T}$ (bb),0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_pt_ec1,JES: pileup $p_{T}$ (ec),0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_pileup_pt_ref,JES: pileup $p_{T}$ (ref),0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_bal,JES: rel. balance,0,1,shape,0,jes_1,JES/JER (1),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_jer_ec1,JES: rel. JER (ec),0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_pt_bb,JES: rel. $p_{T}$ (bb),0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_pt_ec1,JES: rel. $p_{T}$ (ec),0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_stat_fsr,JES: rel. stat. FSR,0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_relative_stat_ec,JES: rel. stat. (ec),0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_single_pion_ecal,JES: $\pi$ (ECAL),0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_single_pion_hcal,JES: $\pi$ (HCAL),0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_time_pt_eta,JES: time $p_{T}/\eta$,0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_flavor_qcd,JES: flavor,0,1,shape,0,jes_2,JES/JER (2),1,1,1,1,0,1,0,1,1,1,1,1,1,1

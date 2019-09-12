@@ -119,20 +119,23 @@ def chi2_test(y1, y2, var1, var2):
     return chi2
 
 # modified objective for testing lepton universality
-def objective_lu(params, data, objective, test_type=1):
-    if test_type == 1:
+def objective_lu(params, objective, test_type=1, **kwargs):
+    if test_type == 0:
+        params_new = params 
+    elif test_type == 1:
         beta = params[0]
         params_new = np.concatenate([[beta, beta, beta, 1 - 3*beta], params[1:]])
     elif test_type == 2:
         beta_emu = params[0]
         beta_tau = params[1]
         params_new = np.concatenate([[beta_emu, beta_emu, beta_tau, 1 - 2*beta_emu - beta_tau], params[2:]])
-    return objective(params_new, data)
 
-def reduced_objective(params, data, params_fixed, mask, objective):
-    new_params = params_fixed.copy()
-    new_params[mask] = params
-    return objective(new_params, data) 
+    return objective(params_new, **kwargs)
+
+def reduced_objective(params, params_fixed, mask, objective, **kwargs):
+    params_new = params_fixed.copy()
+    params_new[mask] = params
+    return objective(params_new, **kwargs) 
 
 # Barlow-Beeston method for limited MC statistics
 def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
@@ -143,7 +146,6 @@ def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
     beta_minus = (-1*b - np.sqrt(b**2 - 4*a*c))/2
 
     return beta_plus, beta_minus
-        
 
 class FitData(object):
     def __init__(self, path, selections, processes, process_cut=0):
@@ -400,9 +402,9 @@ class FitData(object):
         return outdata
 
     def mixture_model(self, params, category, 
-                      process_amplitudes=None, 
-                      no_sum=False, 
-                      randomize=False
+                      process_amplitudes = None,
+                      no_sum             = False,
+                      randomize          = False
                       ):
         '''
         Outputs mixture and associated variance for a given category.
@@ -467,7 +469,7 @@ class FitData(object):
                   cost_type           = 'poisson',
                   no_shape            = False,
                   do_mc_stat          = True,
-                  randomize_templates = False
+                  randomize_templates = False,
                  ):
         '''
         Cost function for MC data model.  This version has no background
@@ -526,7 +528,6 @@ class FitData(object):
                 cost += np.sum(bb_penalty)
 
                 self._cache[category]['bb_penalty'] = bb_penalty
-
 
             # calculate the cost
             if cost_type == 'poisson':
