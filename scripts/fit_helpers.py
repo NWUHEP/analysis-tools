@@ -34,7 +34,7 @@ features = dict(
                 e4j   = 'lepton1_pt', # electron pt
                 )
 
-def signal_amplitudes(beta, br_tau, single_w = False):
+def signal_amplitudes(beta, br_tau, single_w=False):
     '''
     Returns an array of branching fractions for each signal channel.
 
@@ -78,6 +78,36 @@ def signal_amplitudes(beta, br_tau, single_w = False):
                                ])
 
     return amplitudes
+
+def signal_amplitudes_jac(beta, br_tau, single_w=False):
+    '''
+    Derivatives of signal component amplitudes.
+    '''
+
+    if single_w:
+        amplitudes_jac = np.array([
+                                  [1, 0, 0,         0,         0,         0],
+                                  [0, 1, 0,         0,         0,         0],
+                                  [0, 0, br_tau[0], 0,         0,         0],
+                                  [0, 0, 0,         br_tau[1], 0,         0],
+                                  [0, 0, 0,         0,         br_tau[2], 0],
+                                  [0, 0, 0,         0,         0,         1]
+                                  ]
+                                 )
+    else:
+        amplitudes_jac = np.array([
+                                  [2*beta[0], 0, 2*beta[1], 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 0, 0, 2*beta[3], 0, 0, 0, 0, 0]
+                                  [0, 2*beta[1], 2*beta[0], 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 2*beta[3], 0, 0, 0, 0]
+                                  [0, 0, 0, 2*beta[2]*br_tau[0]**2, 2*beta[2]*br_tau[1]**2, 
+                                      4*beta[2]*br_tau[0]*br_tau[1], 4*beta[2]*br_tau[0]*br_tau[2], 4*beta[2]*br_tau[1]*br_tau[2], 2*beta[2]*br_tau[2]**2, 
+                                      2*beta[0]*br_tau[0], 2*beta[0]*br_tau[1], 2*beta[0]*br_tau[2], 
+                                      2*beta[1]*br_tau[0], 2*beta[1]*br_tau[1], 2*beta[1]*br_tau[2], 0, 0,
+                                      2*beta[3]*br_tau[0], 2*beta[3]*br_tau[1], 2*beta[3]*br_tau[2], 0],
+                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[0], 2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]]
+                                  ]
+                                 )
+
+    return amplitudes_jac
 
 # covariance approximators
 def calculate_variance(f, x0):
@@ -173,8 +203,8 @@ class FitData(object):
         self.initialize_minimization_cache()
 
         # initialize cost (do this last)
-        self._cost_init = 0
-        self._cost_init = self.objective(self.get_params_init(as_array=True))
+        #self._cost_init = 0
+        #self._cost_init = self.objective(self.get_params_init(as_array=True))
 
     # initialization functions
     def _initialize_data(self, location, selection):
@@ -217,22 +247,22 @@ class FitData(object):
         dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
         '''
 
-        #def np_templates():
-        #    for pname, param in params.iterrows():
-        #        if param.type == 'shape' and param[sel]:
-        #            if f'{pname}_up' in sub_template.columns and param['active'] and param[ds]: 
-        #                deff_plus  = sub_template[f'{pname}_up'].values - val
-        #                deff_minus = sub_template[f'{pname}_down'].values - val
-        #            else:
-        #                deff_plus  = np.zeros_like(val)
-        #                deff_minus = np.zeros_like(val)
-        #            delta_plus.append(deff_plus + deff_minus)
-        #            delta_minus.append(deff_plus - deff_minus)
-        #        elif param.type == 'norm':
-        #            if param[sel] and param[ds] and param['active']:
-        #                norm_vector.append(1)
-        #            else:
-        #                norm_vector.append(0)
+        def np_templates():
+            for pname, param in params.iterrows():
+                if param.type == 'shape' and param[sel]:
+                    if f'{pname}_up' in sub_template.columns and param['active'] and param[ds]: 
+                        deff_plus  = sub_template[f'{pname}_up'].values - val
+                        deff_minus = sub_template[f'{pname}_down'].values - val
+                    else:
+                        deff_plus  = np.zeros_like(val)
+                        deff_minus = np.zeros_like(val)
+                    delta_plus.append(deff_plus + deff_minus)
+                    delta_minus.append(deff_plus - deff_minus)
+                elif param.type == 'norm':
+                    if param[sel] and param[ds] and param['active']:
+                        norm_vector.append(1)
+                    else:
+                        norm_vector.append(0)
         
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
@@ -242,13 +272,18 @@ class FitData(object):
         for sel in self._selections:
             category_tensor = []
             for category, templates in self.get_selection_data(sel).items():
+
+                # omit categories 
+                if f'{sel}_{category}' in self.veto_list:
+                    continue
+
                 self._categories.append(f'{sel}_{category}') 
                 templates                             = templates['templates']
                 data_val, data_var                    = templates['data']['val'], templates['data']['var']
                 self._bin_np[f'{sel}_{category}']     = np.ones(data_val.size)
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
 
-                norm_mask  = []
+                norm_mask    = []
                 process_mask = []
                 data_tensor  = []
                 for ds in self._processes:
@@ -301,7 +336,7 @@ class FitData(object):
                                 delta_minus.append(deff_plus - deff_minus)
 
                             elif param.type == 'norm':
-                                if param[sel] and param[ds] and param['active']:
+                                if param[sel] and param[ds]:
                                     norm_vector.append(1)
                                 else:
                                     norm_vector.append(0)
@@ -327,7 +362,7 @@ class FitData(object):
                             norm_vector = []
                             for pname, param in params.iterrows():
                                 if param.type == 'shape' and param[sel]:
-                                    if f'{pname}_up' in sub_template.columns and param['active'] and param[ds]: 
+                                    if f'{pname}_up' in sub_template.columns and param[ds]: 
                                         deff_plus  = sub_template[f'{pname}_up'].values - val
                                         deff_minus = sub_template[f'{pname}_down'].values - val
                                     else:
@@ -336,7 +371,7 @@ class FitData(object):
                                     delta_plus.append(deff_plus + deff_minus)
                                     delta_minus.append(deff_plus - deff_minus)
                                 elif param.type == 'norm':
-                                    if param[sel] and param[ds] and param['active']:
+                                    if param[sel] and param[ds]:
                                         norm_vector.append(1)
                                     else:
                                         norm_vector.append(0)
@@ -450,9 +485,64 @@ class FitData(object):
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
-        model_val    = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
-        model_val    = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
-        if not no_sum:
+        if no_sum:
+            model_val = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
+        else:
+            model_val = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
+            model_val = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
+
+        #print(model_val)
+        model_var = model_tensor[:,:,1].sum(axis=0) 
+        #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
+
+        if randomize:
+            model_val += np.sqrt(model_var)*self._rnum_cache[category]
+
+        return model_val, model_var
+
+    def mixture_model_jacobian(self, params, category):
+        '''
+        Outputs mixture and associated variance for a given category.
+
+        Parameters:
+        ===========
+        params: parameter values for model
+        category: description of lepton/jet/b tag category
+        '''
+
+        # get the model data
+        model_data = self.get_model_data(category)
+
+        # split parameters into poi, normalization and shape
+        norm_params  = params[self._npoi:self._npoi + self._nnorm]
+        shape_params = params[self._npoi + self._nnorm:]
+
+        # update norm parameter array
+        norm_params = model_data['norm_mask']*norm_params
+        norm_params[norm_params == 0] = 1
+        norm_params = np.product(norm_params, axis=1)
+
+        # apply shape parameter mask and build array for morphing
+        shape_params_masked = shape_params[model_data['shape_param_mask']]
+        shape_params_masked = np.concatenate([[1, 0], 0.5*shape_params_masked**2, 0.5*shape_params_masked])
+
+        # get calculate process_amplitudes
+        if process_amplitudes is None:
+            beta, br_tau = params[:4], params[4:7]
+            ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
+            w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
+            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
+
+        # mask the process amplitudes for this category and apply normalization parameters
+        process_amplitudes_masked = process_amplitudes[model_data['process_mask']]
+        process_amplitudes_masked = norm_params.T*process_amplitudes_masked
+
+        # build expectation from model_tensor and propogate systematics
+        model_tensor = model_data['model']
+        if no_sum:
+            model_val = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
+        else:
+            model_val = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
             model_val = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
 
         #print(model_val)
@@ -488,21 +578,20 @@ class FitData(object):
         '''
 
         # build the process amplitudes (once per evaluation) 
+        #beta, br_tau = self._beta_init*params[:4], self._br_tau_init*params[4:7]
         beta, br_tau = params[:4], params[4:7]
         ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
         process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
+
+        #print(params, ww_amp, w_amp, sep='\n', end='\n\n')
         
         # calculate per category, per selection costs
         cost = 0
         for category, template_data in self._model_data.items():
 
-            # omit categories from calculation of cost
-            if category in self.veto_list:
-                continue
-
             # get the model and data templates
-            model_val, model_var = self.mixture_model(params, category, process_amplitudes, randomize=randomize_templates)
+            model_val, model_var = self.mixture_model(params, category, process_amplitudes, randomize=randomize_templates, no_sum=False)
             if data is None:
                 data_val, data_var = template_data['data']
             else:
@@ -527,18 +616,18 @@ class FitData(object):
                 bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
 
-                self._cache[category]['bb_penalty'] = bb_penalty
+                #self._cache[category]['bb_penalty'] = bb_penalty
 
             # calculate the cost
             if cost_type == 'poisson':
                 mask = (model_val > 0) & (data_val > 0)
-                nll = -data_val[mask]*np.log(model_val[mask]) + model_val[mask]
-                nll += data_val[mask]*np.log(data_val[mask]) - data_val[mask]
+                nll = -data_val[mask]*np.log(model_val[mask]) + model_val[mask] \
+                      + data_val[mask]*np.log(data_val[mask]) - data_val[mask]
             elif cost_type == 'chi2':
                 mask = data_var + model_var > 0
                 nll = 0.5*(data_val[mask] - model_val[mask])**2 / (data_var[mask] + model_var[mask])
 
-            self._cache[category]['cost'] = nll
+            #self._cache[category]['cost'] = nll
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
@@ -547,11 +636,45 @@ class FitData(object):
         self._np_cost = pi_param
 
         # require that the branching fractions sum to 1
-        beta  = params[:4]
-        cost += (1 - np.sum(beta))**2/(2e-12)
+        cost += (np.sum(beta) - 1)**2/1e-8
+        #cost += (np.sum(br_tau) - 1)**2/1e-4
 
-        # require that all branching fractions are contained in [0, 1]
-        if np.any((beta <= 0.) | (beta >= 1.)):
-            cost = np.inf
+        return cost
+
+    def objective_jacobian(params, data):
+
+        # build the process amplitudes (once per evaluation) 
+        #beta, br_tau = self._beta_init*params[:4], self._br_tau_init*params[4:7]
+        beta, br_tau = params[:4], params[4:7]
+        ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
+        w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
+        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
+
+        # calculate per category, per selection costs
+        cost = np.zeros(params.size)
+        for category, template_data in self._model_data.items():
+
+            # get the model and data templates
+            model_val, model_var = self.mixture_model(params, category, process_amplitudes)
+            data_val, data_var   = template_data['data']
+
+            # get the jacobian of the model
+            model_jac = self.mixture_model_jacobian(params, category)
+
+            # calculate the cost
+            mask = (model_val > 0) & (data_val > 0)
+            nll = -data_val[mask]*np.log(model_val[mask]) + model_val[mask] \
+
+            #self._cache[category]['cost'] = nll
+            cost += nll.sum()
+
+        # Add prior constraint terms for nuisance parameters 
+        pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)
+        cost += pi_param.sum()
+        self._np_cost = pi_param
+
+        # require that the branching fractions sum to 1
+        cost += (np.sum(beta) - 1)**2/1e-8
+        #cost += (np.sum(br_tau) - 1)**2/1e-4
 
         return cost
