@@ -554,6 +554,32 @@ class DataManager():
                     init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
                     df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
+            ### combining z+jets samples
+            if label == 'zjets_alt':
+                ratios = [0.7589, 0.1786, 0.0625]
+                if dataset == 'zjets_alt_m-50' or dataset == 'zjets_alt_m-10to50':
+                    # rescale n parton parts
+                    init_count_0 = self._event_counts['z0jets_alt'][0]
+                    df.loc[df.n_partons == 0, 'weight'] *= ratios[0]*init_count/(init_count_0 + ratios[0]*init_count)
+
+                    init_count_1 = self._event_counts['z1jets_alt'][0]
+                    df.loc[df.n_partons == 1, 'weight'] *= ratios[1]*init_count/(init_count_1 + ratios[1]*init_count)
+
+                    init_count_2 = self._event_counts['z2jets_alt'][0]
+                    df.loc[df.n_partons == 2, 'weight'] *= ratios[2]*init_count/(init_count_2 + ratios[2]*init_count)
+
+                elif dataset == 'z0jets_alt':
+                    init_count_inclusive = self._event_counts['zjets_alt_m-50'][0] + self._event_counts['zjets_alt_m-10to50'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + ratios[0]*init_count_inclusive)
+
+                elif dataset == 'z1jets_alt':
+                    init_count_inclusive = self._event_counts['zjets_alt_m-50'][0] + self._event_counts['zjets_alt_m-10to50'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + ratios[1]*init_count_inclusive)
+
+                elif dataset == 'z2jets_alt':
+                    init_count_inclusive = self._event_counts['zjets_alt_m-50'][0] + self._event_counts['zjets_alt_m-10to50'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
+
             ### only keep certain features ###
             if self._features is not None:
                 df = df[[f for f in self._features + ['weight', 'run_number', 'event_number'] if f in df.columns]]

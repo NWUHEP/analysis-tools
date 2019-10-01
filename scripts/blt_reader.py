@@ -154,6 +154,7 @@ def fill_event_vars(tree, dataset):
                     lepton2_reco_var = tree.leptonTwoRecoVar,
                     lepton1_id_var   = tree.leptonOneIDVar,
                     lepton2_id_var   = tree.leptonTwoIDVar,
+                    trigger_var      = tree.triggerVar,
 
                    )
 

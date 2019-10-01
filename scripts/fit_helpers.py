@@ -5,12 +5,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import numdifftools as nd
+from scipy.stats import lognorm, norm
 
-#from functools import partial
-#from scipy.integrate import quad
-#from lmfit import Parameters
-
-#import nllfit.fit_tools as ft
 import scripts.plot_tools as pt
 
 np.set_printoptions(precision=2)
@@ -79,7 +75,7 @@ def signal_amplitudes(beta, br_tau, single_w=False):
 
     return amplitudes
 
-def signal_amplitudes_jac(beta, br_tau, single_w=False):
+def signal_amplitudes_jacobian(beta, br_tau, npadding, single_w=False):
     '''
     Derivatives of signal component amplitudes.
     '''
@@ -88,24 +84,35 @@ def signal_amplitudes_jac(beta, br_tau, single_w=False):
         amplitudes_jac = np.array([
                                   [1, 0, 0,         0,         0,         0],
                                   [0, 1, 0,         0,         0,         0],
-                                  [0, 0, br_tau[0], 0,         0,         0],
-                                  [0, 0, 0,         br_tau[1], 0,         0],
-                                  [0, 0, 0,         0,         br_tau[2], 0],
-                                  [0, 0, 0,         0,         0,         1]
+                                  [0, 0, br_tau[0], br_tau[1], br_tau[2], 0],
+                                  [0, 0, 0,         0,         0,         1],
+                                  [0, 0, beta[2],   0,         0,         0],
+                                  [0, 0, 0,         beta[2],   0,         0],
+                                  [0, 0, 0,         0,         beta[2],   0],
                                   ]
                                  )
+        amplitudes_jac = np.vstack([amplitudes_jac, np.zeros((npadding, 6))])
     else:
         amplitudes_jac = np.array([
-                                  [2*beta[0], 0, 2*beta[1], 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 0, 0, 2*beta[3], 0, 0, 0, 0, 0]
-                                  [0, 2*beta[1], 2*beta[0], 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 2*beta[3], 0, 0, 0, 0]
+                                  [2*beta[0], 0, 2*beta[1], 0, 0, 0, 0, 0, 0,
+                                      2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 0, 0, 
+                                      2*beta[3], 0, 0, 0, 0, 0],
+                                  [0, 2*beta[1], 2*beta[0], 0, 0, 0, 0, 0, 0,
+                                      0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 
+                                      0, 2*beta[3], 0, 0, 0, 0],
                                   [0, 0, 0, 2*beta[2]*br_tau[0]**2, 2*beta[2]*br_tau[1]**2, 
                                       4*beta[2]*br_tau[0]*br_tau[1], 4*beta[2]*br_tau[0]*br_tau[2], 4*beta[2]*br_tau[1]*br_tau[2], 2*beta[2]*br_tau[2]**2, 
                                       2*beta[0]*br_tau[0], 2*beta[0]*br_tau[1], 2*beta[0]*br_tau[2], 
                                       2*beta[1]*br_tau[0], 2*beta[1]*br_tau[1], 2*beta[1]*br_tau[2], 0, 0,
                                       2*beta[3]*br_tau[0], 2*beta[3]*br_tau[1], 2*beta[3]*br_tau[2], 0],
-                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[0], 2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]]
+                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+                                      2*beta[0], 2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]],
+                                  [0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0, 0, 0],
+                                  [0, 0, 0, 0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0, 0],
+                                  [0, 0, 0, 0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0]
                                   ]
                                  )
+        amplitudes_jac = np.vstack([amplitudes_jac, np.zeros((npadding,21))])
 
     return amplitudes_jac
 
@@ -165,6 +172,7 @@ def objective_lu(params, objective, test_type=1, **kwargs):
 def reduced_objective(params, params_fixed, mask, objective, **kwargs):
     params_new = params_fixed.copy()
     params_new[mask] = params
+
     return objective(params_new, **kwargs) 
 
 # Barlow-Beeston method for limited MC statistics
@@ -459,18 +467,15 @@ class FitData(object):
         # get the model data
         model_data = self.get_model_data(category)
 
-        # split parameters into poi, normalization and shape
-        norm_params  = params[self._npoi:self._npoi + self._nnorm]
-        shape_params = params[self._npoi + self._nnorm:]
-
         # update norm parameter array
-        norm_params = model_data['norm_mask']*norm_params
-        norm_params[norm_params == 0] = 1
-        norm_params = np.product(norm_params, axis=1)
+        norm_params     = params[self._npoi:self._npoi + self._nnorm]
+        norm_mask       = model_data['norm_mask']
+        norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask.astype(bool))
 
         # apply shape parameter mask and build array for morphing
-        shape_params_masked = shape_params[model_data['shape_param_mask']]
-        shape_params_masked = np.concatenate([[1, 0], 0.5*shape_params_masked**2, 0.5*shape_params_masked])
+        shape_params = params[self._npoi + self._nnorm:]
+        shape_params = shape_params[model_data['shape_param_mask']]
+        shape_params = np.concatenate([[1, 0], 0.5*shape_params**2, 0.5*shape_params])
 
         # get calculate process_amplitudes
         if process_amplitudes is None:
@@ -480,20 +485,20 @@ class FitData(object):
             process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
 
         # mask the process amplitudes for this category and apply normalization parameters
-        process_amplitudes_masked = process_amplitudes[model_data['process_mask']]
-        process_amplitudes_masked = norm_params.T*process_amplitudes_masked
+        process_amplitudes = process_amplitudes[model_data['process_mask']]
+        process_amplitudes = norm_params_prod.T*process_amplitudes
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
         if no_sum:
-            model_val = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
+            model_val = np.tensordot(model_tensor[:,:,0].T, process_amplitudes, axes=1)
         else:
-            model_val = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
-            model_val = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
+            model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
+            model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
 
         #print(model_val)
         model_var = model_tensor[:,:,1].sum(axis=0) 
-        #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
+        #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes, axes=1)
 
         if randomize:
             model_val += np.sqrt(model_var)*self._rnum_cache[category]
@@ -512,47 +517,46 @@ class FitData(object):
 
         # get the model data
         model_data = self.get_model_data(category)
-
-        # split parameters into poi, normalization and shape
         norm_params  = params[self._npoi:self._npoi + self._nnorm]
         shape_params = params[self._npoi + self._nnorm:]
 
-        # update norm parameter array
-        norm_params = model_data['norm_mask']*norm_params
-        norm_params[norm_params == 0] = 1
-        norm_params = np.product(norm_params, axis=1)
+        # Calculate the normalization parameter products
+        norm_mask = model_data['norm_mask']
+        norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask.astype(bool))
+
+        # norm parameter jacobian
+        norm_params_jac = (1 - np.identity(norm_params.size))*norm_params 
+        norm_params_jac = np.array([model_data['norm_mask']*n for n in norm_params_jac])
 
         # apply shape parameter mask and build array for morphing
-        shape_params_masked = shape_params[model_data['shape_param_mask']]
-        shape_params_masked = np.concatenate([[1, 0], 0.5*shape_params_masked**2, 0.5*shape_params_masked])
+        shape_params = shape_params[model_data['shape_param_mask']]
+        shape_params_arr = np.concatenate([[1, 0], 0.5*shape_params**2, 0.5*shape_params])
 
-        # get calculate process_amplitudes
-        if process_amplitudes is None:
-            beta, br_tau = params[:4], params[4:7]
-            ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
-            w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
-            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
+        # shape parameter jacobian
+        sp_matrix = np.identity(self._nshape)[:, model_data['shape_param_mask']]
+        sp_matrix = np.vstack([np.zeros([self._npoi+self._nnorm, shape_params.size]), sp_matrix])
+        shape_params_jac = np.hstack([np.zeros([self._nparams, 2]), shape_params*sp_matrix, 0.5*sp_matrix])
 
-        # mask the process amplitudes for this category and apply normalization parameters
-        process_amplitudes_masked = process_amplitudes[model_data['process_mask']]
-        process_amplitudes_masked = norm_params.T*process_amplitudes_masked
+        # get the signal amplitudes and build process amplitudes
+        beta, br_tau = params[:4], params[4:7]
+        ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
+        w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
 
-        # build expectation from model_tensor and propogate systematics
+        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
+        process_amplitudes = process_amplitudes[model_data['process_mask']]
+
+        # do the same for the signal amplitude jacobians
+        ww_amp_jac = signal_amplitudes_jacobian(beta, br_tau, params.size - 7)/self._ww_amp_init
+        w_amp_jac  = signal_amplitudes_jacobian(beta, br_tau, params.size - 7, single_w=True)/self._w_amp_init
+        process_amplitudes_jac = np.concatenate([ww_amp_jac, ww_amp_jac, ww_amp_jac, w_amp_jac, np.zeros((params.size, 3))], axis=1)
+        #process_amplitudes_jac = process_amplitudes_jac[model_data['process_mask']]
+
+        # combine everything together
         model_tensor = model_data['model']
-        if no_sum:
-            model_val = np.tensordot(model_tensor[:,:,0].T, process_amplitudes_masked, axes=1)
-        else:
-            model_val = np.tensordot(model_tensor, shape_params_masked, axes=1) # n.p. modification
-            model_val = np.tensordot(model_val.T, process_amplitudes_masked, axes=1)
+        model_val = np.tensordot(model_tensor, shape_params_arr, axes=1) # n.p. modification
+        model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
 
-        #print(model_val)
-        model_var = model_tensor[:,:,1].sum(axis=0) 
-        #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes_masked, axes=1)
-
-        if randomize:
-            model_val += np.sqrt(model_var)*self._rnum_cache[category]
-
-        return model_val, model_var
+        return process_amplitudes, shape_params_arr, norm_params_jac, process_amplitudes_jac, shape_params_jac
         
     def objective(self, params, 
                   data                = None,
@@ -577,9 +581,12 @@ class FitData(object):
         randomize_templates: displaces the prediction in each bin by a fixed, random amount.
         '''
 
+        # branching fractions scaled back to true values
+        #params[:4]   *= self._beta_init
+        #params[4:7]  *= self._br_tau_init
+        beta, br_tau  = params[:4], params[4:7]
+
         # build the process amplitudes (once per evaluation) 
-        #beta, br_tau = self._beta_init*params[:4], self._br_tau_init*params[4:7]
-        beta, br_tau = params[:4], params[4:7]
         ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
         process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
@@ -637,14 +644,13 @@ class FitData(object):
 
         # require that the branching fractions sum to 1
         cost += (np.sum(beta) - 1)**2/1e-8
-        #cost += (np.sum(br_tau) - 1)**2/1e-4
+        cost += (np.sum(br_tau) - 1)**2/1e-3
 
         return cost
 
     def objective_jacobian(params, data):
 
         # build the process amplitudes (once per evaluation) 
-        #beta, br_tau = self._beta_init*params[:4], self._br_tau_init*params[4:7]
         beta, br_tau = params[:4], params[4:7]
         ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
@@ -663,13 +669,13 @@ class FitData(object):
 
             # calculate the cost
             mask = (model_val > 0) & (data_val > 0)
-            nll = -data_val[mask]*np.log(model_val[mask]) + model_val[mask] \
+            nll_jac = model_jac*(1 - data_val[mask]/model_val[mask]) 
 
             #self._cache[category]['cost'] = nll
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
-        pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)
+        pi_param_jac = (params[4:] - self._pval_init[4:]) / self._perr_init[4:]**2
         cost += pi_param.sum()
         self._np_cost = pi_param
 
