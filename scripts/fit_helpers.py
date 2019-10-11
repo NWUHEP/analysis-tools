@@ -155,26 +155,6 @@ def chi2_test(y1, y2, var1, var2):
     chi2 = 0.5*(y1 - y2)**2/(var1 + var2)
     return chi2
 
-# modified objective for testing lepton universality
-def objective_lu(params, objective, test_type=1, **kwargs):
-    if test_type == 0:
-        params_new = params 
-    elif test_type == 1:
-        beta = params[0]
-        params_new = np.concatenate([[beta, beta, beta, 1 - 3*beta], params[1:]])
-    elif test_type == 2:
-        beta_emu = params[0]
-        beta_tau = params[1]
-        params_new = np.concatenate([[beta_emu, beta_emu, beta_tau, 1 - 2*beta_emu - beta_tau], params[2:]])
-
-    return objective(params_new, **kwargs)
-
-def reduced_objective(params, params_fixed, mask, objective, **kwargs):
-    params_new = params_fixed.copy()
-    params_new[mask] = params
-
-    return objective(params_new, **kwargs) 
-
 # Barlow-Beeston method for limited MC statistics
 def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
     a = 1
@@ -245,7 +225,13 @@ class FitData(object):
         self._nshape     = df_params.query('type == "shape"').shape[0]
         self._pval_init  = df_params['val_init'].values
         self._perr_init  = df_params['err_init'].values
+        self._pmask      = df_params['active'].values.astype(bool)
         self._parameters = df_params
+
+        # define priors here
+        #self._priors = []
+        #for prior_pdf in df_params['pdf']:
+        #    self._priors.append()
 
         return
 
@@ -447,7 +433,6 @@ class FitData(object):
     def mixture_model(self, params, category, 
                       process_amplitudes = None,
                       no_sum             = False,
-                      randomize          = False
                       ):
         '''
         Outputs mixture and associated variance for a given category.
@@ -460,20 +445,18 @@ class FitData(object):
             they can be passed in, otherwise calculates values based on input
             parameters
         no_sum: (default False) if set to True, will not sum across the process dimension
-        randomize: (default False) if set to True, will randomly displace
-            individual bin normalizations based on the cached values.  
         '''
 
-        # get the model data
-        model_data = self.get_model_data(category)
+        # get the model data and unpack parameters
+        model_data   = self.get_model_data(category)
+        norm_params  = params[self._npoi:self._npoi + self._nnorm]
+        shape_params = params[self._npoi + self._nnorm:]
 
         # update norm parameter array
-        norm_params     = params[self._npoi:self._npoi + self._nnorm]
-        norm_mask       = model_data['norm_mask']
-        norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask.astype(bool))
+        norm_mask       = model_data['norm_mask'].astype(bool)
+        norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask)
 
         # apply shape parameter mask and build array for morphing
-        shape_params = params[self._npoi + self._nnorm:]
         shape_params = shape_params[model_data['shape_param_mask']]
         shape_params = np.concatenate([[1, 0], 0.5*shape_params**2, 0.5*shape_params])
 
@@ -486,7 +469,7 @@ class FitData(object):
 
         # mask the process amplitudes for this category and apply normalization parameters
         process_amplitudes = process_amplitudes[model_data['process_mask']]
-        process_amplitudes = norm_params_prod.T*process_amplitudes
+        process_amplitudes = norm_param_prod.T*process_amplitudes
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
@@ -500,12 +483,9 @@ class FitData(object):
         model_var = model_tensor[:,:,1].sum(axis=0) 
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes, axes=1)
 
-        if randomize:
-            model_val += np.sqrt(model_var)*self._rnum_cache[category]
-
         return model_val, model_var
 
-    def mixture_model_jacobian(self, params, category):
+    def mixture_model_jacobian(self, params, category, process_amplitudes=None):
         '''
         Outputs mixture and associated variance for a given category.
 
@@ -513,22 +493,29 @@ class FitData(object):
         ===========
         params: parameter values for model
         category: description of lepton/jet/b tag category
+        process_amplitudes: if signal process amplitudes have been calculated
+                            they can be passed in, otherwise calculates values based on input
+                            parameters
         '''
 
         # get the model data
         model_data = self.get_model_data(category)
-        norm_params  = params[self._npoi:self._npoi + self._nnorm]
-        shape_params = params[self._npoi + self._nnorm:]
 
         # Calculate the normalization parameter products
-        norm_mask = model_data['norm_mask']
-        norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask.astype(bool))
+        norm_params  = params[self._npoi:self._npoi + self._nnorm]
+        norm_mask = model_data['norm_mask'].astype(bool)
+        norm_params_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask)
 
         # norm parameter jacobian
-        norm_params_jac = (1 - np.identity(norm_params.size))*norm_params 
-        norm_params_jac = np.array([model_data['norm_mask']*n for n in norm_params_jac])
+        norm_params_jac = np.identity(norm_params.size) + (1 - np.identity(norm_params.size))*norm_params 
+        norm_params_jac = np.array([np.product(norm_params_jac, axis=1, where=m)*m for m in norm_mask])
+        norm_params_jac = np.hstack([np.zeros([norm_mask.shape[0], self._npoi]), 
+                                     norm_params_jac, 
+                                     np.zeros([norm_mask.shape[0], self._nshape])
+                                     ])
 
         # apply shape parameter mask and build array for morphing
+        shape_params = params[self._npoi + self._nnorm:]
         shape_params = shape_params[model_data['shape_param_mask']]
         shape_params_arr = np.concatenate([[1, 0], 0.5*shape_params**2, 0.5*shape_params])
 
@@ -539,31 +526,39 @@ class FitData(object):
 
         # get the signal amplitudes and build process amplitudes
         beta, br_tau = params[:4], params[4:7]
-        ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
-        w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
+        if process_amplitudes is None:
+            ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
+            w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
+            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
 
-        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
-        process_amplitudes = process_amplitudes[model_data['process_mask']]
+        # apply mask
+        process_mask = model_data['process_mask'].astype(bool)
+        process_amplitudes = process_amplitudes[process_mask]
 
         # do the same for the signal amplitude jacobians
         ww_amp_jac = signal_amplitudes_jacobian(beta, br_tau, params.size - 7)/self._ww_amp_init
         w_amp_jac  = signal_amplitudes_jacobian(beta, br_tau, params.size - 7, single_w=True)/self._w_amp_init
         process_amplitudes_jac = np.concatenate([ww_amp_jac, ww_amp_jac, ww_amp_jac, w_amp_jac, np.zeros((params.size, 3))], axis=1)
-        #process_amplitudes_jac = process_amplitudes_jac[model_data['process_mask']]
+        process_amplitudes_jac = process_amplitudes_jac[:,process_mask]
 
         # combine everything together
-        model_tensor = model_data['model']
-        model_val = np.tensordot(model_tensor, shape_params_arr, axes=1) # n.p. modification
-        model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
+        A1 = np.einsum('i,jk->ijk', norm_params_prod.T*process_amplitudes, shape_params_jac)
+        A2 = np.einsum('i,jk->ijk', shape_params_arr, process_amplitudes_jac*norm_params_prod)
+        A3 = np.einsum('i,jk->ijk', shape_params_arr, process_amplitudes*norm_params_jac.T)
+        A = np.transpose(A1, (2, 1, 0)) + A2 + A3
 
-        return process_amplitudes, shape_params_arr, norm_params_jac, process_amplitudes_jac, shape_params_jac
+        model_tensor = model_data['model']
+        model_val_jac = np.einsum('ijk,kli->jl', model_tensor, A) # n.p. modification
+
+        return model_val_jac 
         
-    def objective(self, params, 
+    def objective(self, params,
                   data                = None,
                   cost_type           = 'poisson',
                   no_shape            = False,
-                  do_mc_stat          = True,
+                  do_mc_stat          = False,
                   randomize_templates = False,
+                  lu_test = None
                  ):
         '''
         Cost function for MC data model.  This version has no background
@@ -579,14 +574,19 @@ class FitData(object):
         no_shape : sums over all bins in input templates
         do_mc_stat: include bin-by-bin Barlow-Beeston parameters accounting for limited MC statistics
         randomize_templates: displaces the prediction in each bin by a fixed, random amount.
+        lu_test: for testing of lepton universality
+                * if 0 then all leptonic W branching fractions are equal
+                * if 1 then e and mu leptonic W branching fractions are equal, tau is different
+                * else all W branching fractions vary independently
         '''
 
-        # branching fractions scaled back to true values
-        #params[:4]   *= self._beta_init
-        #params[4:7]  *= self._br_tau_init
-        beta, br_tau  = params[:4], params[4:7]
+        # apply mask to parameters
+        params_reduced = self._pval_init.copy()
+        params_reduced[self._pmask] = params
+        params = params_reduced
 
         # build the process amplitudes (once per evaluation) 
+        beta, br_tau  = params[:4], params[4:7]
         ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
         process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
@@ -598,7 +598,7 @@ class FitData(object):
         for category, template_data in self._model_data.items():
 
             # get the model and data templates
-            model_val, model_var = self.mixture_model(params, category, process_amplitudes, randomize=randomize_templates, no_sum=False)
+            model_val, model_var = self.mixture_model(params, category, process_amplitudes, no_sum=False)
             if data is None:
                 data_val, data_var = template_data['data']
             else:
@@ -643,12 +643,48 @@ class FitData(object):
         self._np_cost = pi_param
 
         # require that the branching fractions sum to 1
-        cost += (np.sum(beta) - 1)**2/1e-8
-        cost += (np.sum(br_tau) - 1)**2/1e-3
+        cost += (np.sum(beta) - 1)**2/1e-10
+
+        # constraining branching fractions for lepton universality testing (maybe not the best way)
+        if lu_test == 0:
+            cost += (beta[0] - beta[1])**2/1e-10
+            cost += (beta[0] - beta[2])**2/1e-10
+            #cost += (beta[1] - beta[2])**2/1e-10 # necessary?
+        elif lu_test == 1:
+            cost += (beta[0] - beta[1])**2/1e-10
+
+        # do the same for the tau branching fraction
+        #cost += (np.sum(br_tau) - 1)**2/1e-3
+
+        #print(params[:4])
 
         return cost
 
-    def objective_jacobian(params, data):
+    def objective_jacobian(self, params, data=None, lu_test=None):
+        '''
+        Returns the jacobian of the objective.
+
+        Parameters:
+        ===========
+        params : numpy array of parameters.  The first four are the W branching
+                 fractions, all successive ones are nuisance parameters.
+        data : dataset to be fitted
+        lu_test: for testing of lepton universality
+                * if 0 then all leptonic W branching fractions are equal
+                * if 1 then e and mu leptonic W branching fractions are equal, tau is different
+                * else all W branching fractions vary independently
+        '''
+
+        # apply mask to parameters
+        params_reduced = self._pval_init.copy()
+        params_reduced[self._pmask] = params
+        params = params_reduced
+
+        ## set branching fractions depending on hypothesis test
+        #if lu_test == 0:
+        #    params_reduced[1:3] = params[0]
+        #elif lu_test == 1:
+        #    params_reduced[1] = params[0]
 
         # build the process amplitudes (once per evaluation) 
         beta, br_tau = params[:4], params[4:7]
@@ -657,30 +693,42 @@ class FitData(object):
         process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
 
         # calculate per category, per selection costs
-        cost = np.zeros(params.size)
+        dcost = np.zeros(params.size)
         for category, template_data in self._model_data.items():
 
             # get the model and data templates
             model_val, model_var = self.mixture_model(params, category, process_amplitudes)
-            data_val, data_var   = template_data['data']
+            if data is None:
+                data_val, data_var = template_data['data']
+            else:
+                data_val, data_var = data[category]
 
             # get the jacobian of the model
-            model_jac = self.mixture_model_jacobian(params, category)
+            model_jac = self.mixture_model_jacobian(params, category, process_amplitudes)
 
             # calculate the cost
             mask = (model_val > 0) & (data_val > 0)
-            nll_jac = model_jac*(1 - data_val[mask]/model_val[mask]) 
+            nll_jac = np.dot(model_jac.T[:,mask], (1 - data_val[mask]/model_val[mask]))
 
-            #self._cache[category]['cost'] = nll
-            cost += nll.sum()
+            dcost += nll_jac
 
         # Add prior constraint terms for nuisance parameters 
         pi_param_jac = (params[4:] - self._pval_init[4:]) / self._perr_init[4:]**2
-        cost += pi_param.sum()
-        self._np_cost = pi_param
+        dcost[4:] += pi_param_jac
 
         # require that the branching fractions sum to 1
-        cost += (np.sum(beta) - 1)**2/1e-8
-        #cost += (np.sum(br_tau) - 1)**2/1e-4
+        dcost[:4] += 2*(np.sum(beta) - 1)/1e-10
 
-        return cost
+        # constraining branching fractions for lepton universality testing (maybe not the best way)
+        if lu_test == 0:
+            dcost[0] += 2*(beta[0] - beta[1])/1e-10
+            dcost[0] += 2*(beta[0] - beta[2])/1e-10
+            dcost[1] += -2*(beta[0] - beta[1])/1e-10
+            dcost[2] += -2*(beta[0] - beta[2])/1e-10
+        elif lu_test == 1:
+            dcost[0] += 2*(beta[0] - beta[1])/1e-10
+            dcost[1] += -2*(beta[0] - beta[1])/1e-10
+
+        #dcost += 2*(np.sum(br_tau) - 1)/1e-4
+
+        return dcost[self._pmask]
