@@ -156,12 +156,12 @@ def chi2_test(y1, y2, var1, var2):
     return chi2
 
 # Barlow-Beeston method for limited MC statistics
-def bb_objective_aux(params_mc, data_val, exp_val, exp_var):
+def bb_objective_aux(data_val, exp_val, exp_var):
     a = 1
     b = exp_var/exp_val - 1
-    c = -1*data_val*exp_var/exp_val**2
-    beta_plus  = (-1*b + np.sqrt(b**2 - 4*a*c))/2
-    beta_minus = (-1*b - np.sqrt(b**2 - 4*a*c))/2
+    c = -data_val*exp_var/exp_val**2
+    beta_plus  = (-b + np.sqrt(b*b - 4*a*c))/2
+    beta_minus = (-b - np.sqrt(b*b - 4*a*c))/2
 
     return beta_plus, beta_minus
 
@@ -186,9 +186,6 @@ class FitData(object):
         # initialize fit data
         self.veto_list = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0'] # used to remove categories from fit
         self._initialize_fit_tensor(process_cut)
-
-        # minimization cache
-        self.initialize_minimization_cache()
 
         # initialize cost (do this last)
         #self._cost_init = 0
@@ -260,7 +257,6 @@ class FitData(object):
         
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
-        self._bin_np     = dict()
         self._rnum_cache = dict()
         self._categories = []
         for sel in self._selections:
@@ -274,7 +270,6 @@ class FitData(object):
                 self._categories.append(f'{sel}_{category}') 
                 templates                             = templates['templates']
                 data_val, data_var                    = templates['data']['val'], templates['data']['var']
-                self._bin_np[f'{sel}_{category}']     = np.ones(data_val.size)
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
 
                 norm_mask    = []
@@ -384,13 +379,6 @@ class FitData(object):
 
         return
 
-    def initialize_minimization_cache(self):
-        '''
-        Used for debugging minimization and analyzing per bin statistical n.p. and cost
-        '''
-        self._cache = {cat:dict(cost = 0, np_bb = 0) for cat in self._categories}
-        self._np_cost = 0
- 
     # getter functions
     def get_selection_data(self, selection):
         return self._selection_data[selection]
@@ -555,8 +543,8 @@ class FitData(object):
     def objective(self, params,
                   data                = None,
                   cost_type           = 'poisson',
+                  do_bb_lite          = True,
                   no_shape            = False,
-                  do_mc_stat          = False,
                   randomize_templates = False,
                   lu_test = None
                  ):
@@ -567,12 +555,12 @@ class FitData(object):
 
         Parameters:
         ===========
-        params : numpy array of parameters.  The first four are the W branching
-                 fractions, all successive ones are nuisance parameters.
-        data : dataset to be fitted
-        cost_type : either 'chi2' or 'poisson'
-        no_shape : sums over all bins in input templates
-        do_mc_stat: include bin-by-bin Barlow-Beeston parameters accounting for limited MC statistics
+        params: numpy array of parameters.  The first four are the W branching
+                fractions, all successive ones are nuisance parameters.
+        data: dataset to be fitted
+        cost_type: either 'chi2' or 'poisson'
+        no_shape: sums over all bins in input templates
+        do_bb_lite: include bin-by-bin Barlow-Beeston parameters accounting for limited MC statistics
         randomize_templates: displaces the prediction in each bin by a fixed, random amount.
         lu_test: for testing of lepton universality
                 * if 0 then all leptonic W branching fractions are equal
@@ -591,8 +579,6 @@ class FitData(object):
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
         process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
 
-        #print(params, ww_amp, w_amp, sep='\n', end='\n\n')
-        
         # calculate per category, per selection costs
         cost = 0
         for category, template_data in self._model_data.items():
@@ -614,16 +600,14 @@ class FitData(object):
 
             # include effect of MC statisitcs (important that this is done
             # AFTER no_shape condition so inputs are integrated over)
-            if do_mc_stat:
-                bin_amp = self._bin_np[category]
-                bin_amp = bb_objective_aux(bin_amp, data_val, model_val, model_var)[0]
+            if do_bb_lite:
+                # update bin-by-bin amplitudes
+                bin_amp = bb_objective_aux(data_val, model_val, model_var)[0]
                 model_val *= bin_amp
 
-                self._bin_np[category] = bin_amp 
-                bb_penalty = (1 - bin_amp)**2/(2*model_var/model_val**2)
+                # add deviation of amplitudes to cost (assume Gaussian penalty)
+                bb_penalty = (bin_amp - 1)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
-
-                #self._cache[category]['bb_penalty'] = bb_penalty
 
             # calculate the cost
             if cost_type == 'poisson':
@@ -634,7 +618,6 @@ class FitData(object):
                 mask = data_var + model_var > 0
                 nll = 0.5*(data_val[mask] - model_val[mask])**2 / (data_var[mask] + model_var[mask])
 
-            #self._cache[category]['cost'] = nll
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
@@ -649,18 +632,16 @@ class FitData(object):
         if lu_test == 0:
             cost += (beta[0] - beta[1])**2/1e-10
             cost += (beta[0] - beta[2])**2/1e-10
-            #cost += (beta[1] - beta[2])**2/1e-10 # necessary?
         elif lu_test == 1:
             cost += (beta[0] - beta[1])**2/1e-10
 
         # do the same for the tau branching fraction
         #cost += (np.sum(br_tau) - 1)**2/1e-3
 
-        #print(params[:4])
 
         return cost
 
-    def objective_jacobian(self, params, data=None, lu_test=None):
+    def objective_jacobian(self, params, data=None, lu_test=None, do_bb_lite=True):
         '''
         Returns the jacobian of the objective.
 
@@ -706,7 +687,17 @@ class FitData(object):
             # get the jacobian of the model
             model_jac = self.mixture_model_jacobian(params, category, process_amplitudes)
 
-            # calculate the cost
+            if do_bb_lite:
+                # update bin-by-bin amplitudes
+                bin_amp = bb_objective_aux(data_val, model_val, model_var)[0]
+                model_val *= bin_amp
+                model_jac = model_jac*bin_amp.reshape(model_jac.shape[0], 1)
+
+                # add deviation of amplitudes to cost (assume Gaussian penalty)
+                #bb_penalty = (bin_amp - 1)/(model_var/model_val**2)
+                #dcost += np.sum(bb_penalty)
+
+            # calculate the jacobian of the NLL
             mask = (model_val > 0) & (data_val > 0)
             nll_jac = np.dot(model_jac.T[:,mask], (1 - data_val[mask]/model_val[mask]))
 
