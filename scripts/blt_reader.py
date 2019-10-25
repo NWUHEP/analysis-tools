@@ -143,7 +143,7 @@ def fill_event_vars(tree, dataset):
                     top_pt_weight       = tree.topPtWeight,
                     z_pt_weight         = tree.zPtWeight,
                     ww_pt_weight        = tree.wwPtWeight,
-                    event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
+                    #event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
 
                     # uncertainties
                     ww_pt_scale_up   = tree.wwPtScaleUp,
@@ -180,7 +180,9 @@ def fill_event_vars(tree, dataset):
         out_dict['gen_weight'] = tree.genWeight
         out_dict['n_partons']  = tree.nPartons
         if dataset in ['ttbar_lep', 'ttbar_semilep', 'ttbar_inclusive', 
-                       'zjets_m-10to50_alt', 'zjets_m-50_alt'
+                       'zjets_m-10to50_alt', 'zjets_m-50_alt',
+                       'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
+
                       ]:
             out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
             out_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
@@ -584,6 +586,10 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
         entry = {}
         entry.update(fill_event_vars(tree, dataset))
 
+        if selection in ['ee', 'emu', 'etau', 'e4j']:
+            entry['el_trigger_syst_tag']   = tree.eleTriggerVarTagSyst
+            entry['el_trigger_syst_probe'] = tree.eleTriggerVarProbeSyst
+
         if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau']:
             entry.update(fill_jet_vars(tree))
             entry.update(fill_jet_lepton_vars(tree))
@@ -639,7 +645,6 @@ if __name__ == '__main__':
                         #'ttbar_inclusive_herwig'
                         ]
 
-    dataset_list.append('ttbar_lep')
 
     ### Initialize multiprocessing queue and processes
     processes   = {}

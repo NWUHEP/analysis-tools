@@ -145,27 +145,28 @@ if __name__ == '__main__':
 
     # features to keep in memory
     feature_list = [
-                    'lepton1_pt', 'lepton2_pt', 
+                    'lepton1_pt', 'lepton2_pt',
                     'lead_lepton_pt','trailing_lepton_pt',
                     'lead_lepton_flavor', 'trailing_lepton_flavor',
                     'dilepton1_mass', 'dilepton1_delta_phi', 'lepton1_mt',
-                    'n_jets', 'n_bjets', 'tau_decay_mode', 
+                    'n_jets', 'n_bjets', 'tau_decay_mode',
                     
-                    'n_pu', 'gen_cat', 
-                    'lepton1_reco_weight', 'lepton2_reco_weight', 
+                    'n_pu', 'gen_cat',
+                    'lepton1_reco_weight', 'lepton2_reco_weight',
                     'lepton1_id_weight', 'lepton2_id_weight',
                     'trigger_weight', 'pileup_weight', 'top_pt_weight',
-                    'z_pt_weight', 'ww_pt_weight', 'event_weight', 
+                    'z_pt_weight', 'ww_pt_weight', 'event_weight',
 
                     'qcd_weight_nominal', 'qcd_weight_nom_up', 'qcd_weight_nom_down',
                     'qcd_weight_up_nom', 'qcd_weight_up_up', 'qcd_weight_down_nom',
-                    'qcd_weight_down_down', 'pdf_var', 'alpha_s_err', 
+                    'qcd_weight_down_down', 'pdf_var', 'alpha_s_err',
 
-                    'ww_pt_scale_up', 'ww_pt_scale_down', 
-                    'ww_pt_resum_up', 'ww_pt_resum_down', 
+                    'ww_pt_scale_up', 'ww_pt_scale_down',
+                    'ww_pt_resum_up', 'ww_pt_resum_down',
 
                     'lepton1_id_var', 'lepton2_id_var',
                     'lepton1_reco_var', 'lepton2_reco_var',
+                    'trigger_var', 'el_trigger_syst_tag', 'el_trigger_syst_probe',
 
                     'n_jets_jer_up', 'n_jets_jer_down',
                     'n_bjets_jer_up', 'n_bjets_jer_down',
@@ -180,9 +181,9 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_up' for n in btag_source_names]
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
-    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['mutau', 'etau']
-    pt.make_directory(f'{args.output}')
+    #selections = ['emu', 'ee', 'mumu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['e4j']#, 'emu', 'etau', 'e4j']
+    pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
         feature    = fh.features[selection]
@@ -331,12 +332,11 @@ if __name__ == '__main__':
             else:
                 full_cut = f'{cat_items.cut} and {cat_items.jet_cut}'
 
-            print(category)
             for idecay, decay_data in decay_map.iterrows():
                 binning = data[category]['bins']
                 df_syst = data[category]['templates']['ttbar'][decay_data.decay]
                 
-                print(decay_data.decay)
+                #print(decay_data.decay)
                 if np.sqrt(df_syst['var'].sum())/df_syst['val'].sum() < 0.1:
                     st.ttbar_systematics(dm, df_syst, 
                                          f'{full_cut} and gen_cat == {idecay}',

@@ -258,6 +258,7 @@ class FitData(object):
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
         self._rnum_cache = dict()
+        self._bb_np      = dict()
         self._categories = []
         for sel in self._selections:
             category_tensor = []
@@ -271,6 +272,7 @@ class FitData(object):
                 templates                             = templates['templates']
                 data_val, data_var                    = templates['data']['val'], templates['data']['var']
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
+                self._bb_np[f'{sel}_{category}']      = np.ones(data_val.size)
 
                 norm_mask    = []
                 process_mask = []
@@ -462,12 +464,11 @@ class FitData(object):
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
         if no_sum:
-            model_val = np.tensordot(model_tensor[:,:,0].T, process_amplitudes, axes=1)
+            model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
         else:
             model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
             model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
 
-        #print(model_val)
         model_var = model_tensor[:,:,1].sum(axis=0) 
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes, axes=1)
 
@@ -585,6 +586,9 @@ class FitData(object):
 
             # get the model and data templates
             model_val, model_var = self.mixture_model(params, category, process_amplitudes, no_sum=False)
+            if randomize_templates:
+                model_val += self._rnum_cache[category]*np.sqrt(model_var)
+
             if data is None:
                 data_val, data_var = template_data['data']
             else:
@@ -604,6 +608,7 @@ class FitData(object):
                 # update bin-by-bin amplitudes
                 bin_amp = bb_objective_aux(data_val, model_val, model_var)[0]
                 model_val *= bin_amp
+                self._bb_np[category] = bin_amp # save BB n.p.
 
                 # add deviation of amplitudes to cost (assume Gaussian penalty)
                 bb_penalty = (bin_amp - 1)**2/(2*model_var/model_val**2)
@@ -641,7 +646,11 @@ class FitData(object):
 
         return cost
 
-    def objective_jacobian(self, params, data=None, lu_test=None, do_bb_lite=True):
+    def objective_jacobian(self, params, data=None, 
+                           do_bb_lite          = True,
+                           randomize_templates = False,
+                           lu_test             = None,
+                          ):
         '''
         Returns the jacobian of the objective.
 
@@ -650,6 +659,7 @@ class FitData(object):
         params : numpy array of parameters.  The first four are the W branching
                  fractions, all successive ones are nuisance parameters.
         data : dataset to be fitted
+        randomize_templates: displaces the prediction in each bin by a fixed, random amount.
         lu_test: for testing of lepton universality
                 * if 0 then all leptonic W branching fractions are equal
                 * if 1 then e and mu leptonic W branching fractions are equal, tau is different
@@ -660,12 +670,6 @@ class FitData(object):
         params_reduced = self._pval_init.copy()
         params_reduced[self._pmask] = params
         params = params_reduced
-
-        ## set branching fractions depending on hypothesis test
-        #if lu_test == 0:
-        #    params_reduced[1:3] = params[0]
-        #elif lu_test == 1:
-        #    params_reduced[1] = params[0]
 
         # build the process amplitudes (once per evaluation) 
         beta, br_tau = params[:4], params[4:7]
@@ -679,6 +683,9 @@ class FitData(object):
 
             # get the model and data templates
             model_val, model_var = self.mixture_model(params, category, process_amplitudes)
+            if randomize_templates:
+                model_val += self._rnum_cache[category]*np.sqrt(model_var)
+
             if data is None:
                 data_val, data_var = template_data['data']
             else:

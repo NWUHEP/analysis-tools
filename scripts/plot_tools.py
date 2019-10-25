@@ -25,7 +25,9 @@ dataset_dict = dict(
                     #ttbar     = ['ttbar_lep', 'ttbar_semilep'],
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
-                    zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt'],
+                    zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt',
+                                 'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
+                                 ],
                     zjets_ext = ['z0jets_alt', 'z1jets_alt', 'z2jets_alt'],
                     zjets     = ['zjets_m-50',  'zjets_m-10to50',
                                  'z1jets_m-50', 'z1jets_m-10to50',
@@ -87,13 +89,13 @@ categories = dict(
 
                   cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
 
-                  cat_eq0_eq0   = Category(tau_dy_cut, 'n_jets == 0 and n_bjets == 0', ['etau', 'mutau'],                       '$N_{j} = 0, N_{b} = 0$, W veto',       0),
-                  cat_eq1_eq0   = Category(tau_dy_cut, 'n_jets == 1 and n_bjets == 0', ['etau', 'mutau'],                       '$N_{j} = 1, N_{b} = 0$, W veto',       1),
-                  cat_eq1_eq1   = Category(None,       'n_jets == 1 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} = 1, N_{b} = 1$',               1),
-                  cat_eq2_eq1   = Category(None,       'n_jets == 2 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} = 2, N_{b} = 1$',               2),
-                  cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'],                       '$N_{j} \geq 3, N_{b} = 1$',            3),
-                  cat_eq2_gt2   = Category(None,       'n_jets == 2 and n_bjets >= 2', ['etau', 'mutau'],                       '$N_{j} = 2, N_{b} \geq 2$',            2),
-                  cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'],                       '$N_{j} \geq 3, N_{b} \geq 2$',         3),
+                  cat_eq0_eq0   = Category(tau_dy_cut, 'n_jets == 0 and n_bjets == 0', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto',       0),
+                  cat_eq1_eq0   = Category(tau_dy_cut, 'n_jets == 1 and n_bjets == 0', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto',       1),
+                  cat_eq1_eq1   = Category(None,       'n_jets == 1 and n_bjets == 1', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$',               1),
+                  cat_eq2_eq1   = Category(None,       'n_jets == 2 and n_bjets == 1', ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$',               2),
+                  cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$',            3),
+                  cat_eq2_gt2   = Category(None,       'n_jets == 2 and n_bjets >= 2', ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$',            2),
+                  cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
 
                   cat_eq0_eq0_a = Category(None,       'n_jets == 0 and n_bjets == 0', ['emu'], '$N_{j} = 0, N_{b} = 0$',       0),
                   cat_eq1_eq0_a = Category(None,       'n_jets == 1 and n_bjets == 0', ['emu'], '$N_{j} = 1, N_{b} = 0$',       1),
@@ -285,7 +287,6 @@ def fit_plot(bins, data_val, model_pre, model_post,
     ===========
     '''
     fig, axes = plt.subplots(2, 1, figsize=(10, 12), facecolor='white', sharex=True, gridspec_kw={'height_ratios':[5,2]})
-    #fig.subplots_adjust(hspace=0) # doesn't work with tight layout
 
     # get bin widths and central points
     dx = (bins[1:] - bins[:-1])
@@ -352,12 +353,12 @@ def fit_plot(bins, data_val, model_pre, model_post,
             linestyle='--',
             label='expected (prefit)'
             )
-    #ax.plot(bins, model_post/dx,
-    #        drawstyle='steps-post',
-    #        c='C1',
-    #        linestyle='--',
-    #        label='expected (postfit)'
-    #        )
+    ax.plot(bins, model_post/dx,
+            drawstyle='steps-post',
+            c='C1',
+            linestyle='--',
+            label='expected (postfit)'
+            )
     ax.fill_between(bins, (model_pre - model_stat_err)/dx, (model_pre + model_stat_err)/dx,
                     color='grey',
                     step='post',
@@ -526,6 +527,13 @@ class DataManager():
                 scale *= lut_entry.branching_fraction
 
                 if label == 'zjets_alt':
+
+                    ### fix tau id scale factor
+                    if self._selection in ['etau', 'mutau']:
+                        df.loc[:,'lepton2_id_weight'] = 0.95
+                        df.loc[:,'lepton2_id_var'] = 0.05**2
+                        df.loc[:,'weight'] *= 0.95
+
                     scale *= df.gen_weight
                     neg_count = self._event_counts[dataset][9]
                     scale /= init_count - 2*neg_count
@@ -554,30 +562,36 @@ class DataManager():
                     init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
                     df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
-            ### combining z+jets samples
             if label == 'zjets_alt':
-                ratios = [0.7589, 0.1786, 0.0625]
-                if dataset == 'zjets_alt_m-50' or dataset == 'zjets_alt_m-10to50':
+
+                ### combining z+jets samples
+                ratios = [0.8252, 0.1534, 0.0588]
+                if dataset == 'zjets_m-50_alt':
+                    init_count -= 2*self._event_counts[dataset][9]
+
                     # rescale n parton parts
-                    init_count_0 = self._event_counts['z0jets_alt'][0]
+                    init_count_0 = self._event_counts['z0jets_alt'][0] - 2*self._event_counts['z0jets_alt'][9]
                     df.loc[df.n_partons == 0, 'weight'] *= ratios[0]*init_count/(init_count_0 + ratios[0]*init_count)
 
-                    init_count_1 = self._event_counts['z1jets_alt'][0]
+                    init_count_1 = self._event_counts['z1jets_alt'][0] - 2*self._event_counts['z1jets_alt'][9]
                     df.loc[df.n_partons == 1, 'weight'] *= ratios[1]*init_count/(init_count_1 + ratios[1]*init_count)
 
-                    init_count_2 = self._event_counts['z2jets_alt'][0]
+                    init_count_2 = self._event_counts['z2jets_alt'][0] - 2*self._event_counts['z2jets_alt'][9]
                     df.loc[df.n_partons == 2, 'weight'] *= ratios[2]*init_count/(init_count_2 + ratios[2]*init_count)
 
                 elif dataset == 'z0jets_alt':
-                    init_count_inclusive = self._event_counts['zjets_alt_m-50'][0] + self._event_counts['zjets_alt_m-10to50'][0]
+                    init_count -= 2*self._event_counts[dataset][9]
+                    init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
                     df.loc[:, 'weight'] *= init_count/(init_count + ratios[0]*init_count_inclusive)
 
                 elif dataset == 'z1jets_alt':
-                    init_count_inclusive = self._event_counts['zjets_alt_m-50'][0] + self._event_counts['zjets_alt_m-10to50'][0]
+                    init_count -= 2*self._event_counts[dataset][9]
+                    init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
                     df.loc[:, 'weight'] *= init_count/(init_count + ratios[1]*init_count_inclusive)
 
                 elif dataset == 'z2jets_alt':
-                    init_count_inclusive = self._event_counts['zjets_alt_m-50'][0] + self._event_counts['zjets_alt_m-10to50'][0]
+                    init_count -= 2*self._event_counts[dataset][9]
+                    init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
                     df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
 
             ### only keep certain features ###
@@ -674,8 +688,8 @@ class DataManager():
                 if mc_scale:
                     n   = df.weight.sum()
                     var_stat = np.sum(df.weight**2)
-                    sigma_xs = 0. #0.1 if dataset in ['zjets_alt', 'diboson'] else 0.05
-                    var_syst = (sigma_xs**2 + 0.025**2)*n**2
+                    sigma_xs = 0. 
+                    var_syst = 0. #(sigma_xs**2 + 0.025**2)*n**2
                     err = np.sqrt(var_stat + var_syst)
                     
                 else:

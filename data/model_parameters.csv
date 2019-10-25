@@ -3,9 +3,9 @@ beta_e,$\beta_{e}$,0.108,0.108,poi,1,none,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 beta_mu,$\beta_{\mu}$,0.108,0.108,poi,1,none,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 beta_tau,$\beta_{\tau}$,0.108,0.108,poi,1,none,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 beta_h,$\beta_{h}$,0.676,0.676,poi,1,none,w_br,W BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
-br_tau_e,$b_{\tau_{e}}$,0.1785,0.0004,poi,1,lognorm,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
-br_tau_mu,$b_{\tau_{\mu}}$,0.1736,0.0004,poi,1,lognorm,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
-br_tau_h,$b_{\tau_{h}}$,0.6479,0.001,poi,1,lognorm,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_e,$b_{\tau_{e}}$,0.1774,0.0004,poi,1,lognorm,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_mu,$b_{\tau_{\mu}}$,0.173,0.0004,poi,1,lognorm,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
+br_tau_h,$b_{\tau_{h}}$,0.6496,0.001,poi,1,lognorm,tau_br,$\tau$ BR,1,1,0,1,0,1,0,1,1,1,1,1,1,1
 lumi,$L_{int}$,1,0.025,norm,1,lognorm,misc,misc.,1,1,1,1,1,1,0,1,1,1,1,1,1,1
 xs_diboson,VV norm. (non-WW),1,0.1,norm,1,lognorm,misc,misc.,0,0,0,0,1,0,0,1,1,1,1,1,1,1
 xs_ww,WW norm.,1,0.1,norm,1,lognorm,misc,misc.,0,0,0,0,0,1,0,1,1,1,1,1,1,1
@@ -15,7 +15,6 @@ e_fakes,"QCD norm (e, iso)",1,0.1,norm,1,lognorm,qcd,QCD estimate,0,0,0,0,0,0,1,
 mu_fakes,"QCD norm ($\mu$, iso)",1,0.1,norm,1,lognorm,qcd,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,0,1
 e_fakes_ss,"QCD norm (e, ss)",1,0.1,norm,1,lognorm,qcd,QCD estimate,0,0,0,0,0,0,1,0,1,0,1,0,0,0
 mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.1,norm,1,lognorm,qcd,QCD estimate,0,0,0,0,0,0,1,0,1,0,0,1,0,0
-trigger_e,$e$ trigger,1,0.01,norm,1,lognorm,reco_lepton,$\ell$ reco,1,1,1,1,1,1,0,1,1,0,1,0,1,0
 trigger_mu,$\mu$ trigger,1,0.005,norm,1,lognorm,reco_lepton,$\ell$ reco,1,1,1,1,1,1,0,0,1,1,0,1,0,1
 xs_zjets_alt_pdf,Z norm. (PDF),0,1,shape,1,gaussian,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
 xs_zjets_alt_alpha_s,Z norm. ($\alpha_{s}$),0,1,shape,1,gaussian,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,1,1
@@ -25,7 +24,6 @@ xs_zjets_alt_qcd_scale_2,Z norm. ($\mu_{f}/\mu_{r}\ n_{j} = 2$),0,1,shape,1,gaus
 xs_ttbar_pdf,$t\bar{t}$ norm. (PDF),0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_alpha_s,$t\bar{t}$ norm. ($\alpha_{s}$),0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 xs_ttbar_qcd_scale,$t\bar{t}$ norm. ($\mu_{f}/\mu_{r}$),0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-eff_tau_id,$\epsilon_{\tau}$,0,1,shape,0,gaussian,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_0,$\epsilon_{\tau}$ ($20 \leq p_{T} < 25$),0,1,shape,1,gaussian,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_1,$\epsilon_{\tau}$ ($25 \leq p_{T} < 30$),0,1,shape,1,gaussian,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
 eff_tau_2,$\epsilon_{\tau}$ ($30 \leq p_{T} < 40$),0,1,shape,1,gaussian,reco_lepton,$\tau$ reco,1,1,1,1,0,1,0,0,0,0,1,1,0,0
@@ -51,7 +49,15 @@ eff_e_2,$\epsilon_{e}$ ($30 \leq p_{T} < 40$),0,1,shape,1,gaussian,reco_lepton,$
 eff_e_3,$\epsilon_{e}$ ($40 \leq p_{T} < 50$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
 eff_e_4,$\epsilon_{e}$ ($50 \leq p_{T} < 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
 eff_e_5,$\epsilon_{e}$ ($p_{T} \geq 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+trigger_e_0,e trigger ($30 \leq p_{T} < 35$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,1,0
+trigger_e_1,e trigger ($35 \leq p_{T} < 40$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,1,0
+trigger_e_2,e trigger ($40 \leq p_{T} < 45$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,1,0
+trigger_e_3,e trigger ($45 \leq p_{T} < 50$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,1,0
+trigger_e_4,e trigger ($50 \leq p_{T} < 60$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,1,0
+trigger_e_5,e trigger ($p_{T} \geq 60$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,1,0
 escale_e,$e$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,0,0,1,0
+trigger_e_tag,$e$ trigger (tag),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,1,0,0,0
+trigger_e_probe,$e$ trigger (probe),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,1,0,0,0
 eff_iso_mu,"$\epsilon_{\mu,iso}$",0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
 eff_id_mu,"$\epsilon_{\mu,id}$",0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,0
 eff_mu_0,$\epsilon_{\mu}$ ($10 \leq p_{T} < 15$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
@@ -64,10 +70,10 @@ eff_mu_6,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,gaussian,reco_lepto
 eff_mu_7,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 escale_mu,$\mu$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,gaussian,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-isr,ISR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-fsr,FSR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-hdamp,ME-PS,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-tune,UE/MPI,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+isr,ISR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+fsr,FSR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+hdamp,ME-PS,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+tune,UE/MPI,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 ww_resum,WW $p_{T}$ (resum),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 z_pt,Z $p_{T}$,0,1,shape,0,gaussian,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
