@@ -166,7 +166,10 @@ def bb_objective_aux(data_val, exp_val, exp_var):
     return beta_plus, beta_minus
 
 class FitData(object):
-    def __init__(self, path, selections, processes, process_cut=0):
+    def __init__(self, path, selections, processes, 
+                 param_file  = 'data/model_parameters_default.pkl',
+                 process_cut = 0
+                 ):
         self._selections     = selections
         self._processes      = processes
         self._n_selections   = len(selections)
@@ -175,7 +178,7 @@ class FitData(object):
 
         # retrieve parameter configurations
         self._decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
-        self._initialize_parameters()
+        self._initialize_parameters(param_file)
 
         # initialize branching fraction parameters
         self._beta_init   = self._pval_init[:4]
@@ -208,11 +211,11 @@ class FitData(object):
 
         return data
 
-    def _initialize_parameters(self):
+    def _initialize_parameters(self, param_file):
         '''
         Gets parameter configuration from a file.
         '''
-        df_params = pd.read_csv('data/model_parameters.csv')
+        df_params = pd.read_csv(param_file)
         df_params = df_params.set_index('name')
         df_params = df_params.astype({'err_init':float, 'val_init':float})
 
@@ -225,6 +228,11 @@ class FitData(object):
         self._pmask      = df_params['active'].values.astype(bool)
         self._parameters = df_params
 
+        # temporary handling of top pt systematic (one-sided Gaussian)
+        self._pi_mask = self._pmask.copy()
+        self._pi_mask[:4] = False
+        self._top_pt_index = df_params.index.get_loc('top_pt')
+        self._pi_mask[self._top_pt_index] = False
         # define priors here
         #self._priors = []
         #for prior_pdf in df_params['pdf']:
@@ -237,23 +245,6 @@ class FitData(object):
         This converts the data stored in the input dataframes into a numpy tensor of
         dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
         '''
-
-        def np_templates():
-            for pname, param in params.iterrows():
-                if param.type == 'shape' and param[sel]:
-                    if f'{pname}_up' in sub_template.columns and param['active'] and param[ds]: 
-                        deff_plus  = sub_template[f'{pname}_up'].values - val
-                        deff_minus = sub_template[f'{pname}_down'].values - val
-                    else:
-                        deff_plus  = np.zeros_like(val)
-                        deff_minus = np.zeros_like(val)
-                    delta_plus.append(deff_plus + deff_minus)
-                    delta_minus.append(deff_plus - deff_minus)
-                elif param.type == 'norm':
-                    if param[sel] and param[ds] and param['active']:
-                        norm_vector.append(1)
-                    else:
-                        norm_vector.append(0)
         
         params = self._parameters.query('type != "poi"')
         self._model_data = dict()
@@ -349,11 +340,17 @@ class FitData(object):
                             else:
                                 process_mask.append(1)
 
+
                             delta_plus, delta_minus = [], []
                             norm_vector = []
                             for pname, param in params.iterrows():
                                 if param.type == 'shape' and param[sel]:
                                     if f'{pname}_up' in sub_template.columns and param[ds]: 
+
+                                        ## temporary modifcation to top pt morphing for ttbar templates
+                                        #if ds == 'ttbar' and pname == 'top_pt':
+                                        #    sub_template.loc[:,'top_pt_down'] = val
+
                                         deff_plus  = sub_template[f'{pname}_up'].values - val
                                         deff_minus = sub_template[f'{pname}_down'].values - val
                                     else:
@@ -584,6 +581,9 @@ class FitData(object):
         cost = 0
         for category, template_data in self._model_data.items():
 
+            if category in self.veto_list:
+                continue
+
             # get the model and data templates
             model_val, model_var = self.mixture_model(params, category, process_amplitudes, no_sum=False)
             if randomize_templates:
@@ -595,7 +595,6 @@ class FitData(object):
                 data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
-            #veto_list = []
             if no_shape: # or category.split('_')[0] in veto_list:
                 data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
@@ -626,10 +625,18 @@ class FitData(object):
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
-        pi_param = (params[4:] - self._pval_init[4:])**2 / (2*self._perr_init[4:]**2)
+        mask = self._pi_mask
+        pi_param = (params[mask] - self._pval_init[mask])**2 / (2*self._perr_init[mask]**2)
         cost += pi_param.sum()
         self._np_cost = pi_param
 
+        # temporary implementation of one-sided Gaussian for  top pt morphing
+        p_top_pt = params[self._top_pt_index]
+        if p_top_pt >= 0.:
+            cost += (p_top_pt)**2 / 2
+        else:
+            cost += 1e8
+        
         # require that the branching fractions sum to 1
         cost += (np.sum(beta) - 1)**2/1e-10
 
@@ -681,6 +688,9 @@ class FitData(object):
         dcost = np.zeros(params.size)
         for category, template_data in self._model_data.items():
 
+            if category in self.veto_list:
+                continue
+
             # get the model and data templates
             model_val, model_var = self.mixture_model(params, category, process_amplitudes)
             if randomize_templates:
@@ -711,8 +721,16 @@ class FitData(object):
             dcost += nll_jac
 
         # Add prior constraint terms for nuisance parameters 
-        pi_param_jac = (params[4:] - self._pval_init[4:]) / self._perr_init[4:]**2
-        dcost[4:] += pi_param_jac
+        mask = self._pi_mask
+        pi_param_jac = (params[mask] - self._pval_init[mask]) / self._perr_init[mask]**2
+        dcost[mask] += pi_param_jac
+
+        # temporary implementation of one-sided Gaussian for  top pt morphing
+        p_top_pt = params[self._top_pt_index]
+        if p_top_pt >= 0.:
+            dcost[self._top_pt_index] += p_top_pt
+        else:
+            dcost[self._top_pt_index] = 0
 
         # require that the branching fractions sum to 1
         dcost[:4] += 2*(np.sum(beta) - 1)/1e-10
