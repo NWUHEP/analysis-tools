@@ -167,7 +167,8 @@ def bb_objective_aux(data_val, exp_val, exp_var):
 
 class FitData(object):
     def __init__(self, path, selections, processes, 
-                 param_file  = 'data/model_parameters_default.pkl',
+                 param_file  = 'data/model_parameters_default.csv',
+                 use_prefit  = False,
                  process_cut = 0
                  ):
         self._selections     = selections
@@ -178,7 +179,7 @@ class FitData(object):
 
         # retrieve parameter configurations
         self._decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
-        self._initialize_parameters(param_file)
+        self._initialize_parameters(param_file, use_prefit)
 
         # initialize branching fraction parameters
         self._beta_init   = self._pval_init[:4]
@@ -187,7 +188,7 @@ class FitData(object):
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
         # initialize fit data
-        self.veto_list = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0'] # used to remove categories from fit
+        self.veto_list = [] # used to remove categories from fit
         self._initialize_fit_tensor(process_cut)
 
         # initialize cost (do this last)
@@ -211,13 +212,19 @@ class FitData(object):
 
         return data
 
-    def _initialize_parameters(self, param_file):
+    def _initialize_parameters(self, param_file, use_prefit):
         '''
         Gets parameter configuration from a file.
         '''
         df_params = pd.read_csv(param_file)
         df_params = df_params.set_index('name')
-        df_params = df_params.astype({'err_init':float, 'val_init':float})
+
+        if use_prefit:
+            df_params = df_params.astype({'err_init':float, 'val_init':float, 'err_fit':float, 'val_fit':float})
+            df_params.loc[:,'val_init']  = df_params['val_fit'].values
+            df_params.loc[:,'err_init']  = df_params['err_fit'].values
+        else:
+            df_params = df_params.astype({'err_init':float, 'val_init':float})
 
         self._nparams    = df_params.shape[0]
         self._npoi       = df_params.query('type == "poi"').shape[0]
@@ -443,9 +450,16 @@ class FitData(object):
         norm_mask       = model_data['norm_mask'].astype(bool)
         norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask)
 
-        # apply shape parameter mask and build array for morphing
+        # apply shape parameter mask and build array for morphing.  When shape
+        # parameter values are in the range [-1, 1] there is a quadratic
+        # interpolation between those values.  Beyond that range the morphing
+        # is linear.  
         shape_params = shape_params[model_data['shape_param_mask']]
-        shape_params = np.concatenate([[1, 0], 0.5*shape_params**2, 0.5*shape_params])
+        sp_positive = 0.5*shape_params**2 # values in [-1, 1]
+        sp_plus_mask, sp_minus_mask = (shape_params > 1), (shape_params < -1)
+        sp_positive[sp_plus_mask]   = shape_params[sp_plus_mask] - 0.5 # params > 1
+        sp_positive[sp_minus_mask]  = -shape_params[sp_minus_mask] - 0.5 # params < -1
+        shape_params = np.concatenate([[1, 0], sp_positive, 0.5*shape_params])
 
         # get calculate process_amplitudes
         if process_amplitudes is None:
@@ -503,12 +517,19 @@ class FitData(object):
         # apply shape parameter mask and build array for morphing
         shape_params = params[self._npoi + self._nnorm:]
         shape_params = shape_params[model_data['shape_param_mask']]
-        shape_params_arr = np.concatenate([[1, 0], 0.5*shape_params**2, 0.5*shape_params])
+        sp_positive = 0.5*shape_params**2 # values in [-1, 1]
+        sp_plus_mask, sp_minus_mask = (shape_params > 1), (shape_params < -1)
+        sp_positive[sp_plus_mask]   = shape_params[sp_plus_mask] - 0.5 # params > 1
+        sp_positive[sp_minus_mask]  = -shape_params[sp_minus_mask] - 0.5 # params < -1
+        shape_params_arr = np.concatenate([[1, 0], sp_positive, 0.5*shape_params])
 
         # shape parameter jacobian
         sp_matrix = np.identity(self._nshape)[:, model_data['shape_param_mask']]
         sp_matrix = np.vstack([np.zeros([self._npoi+self._nnorm, shape_params.size]), sp_matrix])
-        shape_params_jac = np.hstack([np.zeros([self._nparams, 2]), shape_params*sp_matrix, 0.5*sp_matrix])
+        sp_positive_der = shape_params.copy()
+        sp_positive_der[sp_plus_mask] = 1
+        sp_positive_der[sp_minus_mask] = -1
+        shape_params_jac = np.hstack([np.zeros([self._nparams, 2]), sp_positive_der*sp_matrix, 0.5*sp_matrix])
 
         # get the signal amplitudes and build process amplitudes
         beta, br_tau = params[:4], params[4:7]
