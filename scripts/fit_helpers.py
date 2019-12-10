@@ -148,7 +148,7 @@ def calculate_covariance(f, x0):
 
         return sig, corr_matrix
     else:
-        return False
+        return False, False 
 
 # GOF statistics
 def chi2_test(y1, y2, var1, var2):
