@@ -231,6 +231,7 @@ class FitData(object):
         self._nnorm      = df_params.query('type == "norm"').shape[0]
         self._nshape     = df_params.query('type == "shape"').shape[0]
         self._pval_init  = df_params['val_init'].values
+        self._pval_fit   = df_params['val_init'].values
         self._perr_init  = df_params['err_init'].values
         self._pmask      = df_params['active'].values.astype(bool)
         self._parameters = df_params
@@ -588,7 +589,7 @@ class FitData(object):
         '''
 
         # apply mask to parameters
-        params_reduced = self._pval_init.copy()
+        params_reduced = self._pval_fit.copy()
         params_reduced[self._pmask] = params
         params = params_reduced
 
@@ -674,7 +675,8 @@ class FitData(object):
 
         return cost
 
-    def objective_jacobian(self, params, data=None, 
+    def objective_jacobian(self, params, 
+                           data                = None,
                            do_bb_lite          = True,
                            randomize_templates = False,
                            lu_test             = None,
@@ -695,7 +697,7 @@ class FitData(object):
         '''
 
         # apply mask to parameters
-        params_reduced = self._pval_init.copy()
+        params_reduced = self._pval_fit.copy()
         params_reduced[self._pmask] = params
         params = params_reduced
 
