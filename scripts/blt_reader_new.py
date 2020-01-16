@@ -94,8 +94,8 @@ if __name__ == '__main__':
     ### Configuration ###
     selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
     do_data     = False
-    do_mc       = True
-    do_syst     = False
+    do_mc       = False
+    do_syst     = True
     period      = 2016
 
     # configure datasets to run over
@@ -115,6 +115,11 @@ if __name__ == '__main__':
                         'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
                         'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
                         'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+                        'ttbar_inclusive_isrup_ext1', 'ttbar_inclusive_isrdown_ext1',
+                        'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrdown_ext1',
+                        'ttbar_inclusive_fsrup_ext2', 'ttbar_inclusive_fsrdown_ext2',
+                        'ttbar_inclusive_hdampup_ext1', 'ttbar_inclusive_hdampdown_ext1',
+                        'ttbar_inclusive_tuneup_ext1', 'ttbar_inclusive_tunedown_ext1',
                         #'ttbar_inclusive_herwig'
                         ]
 

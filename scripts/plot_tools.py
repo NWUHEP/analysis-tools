@@ -543,7 +543,7 @@ class DataManager():
 
                 df.loc[:, 'weight'] *= scale
 
-            ### combining ttbar samples
+            ### combining inclusive and exclusive ttbar samples
             if label == 'ttbar':
                 if dataset == 'ttbar_inclusive':
                     # rescale leptonic component
@@ -562,6 +562,7 @@ class DataManager():
                     init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
                     df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
+            ### combine inclusive (mass-binned) and exclusive Z samples 
             if label == 'zjets_alt':
 
                 ### combining z+jets samples
@@ -593,6 +594,9 @@ class DataManager():
                     init_count -= 2*self._event_counts[dataset][9]
                     init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
                     df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
+
+            ### combine ttbar samples for systematics
+            #if label
 
             ### only keep certain features ###
             if self._features is not None:
