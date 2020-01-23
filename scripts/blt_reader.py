@@ -575,6 +575,7 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
     else:
         entries = range(event_range[0], event_range[1], 1)
 
+    #print(selection, dataset)
     for i in tqdm(entries, 
                   position = job_id[0],
                   desc     = f'[{selection}|{dataset}] {job_id[1]+1}/{job_id[2]} |',

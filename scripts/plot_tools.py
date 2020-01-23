@@ -21,7 +21,7 @@ dataset_dict = dict(
                                  'electron_2016E', 'electron_2016F', 'electron_2016G', 
                                  'electron_2016H'
                                  ],
-                    ttbar     = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
+                    ttbar     = ['ttbar_inclusive'],# 'ttbar_lep', 'ttbar_semilep'],
                     #ttbar     = ['ttbar_lep', 'ttbar_semilep'],
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
@@ -526,7 +526,7 @@ class DataManager():
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
 
-                if label == 'zjets_alt':
+                if label == 'zjets_alt' or label == 'zjets_fakes':
 
                     ### fix tau id scale factor
                     if self._selection in ['etau', 'mutau']:
@@ -544,29 +544,28 @@ class DataManager():
                 df.loc[:, 'weight'] *= scale
 
             ### combining inclusive and exclusive ttbar samples
-            if label == 'ttbar':
-                if dataset == 'ttbar_inclusive':
-                    # rescale leptonic component
-                    init_count_lep = self._event_counts['ttbar_lep'][0]
-                    df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
+            #if label == 'ttbar':
+            #    if dataset == 'ttbar_inclusive':
+            #        # rescale leptonic component
+            #        init_count_lep = self._event_counts['ttbar_lep'][0]
+            #        df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
 
-                    # rescale semileptonic component
-                    init_count_semilep = self._event_counts['ttbar_semilep'][0]
-                    df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_semilep + 0.438048*init_count)
+            #        # rescale semileptonic component
+            #        init_count_semilep = self._event_counts['ttbar_semilep'][0]
+            #        df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_semilep + 0.438048*init_count)
 
-                elif dataset == 'ttbar_lep':
-                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-                    df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
+            #    elif dataset == 'ttbar_lep':
+            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
 
-                elif dataset == 'ttbar_semilep':
-                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-                    df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
+            #    elif dataset == 'ttbar_semilep':
+            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
-            ### combine inclusive (mass-binned) and exclusive Z samples 
             if label == 'zjets_alt':
 
                 ### combining z+jets samples
-                ratios = [0.8252, 0.1534, 0.0588]
+                ratios = [0.795, 0.148, 0.057]
                 if dataset == 'zjets_m-50_alt':
                     init_count -= 2*self._event_counts[dataset][9]
 
@@ -596,8 +595,49 @@ class DataManager():
                     df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
 
             ### combine ttbar samples for systematics
-            #if label
+            ntotal = -1
+            #print(label, dataset, init_count)
+            if label == 'ttbar_isrup':
+                datasets = ['ttbar_inclusive_isrup', 'ttbar_inclusive_isrup_ext1']#, 'ttbar_inclusive_isrup_ext2']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
 
+            if label == 'ttbar_isrdown':
+                datasets = ['ttbar_inclusive_isrdown', 'ttbar_inclusive_isrdown_ext1']#, 'ttbar_inclusive_isrdown_ext2']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            if label == 'ttbar_fsrup':
+                datasets = ['ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrup_ext2']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            if label == 'ttbar_fsrdown':
+                datasets = ['ttbar_inclusive_fsrdown', 'ttbar_inclusive_fsrdown_ext1', 'ttbar_inclusive_fsrdown_ext2']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            if label == 'ttbar_tuneup':
+                datasets = ['ttbar_inclusive_tuneup', 'ttbar_inclusive_tuneup_ext1']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            if label == 'ttbar_tunedown':
+                datasets = ['ttbar_inclusive_tunedown', 'ttbar_inclusive_tunedown_ext1']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            if label == 'ttbar_hdampup':
+                datasets = ['ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampup_ext1']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            if label == 'ttbar_hdampdown':
+                datasets = ['ttbar_inclusive_hdampdown', 'ttbar_inclusive_hdampdown_ext1']
+                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                df.loc[:, 'weight'] *= init_count/ntotal
+
+            #print(ntotal)
             ### only keep certain features ###
             if self._features is not None:
                 df = df[[f for f in self._features + ['weight', 'run_number', 'event_number'] if f in df.columns]]

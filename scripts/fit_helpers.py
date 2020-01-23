@@ -273,6 +273,8 @@ class FitData(object):
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
                 self._bb_np[f'{sel}_{category}']      = np.ones(data_val.size)
 
+                #print('\n', sel, category, data_val, np.sqrt(data_val.sum()), '\n')
+
                 norm_mask    = []
                 process_mask = []
                 data_tensor  = []
@@ -301,12 +303,12 @@ class FitData(object):
                     if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
 
                         val, var = template['val'].values, template['var'].values
-                        #print(ds, val/np.sqrt(data_var))
 
                         # determine whether process contribution is significant
                         # or should be masked (this should be studied for
                         # impact on poi to determine proper threshold)
-                        if val.sum()/np.sqrt(data_var.sum()) <= process_cut:
+
+                        if val.sum() == 0. or val.sum()/np.sqrt(data_var.sum()) <= process_cut:
                             process_mask.append(0)
                             continue
                         else:
@@ -342,12 +344,11 @@ class FitData(object):
                             full_sum += val.sum()
 
                             # determine wheter process should be masked
-                            if val.sum()/np.sqrt(data_var.sum()) <= process_cut:
+                            if val.sum() == 0. or val.sum()/np.sqrt(data_var.sum()) <= process_cut:
                                 process_mask.append(0)
                                 continue
                             else:
                                 process_mask.append(1)
-
 
                             delta_plus, delta_minus = [], []
                             norm_vector = []

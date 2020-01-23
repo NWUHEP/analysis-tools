@@ -70,10 +70,10 @@ eff_mu_6,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,gaussian,reco_lepto
 eff_mu_7,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 escale_mu,$\mu$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,gaussian,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-isr,ISR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-fsr,FSR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-hdamp,ME-PS,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-tune,UE/MPI,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+isr,ISR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+fsr,FSR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+hdamp,ME-PS,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+tune,UE/MPI,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 ww_resum,WW $p_{T}$ (resum),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 z_pt,Z $p_{T}$,0,1,shape,0,gaussian,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
