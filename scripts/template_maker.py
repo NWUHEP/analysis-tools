@@ -13,7 +13,7 @@ from scripts.blt_reader import jec_source_names, btag_source_names
 
 np.set_printoptions(precision=2)
 
-def get_binning(df, feature, dataset='data', do_bbb=True):
+def get_binning(df, feature, do_bbb=True):
     '''
     Gets binning for histogram templates.  By default uses Bayesian Block Binning.
 
@@ -136,8 +136,14 @@ if __name__ == '__main__':
     datasets_ttbar_syst = [
                            'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
                            'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-                           'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-                           'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+                           #'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                           #'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+
+                 	   'ttbar_inclusive_isrup_ext2', 'ttbar_inclusive_isrdown_ext2',
+                 	   'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrdown_ext1',    
+                 	   'ttbar_inclusive_fsrup_ext2', 'ttbar_inclusive_fsrdown_ext2',    
+                 	   'ttbar_inclusive_hdampup_ext1', 'ttbar_inclusive_hdampdown_ext1',
+                 	   'ttbar_inclusive_tuneup_ext1', 'ttbar_inclusive_tunedown_ext1',
                           ]
 
     # sigal samples are split according the decay of the W bosons
@@ -181,8 +187,8 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_up' for n in btag_source_names]
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
-    #selections = ['emu', 'ee', 'mumu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['e4j']#, 'emu', 'etau', 'e4j']
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    #selections = ['etau']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -243,24 +249,18 @@ if __name__ == '__main__':
                     # w+jets sample into 6 decay modes
 
                     mode_dict = dict()
-                    count = 0
                     for idecay, decay_data in decay_map.iterrows():
-                        count += 1
                         if label == 'wjets' and (idecay < 16):
                             continue
 
                         df = dm.get_dataframe(label, f'{full_cut} and gen_cat == {idecay}')
                         df_template = make_templates(df, binning)
 
-                        # if template is empty, don't generate morphing templates
-                        if df_template['val'].sum() == 0:
-                            mode_dict[decay_data.decay] = df_template
-                            continue
-                         
-                        # produce morphing templates for shape systematics
-                        hval, herr = np.sum(df_template['val']), np.sqrt(np.sum(df_template['var']))
-                        #print(selection, category, label, decay_data.decay, hval, herr, herr/hval)
-                        if herr/hval > 0.1: 
+                        # produce morphing templates for shape systematics if
+                        # any bin has more events than 5% of the total error in
+                        # that bin
+                        hval, hvar = df_template['val'], df_template['var']
+                        if np.all(hval < 0.1*np.sqrt(h)): 
                             mode_dict[decay_data.decay] = df_template
                             continue
 
@@ -271,9 +271,9 @@ if __name__ == '__main__':
 
                         # initialize systematics generator
                         syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, df_template['val'].values)
-
                         df_syst = make_morphing_templates(df, (label, idecay), syst_gen, cat_items)
                         mode_dict[decay_data.decay] = pd.concat([df_template, df_syst], axis=1)
+                        #mode_dict[decay_data.decay] = df_template
 
                     templates[label] = mode_dict
 
@@ -284,15 +284,11 @@ if __name__ == '__main__':
                     df = dm.get_dataframe(label, full_cut)
                     df_template = make_templates(df, binning)
 
-                    # if template is empty, don't generate morphing templates
-                    if np.all(df_template['val'] == 0):
-                        templates[label] = df_template
-                        continue
-
-                    # produce morphing templates for shape systematics
-                    hval, herr = np.sum(df_template['val']), np.sqrt(np.sum(df_template['var']))
-                    #print(selection, category, label, hval, herr, herr/hval)
-                    if label != 'zjets_alt' or herr/hval > 0.1: 
+                    # produce morphing templates for shape systematics if
+                    # any bin has more events than 5% of the total error in
+                    # that bin (excludes empty templates obviously)
+                    hval, hvar = df_template['val'], df_template['var']
+                    if label != 'zjets_alt' or np.all(hval < 0.1*np.sqrt(h)): 
                         templates[label] = df_template
                         continue
 
@@ -301,19 +297,15 @@ if __name__ == '__main__':
                     else:
                         df = dm.get_dataframe(label, cat_items.cut)
 
-
                     syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, df_template['val'].values)
                     df_syst = make_morphing_templates(df, (label, None), syst_gen, cat_items)
-
-                    if label == 'fakes_ss':
-                        label = 'fakes'
-
                     templates[label] = pd.concat([df_template, df_syst], axis=1)
+                    #templates[label] = df_template
 
             data[category] = dict(bins = binning, templates = templates)
 
         # Additional ttbar-specific systematics
-        dm = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics/{selection}_2016',
+        dm = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics_new/{selection}_2016',
                             dataset_names = datasets_ttbar_syst,
                             selection     = selection,
                             scale         = 35.9e3,
@@ -334,13 +326,14 @@ if __name__ == '__main__':
 
             for idecay, decay_data in decay_map.iterrows():
                 binning = data[category]['bins']
+                total_err = np.sqrt(data[category]['templates']['data']['var'])
                 df_syst = data[category]['templates']['ttbar'][decay_data.decay]
-                
-                #print(decay_data.decay)
-                if np.sqrt(df_syst['var'].sum())/df_syst['val'].sum() < 0.1:
-                    st.ttbar_systematics(dm, df_syst, 
+
+                if np.any(df_syst['val'] > 0.5*total_err):
+                    st.ttbar_systematics(dm, df_syst,
                                          f'{full_cut} and gen_cat == {idecay}',
-                                         idecay, feature, binning
+                                         idecay, feature, binning,
+                                         smooth = None
                                         )
 
         # write the templates and morphing templates to file

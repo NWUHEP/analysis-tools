@@ -21,7 +21,7 @@ dataset_dict = dict(
                                  'electron_2016E', 'electron_2016F', 'electron_2016G', 
                                  'electron_2016H'
                                  ],
-                    ttbar     = ['ttbar_inclusive'],# 'ttbar_lep', 'ttbar_semilep'],
+                    ttbar     = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
                     #ttbar     = ['ttbar_lep', 'ttbar_semilep'],
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
@@ -62,18 +62,18 @@ selection_dataset_dict = dict(
                               )
 
 cuts = dict(
-            ee    = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
+            ee    = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12', 
-            mumu  = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
+            mumu  = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
                      and dilepton1_mass > 12',
-            emu   = 'lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 20 \
+            emu   = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            etau  = 'lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
+            etau  = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            mutau = 'lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
+            mutau = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            e4j   = 'lepton1_pt > 30',
-            mu4j  = 'lepton1_pt > 25',
+            e4j   = 'trigger_status == 1 and lepton1_pt > 30',
+            mu4j  = 'trigger_status == 1 and lepton1_pt > 25',
             )
 
 # WIP
@@ -544,23 +544,23 @@ class DataManager():
                 df.loc[:, 'weight'] *= scale
 
             ### combining inclusive and exclusive ttbar samples
-            #if label == 'ttbar':
-            #    if dataset == 'ttbar_inclusive':
-            #        # rescale leptonic component
-            #        init_count_lep = self._event_counts['ttbar_lep'][0]
-            #        df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
+            if label == 'ttbar':
+                if dataset == 'ttbar_inclusive':
+                    # rescale leptonic component
+                    init_count_lep = self._event_counts['ttbar_lep'][0]
+                    df.loc[df.gen_cat <= 15, 'weight'] *= 0.104976*init_count/(init_count_lep + 0.104976*init_count)
 
-            #        # rescale semileptonic component
-            #        init_count_semilep = self._event_counts['ttbar_semilep'][0]
-            #        df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_semilep + 0.438048*init_count)
+                    # rescale semileptonic component
+                    init_count_semilep = self._event_counts['ttbar_semilep'][0]
+                    df.loc[(df.gen_cat >= 16) & (df.gen_cat <= 20), 'weight'] *= 0.438048*init_count/(init_count_semilep + 0.438048*init_count)
 
-            #    elif dataset == 'ttbar_lep':
-            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
+                elif dataset == 'ttbar_lep':
+                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + 0.104976*init_count_inclusive)
 
-            #    elif dataset == 'ttbar_semilep':
-            #        init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
+                elif dataset == 'ttbar_semilep':
+                    init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
+                    df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
             if label == 'zjets_alt':
 
@@ -597,45 +597,46 @@ class DataManager():
             ### combine ttbar samples for systematics
             ntotal = -1
             #print(label, dataset, init_count)
-            if label == 'ttbar_isrup':
-                datasets = ['ttbar_inclusive_isrup', 'ttbar_inclusive_isrup_ext1']#, 'ttbar_inclusive_isrup_ext2']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+            if self._combine:
+                if label == 'ttbar_isrup':
+                    datasets = ['ttbar_inclusive_isrup', 'ttbar_inclusive_isrup_ext2']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_isrdown':
-                datasets = ['ttbar_inclusive_isrdown', 'ttbar_inclusive_isrdown_ext1']#, 'ttbar_inclusive_isrdown_ext2']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_isrdown':
+                    datasets = ['ttbar_inclusive_isrdown', 'ttbar_inclusive_isrdown_ext2']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_fsrup':
-                datasets = ['ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrup_ext2']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_fsrup':
+                    datasets = ['ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrup_ext2']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_fsrdown':
-                datasets = ['ttbar_inclusive_fsrdown', 'ttbar_inclusive_fsrdown_ext1', 'ttbar_inclusive_fsrdown_ext2']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_fsrdown':
+                    datasets = ['ttbar_inclusive_fsrdown', 'ttbar_inclusive_fsrdown_ext1', 'ttbar_inclusive_fsrdown_ext2']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_tuneup':
-                datasets = ['ttbar_inclusive_tuneup', 'ttbar_inclusive_tuneup_ext1']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_tuneup':
+                    datasets = ['ttbar_inclusive_tuneup', 'ttbar_inclusive_tuneup_ext1']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_tunedown':
-                datasets = ['ttbar_inclusive_tunedown', 'ttbar_inclusive_tunedown_ext1']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_tunedown':
+                    datasets = ['ttbar_inclusive_tunedown', 'ttbar_inclusive_tunedown_ext1']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_hdampup':
-                datasets = ['ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampup_ext1']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_hdampup':
+                    datasets = ['ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampup_ext1']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
-            if label == 'ttbar_hdampdown':
-                datasets = ['ttbar_inclusive_hdampdown', 'ttbar_inclusive_hdampdown_ext1']
-                ntotal = np.sum([self._event_counts[d][0] for d in datasets])
-                df.loc[:, 'weight'] *= init_count/ntotal
+                if label == 'ttbar_hdampdown':
+                    datasets = ['ttbar_inclusive_hdampdown', 'ttbar_inclusive_hdampdown_ext1']
+                    ntotal = np.sum([self._event_counts[d][0] for d in datasets])
+                    df.loc[:, 'weight'] *= init_count/ntotal
 
             #print(ntotal)
             ### only keep certain features ###

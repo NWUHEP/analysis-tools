@@ -236,11 +236,6 @@ class FitData(object):
         self._pmask      = df_params['active'].values.astype(bool)
         self._parameters = df_params
 
-        # temporary handling of top pt systematic (one-sided Gaussian)
-        self._pi_mask = self._pmask.copy()
-        self._pi_mask[:4] = False
-        self._top_pt_index = df_params.index.get_loc('top_pt')
-        self._pi_mask[self._top_pt_index] = False
         # define priors here
         #self._priors = []
         #for prior_pdf in df_params['pdf']:
@@ -355,10 +350,6 @@ class FitData(object):
                             for pname, param in params.iterrows():
                                 if param.type == 'shape' and param[sel]:
                                     if f'{pname}_up' in sub_template.columns and param[ds]: 
-
-                                        ## temporary modifcation to top pt morphing for ttbar templates
-                                        #if ds == 'ttbar' and pname == 'top_pt':
-                                        #    sub_template.loc[:,'top_pt_down'] = val
 
                                         deff_plus  = sub_template[f'{pname}_up'].values - val
                                         deff_minus = sub_template[f'{pname}_down'].values - val
@@ -648,18 +639,10 @@ class FitData(object):
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
-        mask = self._pi_mask
-        pi_param = (params[mask] - self._pval_init[mask])**2 / (2*self._perr_init[mask]**2)
+        pi_param = (params - self._pval_init)**2 / (2*self._perr_init**2)
         cost += pi_param.sum()
         self._np_cost = pi_param
 
-        # temporary implementation of one-sided Gaussian for  top pt morphing
-        p_top_pt = params[self._top_pt_index]
-        if p_top_pt >= 0.:
-            cost += (p_top_pt)**2 / 2
-        else:
-            cost += 1e8
-        
         # require that the branching fractions sum to 1
         cost += (np.sum(beta) - 1)**2/1e-10
 
@@ -745,16 +728,8 @@ class FitData(object):
             dcost += nll_jac
 
         # Add prior constraint terms for nuisance parameters 
-        mask = self._pi_mask
-        pi_param_jac = (params[mask] - self._pval_init[mask]) / self._perr_init[mask]**2
-        dcost[mask] += pi_param_jac
-
-        # temporary implementation of one-sided Gaussian for  top pt morphing
-        p_top_pt = params[self._top_pt_index]
-        if p_top_pt >= 0.:
-            dcost[self._top_pt_index] += p_top_pt
-        else:
-            dcost[self._top_pt_index] = 0
+        pi_param_jac = (params - self._pval_init) / self._perr_init**2
+        dcost += pi_param_jac
 
         # require that the branching fractions sum to 1
         dcost[:4] += 2*(np.sum(beta) - 1)/1e-10

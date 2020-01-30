@@ -6,10 +6,30 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from scipy.interpolate import interp1d
+import statsmodels.api as sm
+lowess = sm.nonparametric.lowess
+#kernel_regression = sm.nonparametric.kernel_regression
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 from scripts.blt_reader import jec_source_names, btag_source_names
+
+def template_smoothing(x, h_nom, h_up, h_down, do_lowess=True, **kwargs):
+    '''
+    Smoothing to reduce impact from limited statistics in determining variation
+    templates.  By default this will use the statsmodel implementation of
+    Lowess.
+    '''
+
+    dy_up, dy_down = h_up - h_nom, h_down - h_nom
+    if do_lowess:
+        dy_up   = lowess(dy_up, x, frac=0.7, return_sorted=False)
+        dy_down = lowess(dy_down, x, frac=0.7, return_sorted=False)
+    else:
+        # try bin averages
+        pass
+
+    return h_nom + dy_up, h_nom + dy_down
 
 def conditional_scaling(df, bins, scale, mask, feature, type='var'):
     '''
@@ -83,13 +103,19 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
                              weights=df.query(down_condition).weight
                              )
 
+    #print(f'--{sys_type}--')
+    #print(f'--"{jet_cut}"--')
+    #print('up', h_up.sum())
+    #print('nominal', h_nominal.sum())
+    #print('down', h_down.sum())
+
     # average over bin-by-bin variations for now
     h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
     h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
     
     return h_up, h_down
 
-def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning):
+def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=None):
     '''
     Account for systematics due to modeling of ttbar.
     '''
@@ -99,33 +125,62 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning):
 
         df_up     = dm.get_dataframe(f'ttbar_{syst}up', cut)
         df_down   = dm.get_dataframe(f'ttbar_{syst}down', cut)
-        h_nominal = df_syst['val'].values
-        h_up, _   = np.histogram(df_up[feature], bins=binning, weights=df_up.weight)
-        h_down, _ = np.histogram(df_down[feature], bins=binning, weights=df_down.weight)
+        h_nominal, var_nominal = df_syst['val'].values, df_syst['var'].values
 
-        if syst == 'fsr':
+        h_up, _     = np.histogram(df_up[feature], bins=binning, weights=df_up.weight)
+        var_up, _   = np.histogram(df_up[feature], bins=binning, weights=df_up.weight**2)
+        h_down, _   = np.histogram(df_down[feature], bins=binning, weights=df_down.weight)
+        var_down, _ = np.histogram(df_down[feature], bins=binning, weights=df_down.weight**2)
+
+
+        if h_up.sum() == 0. and h_down.sum() == 0.:
+            continue
+
+        #print(f'--{decay_mode}--{syst}--')
+        #print('up: ', h_up)
+        #print('err up: ', np.sqrt(var_up))
+        #print('nominal: ', h_nominal)
+        #print('down: ', h_down)
+        #print('err down: ', np.sqrt(var_down))
+        #print('--')
+
+        if syst == 'fsr' and dm._selection in ['etau', 'mutau']:
             # corrections for FSR sample
             k_down, k_up = 1., 1.
-            if dm._selection in ['etau', 'mutau']:
-                if decay_mode in [7, 8, 12, 15]: #real taus
-                    k_down, k_up = 1.02, 0.96
-                elif decay_mode in [16, 17, 18, 19]: #fake taus
-                    k_down, k_up = 1.27, 0.72
+            if decay_mode in [7, 8, 12, 15]: #real taus
+                k_down, k_up = 1.02, 0.96
+            elif decay_mode in [16, 17, 18, 19]: #fake taus
+                k_down, k_up = 1.27, 0.72
 
-            #print(h_up, h_nominal, h_down, sep='\n', end='\n--\n')
+            h_up   = (h_nominal + (h_up/k_up - h_nominal)/np.sqrt(2))
+            h_down = (h_nominal + (h_down/k_down - h_nominal)/np.sqrt(2))
+            #print('up: ', h_up)
+            #print('down: ', h_down)
 
-            h_up   = (h_nominal + (h_up - h_nominal)/np.sqrt(2))/k_up
-            h_down = (h_nominal + (h_down - h_nominal)/np.sqrt(2))/k_down
-            #print(h_up, h_nominal, h_down, sep='\n', end='\n--\n')
 
-        # average over bins (not enough statistics to quantify shape effects)
-        h_up = (h_up.sum()/h_nominal.sum())*h_nominal
-        h_down = (h_down.sum()/h_nominal.sum())*h_nominal
+        # symmetrization and smoothing: use something more standard in the
+        # future...  if the fluctuations are highly assymetric, they are
+        # symmetrized and set to 1/3 of the larger fluctuations (1/3 makes the
+        # linear extrapolation on the short side not do anything)
+        #ratio_up   = h_up/h_nominal
+        #ratio_down = h_down/h_nominal
 
-        h_avg   = (h_up + h_down)/2
-        if h_avg.sum() != 0:
-            h_up   *= h_nominal.sum()/h_avg.sum()
-            h_down *= h_nominal.sum()/h_avg.sum()
+        #ratio_asymm     = (1 - ratio_up_mean)/(1-ratio_down_mean)
+        #if ratio_asymm > -1/3: 
+        #    mean_max = np.max([abs(1 - ratio_up_mean), abs(1 - ratio_down_mean)])
+        #    if abs(1 - ratio_up_mean) >= abs(1 - ratio_down_mean):
+        #        ratio_down_mean = 1 + (1 - ratio_up_mean)/3
+        #    else:
+        #        ratio_up_mean = 1 + (1 - ratio_down_mean)/3
+                
+        # smoothing
+        #y_up_smooth = h_nominal#*ratio_up_mean
+        #y_down_smooth = h_nominal#*ratio_down_mean
+
+        #print(f'--smooooothed--')
+        #print(y_up_smooth, ratio_up_mean)
+        #print(h_nominal)
+        #print(y_down_smooth, ratio_down_mean)
 
         df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
@@ -609,7 +664,9 @@ class SystematicTemplateGenerator():
 
         w_up      = df.weight*df.top_pt_weight
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
-        h_down    = self._h - h_up
+        # this factor of 1/3 makes it so that the quadratic interpolation still
+        # morphs the template, but the extrapolation will not modify the template
+        h_down    = self._h - (h_up - self._h)/3 
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):

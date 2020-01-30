@@ -24,11 +24,6 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
     tree = root_file.Get(tree_name)
     selection, dataset = tree_name.replace('bltTree_', '').split('/')
 
-    # strip 'fakes' suffix
-    if '_fakes' in selection:
-        selection = selection.replace('_fakes', '')
-
-    print(dataset)
     ntuple = br.fill_ntuple(tree, selection, dataset, 
                             event_range = event_range, 
                             job_id = (process._identity[0], ix[0], ix[1])
@@ -44,7 +39,7 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
                                          index_col='variable_name'
                                         ).dropna(how='all')
     features_selection = pd.read_excel(infile,
-                                        sheet_name=f'variables_{selection}',
+                                        sheet_name=f'variables_{selection.split("_")[0]}',
                                         index_col='variable_name'
                                        ).dropna(how='all')
     feature_lut = pd.concat([features_default, features_selection], sort=True)
@@ -94,7 +89,7 @@ if __name__ == '__main__':
 
     ### Configuration ###
     #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['etau']
+    selections  = ['etau', 'e4j']
     do_data     = True
     do_mc       = True
     do_syst     = False
@@ -118,7 +113,8 @@ if __name__ == '__main__':
                         'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
                         'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
                         'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-                        'ttbar_inclusive_isrup_ext1', 'ttbar_inclusive_isrdown_ext1',
+                        #'ttbar_inclusive_isrup_ext1', 'ttbar_inclusive_isrdown_ext1',
+                        'ttbar_inclusive_isrup_ext2', 'ttbar_inclusive_isrdown_ext2',
                         'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrdown_ext1',
                         'ttbar_inclusive_fsrup_ext2', 'ttbar_inclusive_fsrdown_ext2',
                         'ttbar_inclusive_hdampup_ext1', 'ttbar_inclusive_hdampdown_ext1',
@@ -188,6 +184,7 @@ if __name__ == '__main__':
                 tree      = root_file.Get(tree_name)
                 n_entries = tree.GetEntriesFast()
 
+                #print(selection, dataset, n_entries)
                 if n_entries == 0: 
                     continue
 

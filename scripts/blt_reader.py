@@ -591,15 +591,15 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
             entry['el_trigger_syst_tag']   = tree.eleTriggerVarTagSyst
             entry['el_trigger_syst_probe'] = tree.eleTriggerVarProbeSyst
 
-        if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau']:
+        if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
             entry.update(fill_jet_vars(tree))
             entry.update(fill_jet_lepton_vars(tree))
             entry.update(fill_dilepton_vars(tree))
 
-            if selection in ['etau', 'mutau']:
+            if selection in ['etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
                 entry.update(fill_tau_vars(tree))
 
-        elif selection in ['e4j', 'mu4j']:
+        elif selection in ['e4j', 'mu4j', 'e4j_fakes', 'mu4j_fakes']:
             entry.update(fill_lepton4j_vars(tree))
 
         entry.update(fill_gen_particle_vars(tree))
