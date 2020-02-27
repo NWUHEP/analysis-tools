@@ -88,8 +88,8 @@ if __name__ == '__main__':
 
 
     ### Configuration ###
-    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['etau', 'e4j']
+    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    #selections  = ['etau', 'e4j']
     do_data     = True
     do_mc       = True
     do_syst     = False
@@ -129,60 +129,61 @@ if __name__ == '__main__':
         pt.make_directory(output_path, clear=(not args.append))
         event_count = {}
 
-        if not fakes_only:
-            for dataset in dataset_list:
+        for dataset in dataset_list:
 
-                # get the root file and check that the tree exists
-                root_file = r.TFile(args.input)
-                if not root_file.Get(selection).GetListOfKeys().Contains(f'bltTree_{dataset}'):
-                    continue
+            # get the root file and check that the tree exists
+            root_file = r.TFile(args.input)
+            if not root_file.Get(selection).GetListOfKeys().Contains(f'bltTree_{dataset}'):
+                continue
 
-                # get the tree and make sure that it's not empty
-                tree_name = f'{selection}/bltTree_{dataset}'
-                tree      = root_file.Get(f'{selection}/bltTree_{dataset}')
-                n_entries = tree.GetEntriesFast()
-                if n_entries == 0: 
-                    continue
+            # get the tree and make sure that it's not empty
+            tree_name = f'{selection}/bltTree_{dataset}'
+            tree      = root_file.Get(f'{selection}/bltTree_{dataset}')
+            n_entries = tree.GetEntriesFast()
+            if n_entries == 0: 
+                continue
 
-                # get event counts
-                ecount = root_file.Get(f'TotalEvents_{dataset}')
-                if ecount:
-                    event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
-                    event_count[dataset][4] = n_entries
-                else:
-                    print(f'Could not find dataset {dataset} in root file...')
-                    continue
-                root_file.Close()
+            # get event counts
+            ecount = root_file.Get(f'TotalEvents_{dataset}')
+            if ecount:
+                event_count[dataset] = [ecount.GetBinContent(i+1) for i in range(ecount.GetNbinsX())]
+                event_count[dataset][4] = n_entries
+            else:
+                print(f'Could not find dataset {dataset} in root file...')
+                continue
+            root_file.Close()
 
-                # split dataset up according to configuration
-                if dataset.split('_')[0] not in ['electron', 'muon']:
-                    max_event = min(n_entries, args.nmax)
-                else:
-                    max_event = n_entries
+            # split dataset up according to configuration
+            if dataset.split('_')[0] not in ['electron', 'muon']:
+                max_event = min(n_entries, args.nmax)
+            else:
+                max_event = n_entries
 
-                event_ranges = [i for i in range(0, max_event, args.nevents)]
-                if event_ranges[-1] < max_event:
-                    event_ranges.append(max_event)
+            event_ranges = [i for i in range(0, max_event, args.nevents)]
+            if event_ranges[-1] < max_event:
+                event_ranges.append(max_event)
 
-                # start pool process
-                tmp_path = f'{output_path}/{dataset}'
-                pt.make_directory(tmp_path, clear=True)
-                for i, ievt in enumerate(event_ranges[:-1]):
-                    result = pool.apply_async(pickle_ntuple, 
-                                              args = (args.input, tree_name, tmp_path, 
-                                                      (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
-                                                     )
-                                              )
-                #print(result.get(timeout=1))
+            # start pool process
+            tmp_path = f'{output_path}/{dataset}'
+            pt.make_directory(tmp_path, clear=True)
+            #for i, ievt in enumerate(event_ranges[:-1]):
+            #    result = pool.apply_async(pickle_ntuple, 
+            #                              args = (args.input, tree_name, tmp_path, 
+            #                                      (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
+            #                                     )
+            #                              )
+            #print(result.get(timeout=1))
 
-        # special case: fakes
+        # run over isolation inverted selections (fakes)
         if selection in ['mutau', 'mu4j', 'etau', 'e4j'] and do_data:
             #for dataset in [d for l in data_labels for d in pt.dataset_dict[l]]:
             for dataset in dataset_list:
                 root_file = r.TFile(args.input)
                 tree_name = f'{selection}_fakes/bltTree_{dataset}'
                 tree      = root_file.Get(tree_name)
+                print(selection, dataset, type(tree))
                 n_entries = tree.GetEntriesFast()
+                continue
 
                 #print(selection, dataset, n_entries)
                 if n_entries == 0: 

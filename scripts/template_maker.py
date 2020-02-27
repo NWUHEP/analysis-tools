@@ -136,8 +136,8 @@ if __name__ == '__main__':
     datasets_ttbar_syst = [
                            'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
                            'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-                           #'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-                           #'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+                           'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                           'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
 
                  	   'ttbar_inclusive_isrup_ext2', 'ttbar_inclusive_isrdown_ext2',
                  	   'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrdown_ext1',    
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['etau']
+    #selections = ['etau']#, 'mutau', 'emu']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -299,6 +299,10 @@ if __name__ == '__main__':
 
                     syst_gen = st.SystematicTemplateGenerator(selection, feature, binning, df_template['val'].values)
                     df_syst = make_morphing_templates(df, (label, None), syst_gen, cat_items)
+
+                    if label == 'fakes_ss':
+                        label = 'fakes'
+
                     templates[label] = pd.concat([df_template, df_syst], axis=1)
                     #templates[label] = df_template
 

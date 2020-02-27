@@ -14,22 +14,18 @@ import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 from scripts.blt_reader import jec_source_names, btag_source_names
 
-def template_smoothing(x, h_nom, h_up, h_down, do_lowess=True, **kwargs):
+def template_smoothing(x, h_nom, h_up, h_down, **kwargs):
     '''
     Smoothing to reduce impact from limited statistics in determining variation
     templates.  By default this will use the statsmodel implementation of
     Lowess.
     '''
 
-    dy_up, dy_down = h_up - h_nom, h_down - h_nom
-    if do_lowess:
-        dy_up   = lowess(dy_up, x, frac=0.7, return_sorted=False)
-        dy_down = lowess(dy_down, x, frac=0.7, return_sorted=False)
-    else:
-        # try bin averages
-        pass
+    dh_up, dh_down = (h_up - h_nom)/h_nom, (h_down - h_nom)/h_nom
+    dh_up   = lowess(dh_up, x, frac=0.5, return_sorted=False)
+    dh_down = lowess(dh_down, x, frac=0.5, return_sorted=False)
 
-    return h_nom + dy_up, h_nom + dy_down
+    return h_nom*(1 + dh_up), h_nom*(1 + dh_down)
 
 def conditional_scaling(df, bins, scale, mask, feature, type='var'):
     '''
@@ -120,6 +116,7 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
     Account for systematics due to modeling of ttbar.
     '''
 
+    #print(f'--{decay_mode}--')
     syst_names = ['isr', 'fsr', 'hdamp', 'tune']
     for syst in syst_names:
 
@@ -132,17 +129,8 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
         h_down, _   = np.histogram(df_down[feature], bins=binning, weights=df_down.weight)
         var_down, _ = np.histogram(df_down[feature], bins=binning, weights=df_down.weight**2)
 
-
         if h_up.sum() == 0. and h_down.sum() == 0.:
             continue
-
-        #print(f'--{decay_mode}--{syst}--')
-        #print('up: ', h_up)
-        #print('err up: ', np.sqrt(var_up))
-        #print('nominal: ', h_nominal)
-        #print('down: ', h_down)
-        #print('err down: ', np.sqrt(var_down))
-        #print('--')
 
         if syst == 'fsr' and dm._selection in ['etau', 'mutau']:
             # corrections for FSR sample
@@ -152,35 +140,54 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
             elif decay_mode in [16, 17, 18, 19]: #fake taus
                 k_down, k_up = 1.27, 0.72
 
-            h_up   = (h_nominal + (h_up/k_up - h_nominal)/np.sqrt(2))
-            h_down = (h_nominal + (h_down/k_down - h_nominal)/np.sqrt(2))
-            #print('up: ', h_up)
-            #print('down: ', h_down)
+            h_up   = (h_nominal + (h_up - h_nominal)/np.sqrt(2))
+            h_down = (h_nominal + (h_down - h_nominal)/np.sqrt(2))
+            h_up /= k_up
+            h_down /= k_down
 
+        # smoothing: do LOWESS smoothing on the difference of histograms
+        x = (binning[:-1] + binning[1:])/2
+        h_up, h_down = template_smoothing(x, h_nominal, h_up, h_down)
 
         # symmetrization and smoothing: use something more standard in the
         # future...  if the fluctuations are highly assymetric, they are
         # symmetrized and set to 1/3 of the larger fluctuations (1/3 makes the
         # linear extrapolation on the short side not do anything)
-        #ratio_up   = h_up/h_nominal
-        #ratio_down = h_down/h_nominal
+        diff_up   = h_up - h_nominal
+        diff_down = h_down - h_nominal
+        mask_up = ((diff_up > 0) & (diff_up > diff_down) & (diff_down > -diff_up/3)) \
+                  | ((diff_up < 0) & (diff_up < diff_down) & (diff_down < -diff_up/3))
+        mask_down = ((diff_down > 0) & (diff_down > diff_up) & (diff_up > -diff_down/3)) \
+                    | ((diff_down < 0) & (diff_down < diff_up) & (diff_up < -diff_down/3))
 
-        #ratio_asymm     = (1 - ratio_up_mean)/(1-ratio_down_mean)
-        #if ratio_asymm > -1/3: 
-        #    mean_max = np.max([abs(1 - ratio_up_mean), abs(1 - ratio_down_mean)])
-        #    if abs(1 - ratio_up_mean) >= abs(1 - ratio_down_mean):
-        #        ratio_down_mean = 1 + (1 - ratio_up_mean)/3
-        #    else:
-        #        ratio_up_mean = 1 + (1 - ratio_down_mean)/3
-                
-        # smoothing
-        #y_up_smooth = h_nominal#*ratio_up_mean
-        #y_down_smooth = h_nominal#*ratio_down_mean
+        #print(diff_up)
+        #print(diff_down)
+        #print(mask_up)
+        #print(mask_down)
+        diff_up[mask_up] = 2*diff_up[mask_up]/3
+        diff_down[mask_up] = -diff_up[mask_up]/3
+        diff_up[mask_down] = -diff_down[mask_down]/3
+        diff_down[mask_up] = 2*diff_up[mask_up]/3
+        #print(diff_up)
+        #print(diff_down)
 
-        #print(f'--smooooothed--')
-        #print(y_up_smooth, ratio_up_mean)
-        #print(h_nominal)
-        #print(y_down_smooth, ratio_down_mean)
+        h_up = h_nominal + diff_up
+        h_down = h_nominal + diff_down
+               
+        #r_up, r_down = (h_up - h_nominal)/h_nominal, (h_down - h_nominal)/h_nominal
+        #sig_r_up = r_up*np.sqrt(var_up/h_up**2 + var_nominal/h_nominal**2)
+        #sig_r_down = r_down*np.sqrt(var_down/h_down**2 + var_nominal/h_nominal**2)
+        #print(f'--{syst}--')
+        #print('nominal: ', h_nominal)
+        #print('err nominal: ', np.sqrt(var_nominal)/h_nominal)
+        #print('err up: ', sig_r_up)
+        #print('err down: ', sig_r_down)
+        #print('dh_up: ', r_up)
+        #print('dh_down: ', r_down)
+
+        #print(f'--smoothed--')
+        #print((h_up_smooth-h_nominal)/h_nominal)
+        #print((h_down_smooth-h_nominal)/h_nominal)
 
         df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
@@ -664,9 +671,7 @@ class SystematicTemplateGenerator():
 
         w_up      = df.weight*df.top_pt_weight
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
-        # this factor of 1/3 makes it so that the quadratic interpolation still
-        # morphs the template, but the extrapolation will not modify the template
-        h_down    = self._h - (h_up - self._h)/3 
+        h_down    = self._h*(1 - 0.33*h_up/self._h)
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):
@@ -675,25 +680,28 @@ class SystematicTemplateGenerator():
         sample.  (Be careful to only apply the variation to the qq production
         and not gg!)
         '''
-       
-        # temporary fix for ww scaling until variation are changed from 0 to 1
-        # upstream
-        mask    = df.ww_pt_scale_up != 0.
-        weights = df.weight.values
 
+        weights = df['weight'].values.copy()
+       
         # scale variation
-        weights[mask] *= df.loc[mask, 'ww_pt_scale_up']
+        weights *= df['ww_pt_scale_up']/0.993
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights[mask] *= df.loc[mask, 'ww_pt_scale_down']/df.loc[mask, 'ww_pt_scale_up']
+        weights *= 0.993/df['ww_pt_scale_up']
+
+        weights *= df['ww_pt_scale_down']/1.001
         h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights[mask] /= df.loc[mask, 'ww_pt_scale_down']
+        weights *= 1.001/df['ww_pt_scale_down']
+
         self._df_sys['ww_scale_up'], self._df_sys['ww_scale_down'] = h_up, h_down
 
         # resum variation
-        weights[mask] *= df.loc[mask, 'ww_pt_resum_up']
+        weights *= df['ww_pt_resum_up']/1.012
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights[mask] *= df.loc[mask, 'ww_pt_resum_down']/df.loc[mask, 'ww_pt_resum_up']
+        weights *= 1.012/df['ww_pt_resum_up']
+
+        weights *= df['ww_pt_resum_down']/0.9493
         h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights[mask] /= df.loc[mask, 'ww_pt_resum_down']
+        weights *= 0.9493/df['ww_pt_resum_down']
+
         self._df_sys['ww_resum_up'], self._df_sys['ww_resum_down'] = h_up, h_down
 

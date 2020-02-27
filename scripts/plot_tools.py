@@ -26,7 +26,7 @@ dataset_dict = dict(
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt',
-                                 'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
+                                 #'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
                                  ],
                     zjets_ext = ['z0jets_alt', 'z1jets_alt', 'z2jets_alt'],
                     zjets     = ['zjets_m-50',  'zjets_m-10to50',
@@ -511,9 +511,9 @@ class DataManager():
             if self._cuts != '':
                 df = df.query(self._cuts).copy()
 
-            init_count        = self._event_counts[dataset][0]
-            lut_entry         = self._lut_datasets.loc[dataset]
-            label             = lut_entry.label
+            init_count = self._event_counts[dataset][0]
+            lut_entry  = self._lut_datasets.loc[dataset]
+            label      = lut_entry.label
             #df.loc[:,'label'] = df.shape[0]*[label, ] # needed? will this break stuff downstream ???
 
             ### update weights with lumi scale factors ###
@@ -526,7 +526,12 @@ class DataManager():
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
 
-                if label == 'zjets_alt' or label == 'zjets_fakes':
+                if label in ['zjets_alt', 'zjets_fakes', 'zjets_ext']:
+
+                    scale *= df.gen_weight
+                    neg_count = self._event_counts[dataset][9]
+                    scale /= init_count - 2*neg_count
+                    #scale *= 1.06 # removes normalization effect of Z pt reweighting
 
                     ### fix tau id scale factor
                     if self._selection in ['etau', 'mutau']:
@@ -534,10 +539,6 @@ class DataManager():
                         df.loc[:,'lepton2_id_var'] = 0.05**2
                         df.loc[:,'weight'] *= 0.95
 
-                    scale *= df.gen_weight
-                    neg_count = self._event_counts[dataset][9]
-                    scale /= init_count - 2*neg_count
-                    #scale *= 1.06 # removes normalization effect of Z pt reweighting
                 else:
                     scale /= init_count
 
@@ -562,37 +563,37 @@ class DataManager():
                     init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
                     df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
-            if label == 'zjets_alt':
+            #if label == 'zjets_alt':
 
-                ### combining z+jets samples
-                ratios = [0.795, 0.148, 0.057]
-                if dataset == 'zjets_m-50_alt':
-                    init_count -= 2*self._event_counts[dataset][9]
+            #    ### combining z+jets samples
+            #    ratios = [0.751, 0.176, 0.0614]
+            #    if dataset == 'zjets_m-50_alt':
+            #        init_count -= 2*self._event_counts[dataset][9]
 
-                    # rescale n parton parts
-                    init_count_0 = self._event_counts['z0jets_alt'][0] - 2*self._event_counts['z0jets_alt'][9]
-                    df.loc[df.n_partons == 0, 'weight'] *= ratios[0]*init_count/(init_count_0 + ratios[0]*init_count)
+            #        # rescale n parton parts
+            #        init_count_0 = self._event_counts['z0jets_alt'][0] - 2*self._event_counts['z0jets_alt'][9]
+            #        df.loc[df.n_partons == 0, 'weight'] *= ratios[0]*init_count/(init_count_0 + ratios[0]*init_count)
 
-                    init_count_1 = self._event_counts['z1jets_alt'][0] - 2*self._event_counts['z1jets_alt'][9]
-                    df.loc[df.n_partons == 1, 'weight'] *= ratios[1]*init_count/(init_count_1 + ratios[1]*init_count)
+            #        init_count_1 = self._event_counts['z1jets_alt'][0] - 2*self._event_counts['z1jets_alt'][9]
+            #        df.loc[df.n_partons == 1, 'weight'] *= ratios[1]*init_count/(init_count_1 + ratios[1]*init_count)
 
-                    init_count_2 = self._event_counts['z2jets_alt'][0] - 2*self._event_counts['z2jets_alt'][9]
-                    df.loc[df.n_partons == 2, 'weight'] *= ratios[2]*init_count/(init_count_2 + ratios[2]*init_count)
+            #        init_count_2 = self._event_counts['z2jets_alt'][0] - 2*self._event_counts['z2jets_alt'][9]
+            #        df.loc[df.n_partons == 2, 'weight'] *= ratios[2]*init_count/(init_count_2 + ratios[2]*init_count)
 
-                elif dataset == 'z0jets_alt':
-                    init_count -= 2*self._event_counts[dataset][9]
-                    init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
-                    df.loc[:, 'weight'] *= init_count/(init_count + ratios[0]*init_count_inclusive)
+            #    elif dataset == 'z0jets_alt':
+            #        init_count -= 2*self._event_counts[dataset][9]
+            #        init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + ratios[0]*init_count_inclusive)
 
-                elif dataset == 'z1jets_alt':
-                    init_count -= 2*self._event_counts[dataset][9]
-                    init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
-                    df.loc[:, 'weight'] *= init_count/(init_count + ratios[1]*init_count_inclusive)
+            #    elif dataset == 'z1jets_alt':
+            #        init_count -= 2*self._event_counts[dataset][9]
+            #        init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + ratios[1]*init_count_inclusive)
 
-                elif dataset == 'z2jets_alt':
-                    init_count -= 2*self._event_counts[dataset][9]
-                    init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
-                    df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
+            #    elif dataset == 'z2jets_alt':
+            #        init_count -= 2*self._event_counts[dataset][9]
+            #        init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
+            #        df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
 
             ### combine ttbar samples for systematics
             ntotal = -1
@@ -1184,7 +1185,7 @@ class PlotManager():
             make_directory(f'{self._output_path}/log/{lut_entry.category}', False)
 
             ### Save output plot ###
-            plt.tight_layout()
+            plt.tight_layout(h_pad=0.)
             fig.subplots_adjust(top=0.94)
 
             ### linear scale ###

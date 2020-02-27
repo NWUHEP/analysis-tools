@@ -89,7 +89,7 @@ if __name__ == '__main__':
     if selection == 'emu':
         cuts['inclusive'] = f'({pt.cuts[selection]}) and n_jets >= 0'
     elif selection in ['ee', 'mumu']:
-        cuts['inclusive'] = f'({pt.cuts[selection]}) and n_jets >= 2 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
+        cuts['inclusive'] = f'({pt.cuts[selection]}) and n_jets >= 2'# and (dilepton1_mass < 81 or dilepton1_mass > 101)'
     elif selection in ['etau', 'mutau']:
         cuts['inclusive'] = f'({pt.cuts[selection]}) and (n_jets >= 0)'
     elif selection in ['e4j', 'mu4j']:
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     if selection == 'emu':
         inclusive_cut = 'n_jets >= 0'
     elif selection in ['ee', 'mumu']:
-        inclusive_cut = 'n_jets >= 2 and (dilepton1_mass < 81 or dilepton1_mass > 101)'
+        inclusive_cut = 'n_jets >= 2' # and (dilepton1_mass < 81 or dilepton1_mass > 101)'
     elif selection in ['etau', 'mutau']:
         inclusive_cut = 'n_jets >= 0'
     elif selection in ['e4j', 'mu4j']:
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     plot_manager.set_output_path(f'{output_path}/inclusive')
     plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                            cut         = inclusive_cut,
-                                           legend      = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
+                                           legend      = list(decay_map.alt_label) + [r'$other$'],
                                            c_colors    = colors[:len(conditions) - 1] + ['gray'],
                                            aux_labels  = bg_labels,
                                            do_ratio    = True,
