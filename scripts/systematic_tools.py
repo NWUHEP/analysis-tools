@@ -21,9 +21,11 @@ def template_smoothing(x, h_nom, h_up, h_down, **kwargs):
     Lowess.
     '''
 
-    dh_up, dh_down = (h_up - h_nom)/h_nom, (h_down - h_nom)/h_nom
-    dh_up   = lowess(dh_up, x, frac=0.5, return_sorted=False)
-    dh_down = lowess(dh_down, x, frac=0.5, return_sorted=False)
+    mask = h_nom > 0
+    dh_up, dh_down = np.zeros_like(h_nom), np.zeros_like(h_nom)
+    dh_up[mask], dh_down[mask] = (h_up[mask] - h_nom[mask])/h_nom[mask], (h_down[mask] - h_nom[mask])/h_nom[mask]
+    dh_up   = lowess(dh_up, x[mask], frac=0.5, return_sorted=False)
+    dh_down = lowess(dh_down, x[mask], frac=0.5, return_sorted=False)
 
     return h_nom*(1 + dh_up), h_nom*(1 + dh_down)
 
@@ -671,7 +673,10 @@ class SystematicTemplateGenerator():
 
         w_up      = df.weight*df.top_pt_weight
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
-        h_down    = self._h*(1 - 0.33*h_up/self._h)
+        mask = self._h > 0
+        h_down = np.zeros_like(self._h)
+        h_down[mask] = self._h[mask]*(1 - 0.33*h_up[mask]/self._h[mask])
+        h_down[~mask] = 0.
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):
@@ -684,24 +689,21 @@ class SystematicTemplateGenerator():
         weights = df['weight'].values.copy()
        
         # scale variation
-        weights *= df['ww_pt_scale_up']/0.993
-        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights *= 0.993/df['ww_pt_scale_up']
-
-        weights *= df['ww_pt_scale_down']/1.001
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights *= 1.001/df['ww_pt_scale_down']
+        k_up, k_down = 0.993, 1.001
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights*df['ww_pt_scale_up']/k_up)
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights*df['ww_pt_scale_down']/k_down)
 
         self._df_sys['ww_scale_up'], self._df_sys['ww_scale_down'] = h_up, h_down
 
         # resum variation
-        weights *= df['ww_pt_resum_up']/1.012
-        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights *= 1.012/df['ww_pt_resum_up']
+        k_up, k_down = 1.012, 0.9493
+        h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights*df['ww_pt_resum_up']/k_up)
+        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights*df['ww_pt_resum_down']/k_down)
 
-        weights *= df['ww_pt_resum_down']/0.9493
-        h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights)
-        weights *= 0.9493/df['ww_pt_resum_down']
+        print('--------')
+        print(self._h)
+        print(h_up, h_down, sep='\n')
+        print(k_up*h_up, k_down*h_down, sep='\n')
 
         self._df_sys['ww_resum_up'], self._df_sys['ww_resum_down'] = h_up, h_down
 

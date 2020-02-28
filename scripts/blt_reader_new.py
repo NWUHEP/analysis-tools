@@ -166,12 +166,12 @@ if __name__ == '__main__':
             # start pool process
             tmp_path = f'{output_path}/{dataset}'
             pt.make_directory(tmp_path, clear=True)
-            #for i, ievt in enumerate(event_ranges[:-1]):
-            #    result = pool.apply_async(pickle_ntuple, 
-            #                              args = (args.input, tree_name, tmp_path, 
-            #                                      (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
-            #                                     )
-            #                              )
+            for i, ievt in enumerate(event_ranges[:-1]):
+                result = pool.apply_async(pickle_ntuple, 
+                                          args = (args.input, tree_name, tmp_path, 
+                                                  (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
+                                                 )
+                                          )
             #print(result.get(timeout=1))
 
         # run over isolation inverted selections (fakes)
@@ -181,9 +181,7 @@ if __name__ == '__main__':
                 root_file = r.TFile(args.input)
                 tree_name = f'{selection}_fakes/bltTree_{dataset}'
                 tree      = root_file.Get(tree_name)
-                print(selection, dataset, type(tree))
                 n_entries = tree.GetEntriesFast()
-                continue
 
                 #print(selection, dataset, n_entries)
                 if n_entries == 0: 

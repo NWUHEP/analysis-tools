@@ -49,12 +49,12 @@ eff_e_2,$\epsilon_{e}$ ($30 \leq p_{T} < 40$),0,1,shape,1,gaussian,reco_lepton,$
 eff_e_3,$\epsilon_{e}$ ($40 \leq p_{T} < 50$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 eff_e_4,$\epsilon_{e}$ ($50 \leq p_{T} < 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 eff_e_5,$\epsilon_{e}$ ($p_{T} \geq 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1,0
-trigger_e_0,e trigger ($30 \leq p_{T} < 35$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,0,1,0
-trigger_e_1,e trigger ($35 \leq p_{T} < 40$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,0,1,0
-trigger_e_2,e trigger ($40 \leq p_{T} < 45$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,0,1,0
-trigger_e_3,e trigger ($45 \leq p_{T} < 50$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,0,1,0
-trigger_e_4,e trigger ($50 \leq p_{T} < 60$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,0,1,0
-trigger_e_5,e trigger ($p_{T} \geq 60$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,0,0,0,0,1,0
+trigger_e_0,e trigger ($30 \leq p_{T} < 35$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0
+trigger_e_1,e trigger ($35 \leq p_{T} < 40$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0
+trigger_e_2,e trigger ($40 \leq p_{T} < 45$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0
+trigger_e_3,e trigger ($45 \leq p_{T} < 50$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0
+trigger_e_4,e trigger ($50 \leq p_{T} < 60$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0
+trigger_e_5,e trigger ($p_{T} \geq 60$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,0,1,0,0,0,1,0
 escale_e,$e$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1,0
 trigger_e_tag,$e$ trigger (tag),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,0,0
 trigger_e_probe,$e$ trigger (probe),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,0,0

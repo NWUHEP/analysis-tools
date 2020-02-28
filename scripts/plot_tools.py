@@ -26,7 +26,7 @@ dataset_dict = dict(
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt',
-                                 #'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
+                                 'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
                                  ],
                     zjets_ext = ['z0jets_alt', 'z1jets_alt', 'z2jets_alt'],
                     zjets     = ['zjets_m-50',  'zjets_m-10to50',
@@ -563,37 +563,43 @@ class DataManager():
                     init_count_inclusive = self._event_counts['ttbar_inclusive'][0]
                     df.loc[:, 'weight'] *= init_count/(init_count + 0.438048*init_count_inclusive)
 
-            #if label == 'zjets_alt':
+            if label == 'zjets_alt':
 
-            #    ### combining z+jets samples
-            #    ratios = [0.751, 0.176, 0.0614]
-            #    if dataset == 'zjets_m-50_alt':
-            #        init_count -= 2*self._event_counts[dataset][9]
+                ### combining z+jets samples
+                ratios = [[0.737, 0.173, 0.091],
+                          [0.967, 0.033, 0.],
+                          [0.,    1.056, -0.056],
+                          [0.,    0.,    1.] ]
 
-            #        # rescale n parton parts
-            #        init_count_0 = self._event_counts['z0jets_alt'][0] - 2*self._event_counts['z0jets_alt'][9]
-            #        df.loc[df.n_partons == 0, 'weight'] *= ratios[0]*init_count/(init_count_0 + ratios[0]*init_count)
+                ### get initial event counts ###
+                init_count_inc = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
+                init_count_1   = self._event_counts['z0jets_alt'][0] - 2*self._event_counts['z0jets_alt'][9]
+                init_count_2   = self._event_counts['z1jets_alt'][0] - 2*self._event_counts['z1jets_alt'][9]
+                init_count_3   = self._event_counts['z2jets_alt'][0] - 2*self._event_counts['z2jets_alt'][9]
+                init_counts = np.array([init_count_inc, init_count_1, init_count_2, init_count_3])
 
-            #        init_count_1 = self._event_counts['z1jets_alt'][0] - 2*self._event_counts['z1jets_alt'][9]
-            #        df.loc[df.n_partons == 1, 'weight'] *= ratios[1]*init_count/(init_count_1 + ratios[1]*init_count)
+                # make the math a little cleaner
+                ratios = np.array(ratios)
+                totals = np.transpose(init_counts*ratios.T)
+                if dataset == 'zjets_m-50_alt':
+                    df.loc[df.n_partons == 0, 'weight'] *= totals[0, 0]/totals[:,0].sum()
+                    df.loc[df.n_partons == 1, 'weight'] *= totals[0, 1]/totals[:,1].sum()
+                    df.loc[df.n_partons >= 2, 'weight'] *= totals[0, 2]/totals[:,2].sum()
 
-            #        init_count_2 = self._event_counts['z2jets_alt'][0] - 2*self._event_counts['z2jets_alt'][9]
-            #        df.loc[df.n_partons == 2, 'weight'] *= ratios[2]*init_count/(init_count_2 + ratios[2]*init_count)
+                elif dataset == 'z0jets_alt':
+                    df.loc[df.n_partons == 0, 'weight'] *= totals[1, 0]/totals[:,0].sum()
+                    df.loc[df.n_partons == 1, 'weight'] *= totals[1, 1]/totals[:,1].sum()
+                    df.loc[df.n_partons >= 2, 'weight'] *= totals[1, 2]/totals[:,2].sum()
 
-            #    elif dataset == 'z0jets_alt':
-            #        init_count -= 2*self._event_counts[dataset][9]
-            #        init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + ratios[0]*init_count_inclusive)
+                elif dataset == 'z1jets_alt':
+                    df.loc[df.n_partons == 0, 'weight'] *= totals[2, 0]/totals[:,0].sum()
+                    df.loc[df.n_partons == 1, 'weight'] *= totals[2, 1]/totals[:,1].sum()
+                    df.loc[df.n_partons >= 2, 'weight'] *= totals[2, 2]/totals[:,2].sum()
 
-            #    elif dataset == 'z1jets_alt':
-            #        init_count -= 2*self._event_counts[dataset][9]
-            #        init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + ratios[1]*init_count_inclusive)
-
-            #    elif dataset == 'z2jets_alt':
-            #        init_count -= 2*self._event_counts[dataset][9]
-            #        init_count_inclusive = self._event_counts['zjets_m-50_alt'][0] - 2*self._event_counts['zjets_m-50_alt'][9]
-            #        df.loc[:, 'weight'] *= init_count/(init_count + ratios[2]*init_count_inclusive)
+                elif dataset == 'z2jets_alt':
+                    df.loc[df.n_partons == 0, 'weight'] *= totals[3, 0]/totals[:,0].sum()
+                    df.loc[df.n_partons == 1, 'weight'] *= totals[3, 1]/totals[:,1].sum()
+                    df.loc[df.n_partons >= 2, 'weight'] *= totals[3, 2]/totals[:,2].sum()
 
             ### combine ttbar samples for systematics
             ntotal = -1

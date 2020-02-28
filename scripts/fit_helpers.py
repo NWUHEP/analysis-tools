@@ -271,12 +271,14 @@ class FitData(object):
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
                 self._bb_np[f'{sel}_{category}']      = np.ones(data_val.size)
 
-                print(f'{sel} {category}: {np.sqrt(data_var)}')
+                #print(f'{sel} {category}: {np.sqrt(data_var)}')
 
                 norm_mask    = []
                 process_mask = []
                 data_tensor  = []
                 for ds in self._processes:
+                    if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes':
+                        ds = 'fakes_ss'
 
                     # initialize mask for removing irrelevant processes
                     if ds not in templates.keys():
@@ -288,12 +290,15 @@ class FitData(object):
                             process_mask.append(0)
                         continue
                     else:
-                        template = templates[ds]
                         if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes_ss':
+                            template = templates['fakes_ss']
                             ds = 'fakes'
+                        else:
+                            template = templates[ds]
+
 
                     shape_param_mask = shape_params['active'] & shape_params[ds] & shape_params[sel]
-                    if ds in ['zjets_alt', 'diboson', 'fakes', 'fakes_ss']: # processes that are not subdivided
+                    if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
                         val, var = template['val'].values, template['var'].values
 
                         # determine whether process contribution is significant
@@ -305,8 +310,7 @@ class FitData(object):
                         else:
                             process_mask.append(1)
 
-                        print(ds, val)
-
+                        #print(ds, val)
                         delta_plus, delta_minus = [], []
                         norm_vector = norm_params[sel] & norm_params[ds]
                         for iparam, (pname, param) in enumerate(shape_params.iterrows()):
@@ -338,8 +342,8 @@ class FitData(object):
                             else:
                                 process_mask.append(1)
 
-                            #print(ds, sub_ds, val)
 
+                            #print(ds, sub_ds, val)
                             delta_plus, delta_minus = [], []
                             for iparam, (pname, param) in enumerate(shape_params.iterrows()):
                                 if param[sel] == 0: continue
@@ -353,6 +357,10 @@ class FitData(object):
 
                                 delta_plus.append(deff_plus + deff_minus)
                                 delta_minus.append(deff_plus - deff_minus)
+                                #print(pname)
+                                #print(deff_plus)
+                                #print(deff_minus)
+
 
                             process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                             data_tensor.append(process_array.T)
@@ -462,7 +470,9 @@ class FitData(object):
         if no_sum:
             model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
         else:
+            #print(model_tensor[:,:,0])
             model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
+            #print(model_val)
             model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
 
         model_var = model_tensor[:,:,1].sum(axis=0) 

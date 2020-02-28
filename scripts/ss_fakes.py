@@ -65,6 +65,6 @@ if __name__ == '__main__':
         # save output and update event counts
         df_qcd.to_pickle(f'{input_dir}/ntuple_fakes_ss.pkl')
 
-        ec = pd.read_csv(f'{input_dir}/event_counts.csv')
-        ec['fakes_ss'] = 10*[1., ]
+        ec = pd.read_csv(f'{input_dir}/event_counts.csv', index_col=0)
+        ec['fakes_ss'] = 14*[1., ]
         ec.to_csv(f'{input_dir}/event_counts.csv')
