@@ -496,6 +496,7 @@ class DataManager():
                             desc       = 'Loading dataframes',
                             unit_scale = True,
                             ncols      = 75,
+                            leave      = False,
                             total      = len(self._dataset_names),
                             ):
 
@@ -531,7 +532,6 @@ class DataManager():
                     scale *= df.gen_weight
                     neg_count = self._event_counts[dataset][9]
                     scale /= init_count - 2*neg_count
-                    #scale *= 1.06 # removes normalization effect of Z pt reweighting
 
                     ### fix tau id scale factor
                     if self._selection in ['etau', 'mutau']:
@@ -546,6 +546,8 @@ class DataManager():
 
             ### combining inclusive and exclusive ttbar samples
             if label == 'ttbar':
+                #df.loc[:, 'weight'] *= df.loc[:, 'top_pt_weight'] # good to have for plots, not to be used when producing templates
+
                 if dataset == 'ttbar_inclusive':
                     # rescale leptonic component
                     init_count_lep = self._event_counts['ttbar_lep'][0]
@@ -602,8 +604,6 @@ class DataManager():
                     df.loc[df.n_partons >= 2, 'weight'] *= totals[3, 2]/totals[:,2].sum()
 
             ### combine ttbar samples for systematics
-            ntotal = -1
-            #print(label, dataset, init_count)
             if self._combine:
                 if label == 'ttbar_isrup':
                     datasets = ['ttbar_inclusive_isrup', 'ttbar_inclusive_isrup_ext2']
@@ -645,7 +645,6 @@ class DataManager():
                     ntotal = np.sum([self._event_counts[d][0] for d in datasets])
                     df.loc[:, 'weight'] *= init_count/ntotal
 
-            #print(ntotal)
             ### only keep certain features ###
             if self._features is not None:
                 df = df[[f for f in self._features + ['weight', 'run_number', 'event_number'] if f in df.columns]]
@@ -833,7 +832,8 @@ class PlotManager():
                             desc='plotting...', 
                             unit_scale=True, 
                             ncols=75, 
-                            total=len(features)
+                            total=len(features),
+                            leave=False
                             ):
             if feature not in self._features:
                 print('{0} not in features.')
@@ -992,8 +992,9 @@ class PlotManager():
                             desc       = 'Plotting',
                             unit_scale = True,
                             ncols      = 75,
-                            total      = len(features
-                           )):
+                            leave      = False,
+                            total      = len(features)
+                            ):
             if feature not in self._features:
                 print('{0} not in features.')
                 continue
@@ -1093,6 +1094,7 @@ class PlotManager():
                             desc       = 'plotting...',
                             unit_scale = True,
                             ncols      = 75,
+                            leave      = False,
                             total      = len(features)
                             ):
             if feature not in self._features:

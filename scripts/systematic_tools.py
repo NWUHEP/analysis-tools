@@ -24,8 +24,8 @@ def template_smoothing(x, h_nom, h_up, h_down, **kwargs):
     mask = h_nom > 0
     dh_up, dh_down = np.zeros_like(h_nom), np.zeros_like(h_nom)
     dh_up[mask], dh_down[mask] = (h_up[mask] - h_nom[mask])/h_nom[mask], (h_down[mask] - h_nom[mask])/h_nom[mask]
-    dh_up   = lowess(dh_up, x[mask], frac=0.5, return_sorted=False)
-    dh_down = lowess(dh_down, x[mask], frac=0.5, return_sorted=False)
+    dh_up   = lowess(dh_up, x, frac=0.5, return_sorted=False)
+    dh_down = lowess(dh_down, x, frac=0.5, return_sorted=False)
 
     return h_nom*(1 + dh_up), h_nom*(1 + dh_down)
 
@@ -675,8 +675,7 @@ class SystematicTemplateGenerator():
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
         mask = self._h > 0
         h_down = np.zeros_like(self._h)
-        h_down[mask] = self._h[mask]*(1 - 0.33*h_up[mask]/self._h[mask])
-        h_down[~mask] = 0.
+        h_down[mask] = self.h - 0.33*(h_up[mask] - self._h[mask])
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):
@@ -700,10 +699,10 @@ class SystematicTemplateGenerator():
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=weights*df['ww_pt_resum_up']/k_up)
         h_down, _ = np.histogram(df[self._feature], bins=self._binning, weights=weights*df['ww_pt_resum_down']/k_down)
 
-        print('--------')
-        print(self._h)
-        print(h_up, h_down, sep='\n')
-        print(k_up*h_up, k_down*h_down, sep='\n')
+        #print('--------')
+        #print(self._h)
+        #print(h_up, h_down, sep='\n')
+        #print(k_up*h_up, k_down*h_down, sep='\n')
 
         self._df_sys['ww_resum_up'], self._df_sys['ww_resum_down'] = h_up, h_down
 

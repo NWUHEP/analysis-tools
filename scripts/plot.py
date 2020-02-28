@@ -160,6 +160,7 @@ if __name__ == '__main__':
                          desc       = 'plotting jet categories...',
                          unit_scale = True,
                          ncols      = 75,
+                         leave      = False
                         ):
         cat_items = pt.categories[category]
         #plot_manager.set_output_path(f'{output_path}/{category}_process')

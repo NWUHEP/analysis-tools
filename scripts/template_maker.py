@@ -188,7 +188,7 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
     #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['emu']#, 'mutau', 'etau']
+    selections = ['emu']#, 'mutau', 'emu']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
