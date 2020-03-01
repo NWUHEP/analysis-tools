@@ -133,19 +133,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ##########################
 
-    datasets_ttbar_syst = [
-                           'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
-                           'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
-                           'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
-                           'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
-
-                 	   'ttbar_inclusive_isrup_ext2', 'ttbar_inclusive_isrdown_ext2',
-                 	   'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrdown_ext1',    
-                 	   'ttbar_inclusive_fsrup_ext2', 'ttbar_inclusive_fsrdown_ext2',    
-                 	   'ttbar_inclusive_hdampup_ext1', 'ttbar_inclusive_hdampdown_ext1',
-                 	   'ttbar_inclusive_tuneup_ext1', 'ttbar_inclusive_tunedown_ext1',
-                          ]
-
     # sigal samples are split according the decay of the W bosons
     decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
 
@@ -187,8 +174,8 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_up' for n in btag_source_names]
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
-    #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['emu']#, 'mutau', 'emu']
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    #selections = ['etau', 'mutau']#, 'emu']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -309,6 +296,19 @@ if __name__ == '__main__':
             data[category] = dict(bins = binning, templates = templates)
 
         # Additional ttbar-specific systematics
+        datasets_ttbar_syst = [
+                               'ttbar_inclusive_isrup', 'ttbar_inclusive_isrdown',
+                               'ttbar_inclusive_fsrup', 'ttbar_inclusive_fsrdown',
+                               'ttbar_inclusive_hdampup', 'ttbar_inclusive_hdampdown',
+                               'ttbar_inclusive_tuneup', 'ttbar_inclusive_tunedown',
+
+                               'ttbar_inclusive_isrup_ext2', 'ttbar_inclusive_isrdown_ext2',
+                               'ttbar_inclusive_fsrup_ext1', 'ttbar_inclusive_fsrdown_ext1',    
+                               'ttbar_inclusive_fsrup_ext2', 'ttbar_inclusive_fsrdown_ext2',    
+                               'ttbar_inclusive_hdampup_ext1', 'ttbar_inclusive_hdampdown_ext1',
+                               'ttbar_inclusive_tuneup_ext1', 'ttbar_inclusive_tunedown_ext1',
+                              ]
+
         dm = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics_new/{selection}_2016',
                             dataset_names = datasets_ttbar_syst,
                             selection     = selection,

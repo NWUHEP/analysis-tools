@@ -169,7 +169,7 @@ class FitData(object):
     def __init__(self, path, selections, processes, 
                  param_file  = 'data/model_parameters_default.csv',
                  use_prefit  = False,
-                 process_cut = 0.05
+                 process_cut = 0
                  ):
         self._selections     = selections
         self._processes      = processes
@@ -230,12 +230,17 @@ class FitData(object):
         self._npoi       = df_params.query('type == "poi"').shape[0]
         self._nnorm      = df_params.query('type == "norm"').shape[0]
         self._nshape     = df_params.query('type == "shape"').shape[0]
-        self._pval_init  = df_params['val_init'].values.copy()
-        self._pval_fit   = df_params['val_init'].values.copy()
-        self._perr_init  = df_params['err_init'].values.copy()
+        self._pval_init  = df_params['val_init'].values
+        self._pval_fit   = df_params['val_init'].values
+        self._perr_init  = df_params['err_init'].values
         self._pmask      = df_params['active'].values.astype(bool)
         self._parameters = df_params
 
+        # temporary handling of top pt systematic (one-sided Gaussian)
+        self._pi_mask = self._pmask.copy()
+        self._pi_mask[:4] = False
+        self._top_pt_index = df_params.index.get_loc('top_pt')
+        self._pi_mask[self._top_pt_index] = False
         # define priors here
         #self._priors = []
         #for prior_pdf in df_params['pdf']:
@@ -250,9 +255,6 @@ class FitData(object):
         '''
         
         params = self._parameters.query('type != "poi"')
-        norm_params  = params.query('type == "norm"')
-        shape_params = params.query('type == "shape"')
-
         self._model_data = dict()
         self._rnum_cache = dict()
         self._bb_np      = dict()
@@ -271,12 +273,13 @@ class FitData(object):
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
                 self._bb_np[f'{sel}_{category}']      = np.ones(data_val.size)
 
-                #print(f'{sel} {category}: {np.sqrt(data_var)}')
+                #print('\n', sel, category, data_val, np.sqrt(data_val.sum()), '\n')
 
                 norm_mask    = []
                 process_mask = []
                 data_tensor  = []
                 for ds in self._processes:
+
                     if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes':
                         ds = 'fakes_ss'
 
@@ -288,89 +291,96 @@ class FitData(object):
                             process_mask.extend(6*[0,])
                         else:
                             process_mask.append(0)
+
                         continue
                     else:
+                        template = templates[ds]
+
                         if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes_ss':
-                            template = templates['fakes_ss']
                             ds = 'fakes'
-                        else:
-                            template = templates[ds]
-
-
-                    shape_param_mask = shape_params['active'] & shape_params[ds] & shape_params[sel]
+                
                     if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
+
                         val, var = template['val'].values, template['var'].values
 
                         # determine whether process contribution is significant
                         # or should be masked (this should be studied for
                         # impact on poi to determine proper threshold)
-                        if val.sum() == 0. or np.all(val/np.sqrt(data_var)) < process_cut:
+
+                        if val.sum() == 0. or val.sum()/np.sqrt(data_var.sum()) <= process_cut:
                             process_mask.append(0)
                             continue
                         else:
                             process_mask.append(1)
 
-                        #print(ds, val)
                         delta_plus, delta_minus = [], []
-                        norm_vector = norm_params[sel] & norm_params[ds]
-                        for iparam, (pname, param) in enumerate(shape_params.iterrows()):
-                            if param[sel] == 0: continue
+                        norm_vector = []
+                        for pname, param in params.iterrows():
+                            if param.type == 'shape' and param[sel]:
+                                if f'{pname}_up' in template.columns and param['active'] and param[ds]:
+                                    deff_plus  = template[f'{pname}_up'].values - val
+                                    deff_minus = template[f'{pname}_down'].values - val
+                                else:
+                                    deff_plus  = np.zeros_like(val)
+                                    deff_minus = np.zeros_like(val)
+                                delta_plus.append(deff_plus + deff_minus)
+                                delta_minus.append(deff_plus - deff_minus)
 
-                            if f'{pname}_up' in template.columns and shape_param_mask[iparam]:
-                                deff_plus  = template[f'{pname}_up'].values - val
-                                deff_minus = template[f'{pname}_down'].values - val
-                            else:
-                                deff_plus  = np.zeros_like(val)
-                                deff_minus = np.zeros_like(val)
-
-                            delta_plus.append(deff_plus + deff_minus)
-                            delta_minus.append(deff_plus - deff_minus)
+                            elif param.type == 'norm':
+                                if param[sel] and param[ds]:
+                                    norm_vector.append(1)
+                                else:
+                                    norm_vector.append(0)
 
                         process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                         data_tensor.append(process_array.T)
-                        norm_mask.append(norm_vector.values)
+                        norm_mask.append(norm_vector)
 
                     elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
-                        norm_vector = norm_params[sel] & norm_params[ds]
+                        full_sum, reduced_sum = 0, 0
                         for sub_ds, sub_template in template.items():
                             val, var = sub_template['val'].values, sub_template['var'].values
+                            full_sum += val.sum()
 
                             # determine wheter process should be masked
-                            if val.sum() == 0. or np.all(val/np.sqrt(data_var)) < process_cut:
+                            if val.sum() == 0. or val.sum()/np.sqrt(data_var.sum()) <= process_cut:
                                 process_mask.append(0)
                                 continue
                             else:
                                 process_mask.append(1)
 
-
-                            #print(ds, sub_ds, val)
                             delta_plus, delta_minus = [], []
-                            for iparam, (pname, param) in enumerate(shape_params.iterrows()):
-                                if param[sel] == 0: continue
+                            norm_vector = []
+                            for pname, param in params.iterrows():
+                                if param.type == 'shape' and param[sel]:
+                                    if f'{pname}_up' in sub_template.columns and param[ds]: 
 
-                                if f'{pname}_up' in sub_template.columns and shape_param_mask[iparam]:
-                                    deff_plus  = sub_template[f'{pname}_up'].values - val
-                                    deff_minus = sub_template[f'{pname}_down'].values - val
-                                else:
-                                    deff_plus  = np.zeros_like(val)
-                                    deff_minus = np.zeros_like(val)
+                                        ## temporary modifcation to top pt morphing for ttbar templates
+                                        #if ds == 'ttbar' and pname == 'top_pt':
+                                        #    sub_template.loc[:,'top_pt_down'] = val
 
-                                delta_plus.append(deff_plus + deff_minus)
-                                delta_minus.append(deff_plus - deff_minus)
-                                #print(pname)
-                                #print(deff_plus)
-                                #print(deff_minus)
-
+                                        deff_plus  = sub_template[f'{pname}_up'].values - val
+                                        deff_minus = sub_template[f'{pname}_down'].values - val
+                                    else:
+                                        deff_plus  = np.zeros_like(val)
+                                        deff_minus = np.zeros_like(val)
+                                    delta_plus.append(deff_plus + deff_minus)
+                                    delta_minus.append(deff_plus - deff_minus)
+                                elif param.type == 'norm':
+                                    if param[sel] and param[ds]:
+                                        norm_vector.append(1)
+                                    else:
+                                        norm_vector.append(0)
 
                             process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                             data_tensor.append(process_array.T)
-                            norm_mask.append(norm_vector.values)
+                            norm_mask.append(norm_vector)
 
                 self._model_data[f'{sel}_{category}'] = dict(
                                                              data             = (data_val, data_var),
                                                              model            = np.stack(data_tensor),
                                                              process_mask     = np.array(process_mask, dtype=bool),
-                                                             shape_param_mask = shape_params[sel].values.astype(bool),
+                                                             shape_param_mask = params.query('type == "shape"')[sel].values.astype(bool),
                                                              norm_mask        = np.stack(norm_mask)
                                                              )
 
@@ -460,19 +470,15 @@ class FitData(object):
             process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
 
         # mask the process amplitudes for this category and apply normalization parameters
-        #print(model_data['process_mask'].sum())
         process_amplitudes = process_amplitudes[model_data['process_mask']]
         process_amplitudes = norm_param_prod.T*process_amplitudes
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
-        #print(model_tensor.shape, shape_params.shape)
         if no_sum:
             model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
         else:
-            #print(model_tensor[:,:,0])
             model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
-            #print(model_val)
             model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
 
         model_var = model_tensor[:,:,1].sum(axis=0) 
@@ -641,10 +647,17 @@ class FitData(object):
             cost += nll.sum()
 
         # Add prior constraint terms for nuisance parameters 
-        pi_param = (params - self._pval_init)**2 / (self._perr_init**2)
-        #print(params[7], self._pval_init[7], self._perr_init[7], pi_param[7])
+        mask = self._pi_mask
+        pi_param = (params[mask] - self._pval_init[mask])**2 / (2*self._perr_init[mask]**2)
         cost += pi_param.sum()
         self._np_cost = pi_param
+
+        # temporary implementation of one-sided Gaussian for  top pt morphing
+        p_top_pt = params[self._top_pt_index]
+        if p_top_pt >= 0.:
+            cost += (p_top_pt)**2 / 2
+        else:
+            cost += 1e8
         
         # require that the branching fractions sum to 1
         cost += (np.sum(beta) - 1)**2/1e-10
@@ -658,6 +671,7 @@ class FitData(object):
 
         # do the same for the tau branching fraction
         #cost += (np.sum(br_tau) - 1)**2/1e-3
+
 
         return cost
 
@@ -730,8 +744,16 @@ class FitData(object):
             dcost += nll_jac
 
         # Add prior constraint terms for nuisance parameters 
-        pi_param_jac = (params - self._pval_init) / self._perr_init**2
-        dcost += pi_param_jac
+        mask = self._pi_mask
+        pi_param_jac = (params[mask] - self._pval_init[mask]) / self._perr_init[mask]**2
+        dcost[mask] += pi_param_jac
+
+        # temporary implementation of one-sided Gaussian for  top pt morphing
+        p_top_pt = params[self._top_pt_index]
+        if p_top_pt >= 0.:
+            dcost[self._top_pt_index] += p_top_pt
+        else:
+            dcost[self._top_pt_index] = 0
 
         # require that the branching fractions sum to 1
         dcost[:4] += 2*(np.sum(beta) - 1)/1e-10
@@ -747,5 +769,5 @@ class FitData(object):
             dcost[1] += -2*(beta[0] - beta[1])/1e-10
 
         #dcost += 2*(np.sum(br_tau) - 1)/1e-4
-
         return dcost[self._pmask]
+

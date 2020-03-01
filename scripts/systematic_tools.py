@@ -22,12 +22,11 @@ def template_smoothing(x, h_nom, h_up, h_down, **kwargs):
     '''
 
     mask = h_nom > 0
-    dh_up, dh_down = np.zeros_like(h_nom), np.zeros_like(h_nom)
-    dh_up[mask], dh_down[mask] = (h_up[mask] - h_nom[mask])/h_nom[mask], (h_down[mask] - h_nom[mask])/h_nom[mask]
-    dh_up   = lowess(dh_up, x, frac=0.5, return_sorted=False)
-    dh_down = lowess(dh_down, x, frac=0.5, return_sorted=False)
+    dh_up, dh_down = h_up - h_nom, h_down - h_nom
+    dh_up   = lowess(dh_up, x, frac=0.4, return_sorted=False)
+    dh_down = lowess(dh_down, x, frac=0.4, return_sorted=False)
 
-    return h_nom*(1 + dh_up), h_nom*(1 + dh_down)
+    return h_nom + dh_up, h_nom + dh_down
 
 def conditional_scaling(df, bins, scale, mask, feature, type='var'):
     '''
@@ -134,47 +133,49 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
         if h_up.sum() == 0. and h_down.sum() == 0.:
             continue
 
-        if syst == 'fsr' and dm._selection in ['etau', 'mutau']:
-            # corrections for FSR sample
-            k_down, k_up = 1., 1.
-            if decay_mode in [7, 8, 12, 15]: #real taus
-                k_down, k_up = 1.02, 0.96
-            elif decay_mode in [16, 17, 18, 19]: #fake taus
-                k_down, k_up = 1.27, 0.72
+        if syst == 'fsr':
+            h_up   = h_nominal + (h_up - h_nominal)/np.sqrt(2)
+            h_down = h_nominal + (h_down - h_nominal)/np.sqrt(2)
 
-            h_up   = (h_nominal + (h_up - h_nominal)/np.sqrt(2))
-            h_down = (h_nominal + (h_down - h_nominal)/np.sqrt(2))
-            h_up /= k_up
-            h_down /= k_down
+            if dm._selection in ['etau', 'mutau']:
+                # corrections for FSR sample
+                k_down, k_up = 1., 1.
+                if decay_mode in [7, 8, 12, 15]: #real taus
+                    k_down, k_up = 1.02, 0.96
+                elif decay_mode in [16, 17, 18, 19]: #fake taus
+                    k_down, k_up = 1.27, 0.72
+
+                h_up /= k_up
+                h_down /= k_down
 
         # smoothing: do LOWESS smoothing on the difference of histograms
-        x = (binning[:-1] + binning[1:])/2
-        h_up, h_down = template_smoothing(x, h_nominal, h_up, h_down)
+        #x = (binning[:-1] + binning[1:])/2
+        #h_up, h_down = template_smoothing(x, h_nominal, h_up, h_down)
 
         # symmetrization and smoothing: use something more standard in the
         # future...  if the fluctuations are highly assymetric, they are
         # symmetrized and set to 1/3 of the larger fluctuations (1/3 makes the
         # linear extrapolation on the short side not do anything)
-        diff_up   = h_up - h_nominal
-        diff_down = h_down - h_nominal
-        mask_up = ((diff_up > 0) & (diff_up > diff_down) & (diff_down > -diff_up/3)) \
-                  | ((diff_up < 0) & (diff_up < diff_down) & (diff_down < -diff_up/3))
-        mask_down = ((diff_down > 0) & (diff_down > diff_up) & (diff_up > -diff_down/3)) \
-                    | ((diff_down < 0) & (diff_down < diff_up) & (diff_up < -diff_down/3))
+        #diff_up   = h_up - h_nominal
+        #diff_down = h_down - h_nominal
+        #mask_up = ((diff_up > 0) & (diff_up > diff_down) & (diff_down > -diff_up/3)) \
+        #          | ((diff_up < 0) & (diff_up < diff_down) & (diff_down < -diff_up/3))
+        #mask_down = ((diff_down > 0) & (diff_down > diff_up) & (diff_up > -diff_down/3)) \
+        #            | ((diff_down < 0) & (diff_down < diff_up) & (diff_up < -diff_down/3))
 
-        #print(diff_up)
-        #print(diff_down)
-        #print(mask_up)
-        #print(mask_down)
-        diff_up[mask_up] = 2*diff_up[mask_up]/3
-        diff_down[mask_up] = -diff_up[mask_up]/3
-        diff_up[mask_down] = -diff_down[mask_down]/3
-        diff_down[mask_up] = 2*diff_up[mask_up]/3
-        #print(diff_up)
-        #print(diff_down)
+        ##print(diff_up)
+        ##print(diff_down)
+        ##print(mask_up)
+        ##print(mask_down)
+        #diff_up[mask_up] = 2*diff_up[mask_up]/3
+        #diff_down[mask_up] = -diff_up[mask_up]/3
+        #diff_up[mask_down] = -diff_down[mask_down]/3
+        #diff_down[mask_up] = 2*diff_up[mask_up]/3
+        ##print(diff_up)
+        ##print(diff_down)
 
-        h_up = h_nominal + diff_up
-        h_down = h_nominal + diff_down
+        #h_up = h_nominal + diff_up
+        #h_down = h_nominal + diff_down
                
         #r_up, r_down = (h_up - h_nominal)/h_nominal, (h_down - h_nominal)/h_nominal
         #sig_r_up = r_up*np.sqrt(var_up/h_up**2 + var_nominal/h_nominal**2)
@@ -186,10 +187,6 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
         #print('err down: ', sig_r_down)
         #print('dh_up: ', r_up)
         #print('dh_down: ', r_down)
-
-        #print(f'--smoothed--')
-        #print((h_up_smooth-h_nominal)/h_nominal)
-        #print((h_down_smooth-h_nominal)/h_nominal)
 
         df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
@@ -675,7 +672,7 @@ class SystematicTemplateGenerator():
         h_up, _   = np.histogram(df[self._feature], bins=self._binning, weights=w_up*(df.weight.sum()/w_up.sum()))
         mask = self._h > 0
         h_down = np.zeros_like(self._h)
-        h_down[mask] = self.h - 0.33*(h_up[mask] - self._h[mask])
+        h_down[mask] = self._h[mask] - 0.33*(h_up[mask] - self._h[mask])
         self._df_sys['top_pt_up'], self._df_sys['top_pt_down'] = h_up, h_down
 
     def ww_pt_systematics(self, df):
