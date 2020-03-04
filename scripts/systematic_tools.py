@@ -23,8 +23,8 @@ def template_smoothing(x, h_nom, h_up, h_down, **kwargs):
 
     mask = h_nom > 0
     dh_up, dh_down = h_up - h_nom, h_down - h_nom
-    dh_up   = lowess(dh_up, x, frac=0.4, return_sorted=False)
-    dh_down = lowess(dh_down, x, frac=0.4, return_sorted=False)
+    dh_up   = lowess(dh_up, x, frac=0.5, return_sorted=False)
+    dh_down = lowess(dh_down, x, frac=0.5, return_sorted=False)
 
     return h_nom + dh_up, h_nom + dh_down
 
@@ -107,8 +107,8 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     #print('down', h_down.sum())
 
     # average over bin-by-bin variations for now
-    h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
-    h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
+    #h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
+    #h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
     
     return h_up, h_down
 
@@ -149,8 +149,8 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
                 h_down /= k_down
 
         # smoothing: do LOWESS smoothing on the difference of histograms
-        #x = (binning[:-1] + binning[1:])/2
-        #h_up, h_down = template_smoothing(x, h_nominal, h_up, h_down)
+        x = (binning[:-1] + binning[1:])/2
+        h_up, h_down = template_smoothing(x, h_nominal, h_up, h_down)
 
         # symmetrization and smoothing: use something more standard in the
         # future...  if the fluctuations are highly assymetric, they are

@@ -259,7 +259,7 @@ def add_lumi_text(ax, lumi):
             transform=ax.transAxes
             )
     ax.text(0.13, 1.01, 'Preliminary',
-            fontsize=15,
+            fontsize=16,
             fontname='Arial',
             fontstyle='italic',
             transform=ax.transAxes
@@ -353,13 +353,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
             linestyle='--',
             label='expected (prefit)'
             )
-    ax.plot(bins, model_post/dx,
-            drawstyle='steps-post',
-            c='C1',
-            linestyle='--',
-            label='expected (postfit)'
-            )
-    ax.fill_between(bins, (model_pre - model_stat_err)/dx, (model_pre + model_stat_err)/dx,
+    ax.fill_between(bins, (model_post - model_stat_err)/dx, (model_post + model_stat_err)/dx,
                     color='grey',
                     step='post',
                     hatch='/',
@@ -375,16 +369,16 @@ def fit_plot(bins, data_val, model_pre, model_post,
                     )
 
     ax.set_yscale('log')
-    ax.set_ylim(0.1*np.min(data_val/dx), 10.*np.max(data_val/dx))
+    ax.set_ylim(0.1*np.min(data_val/dx), 90.*np.max(data_val/dx))
     ax.set_ylabel('Events / GeV')
-    ax.text(0.03, 0.94, title, 
+    ax.text(0.55, 0.65, title, 
             fontsize=20, 
             fontname='Arial', 
             color='red', 
             transform=ax.transAxes
             )
     add_lumi_text(ax, 35.9)
-    ax.legend(fontsize=14)
+    ax.legend(fontsize=18, ncol=3, loc=9)
     #ax.legend(labels + [r'$\sigma_{\sf stat.}$', r'$\sigma_{\sf syst.}$', 'Data'])
 
     ax.grid()
@@ -393,25 +387,25 @@ def fit_plot(bins, data_val, model_pre, model_post,
     ax.plot(bins[[0,-1]], [1, 1], 'k:')
 
     #ax.errorbar(x, data_val/model_pre, np.sqrt(data_val)/model_pre, 
-    ax.errorbar(x*(1-0.01), data_val/model_pre, np.sqrt(data_val)/model_pre, 
-                markersize=8,
-                fmt='ko', 
-                capsize=0, 
-                elinewidth=2, 
-                label='prefit'
-                )
+    #ax.errorbar(x*(1-0.01), data_val/model_pre, np.sqrt(data_val)/model_pre, 
+    #            markersize=10,
+    #            fmt='C0o', 
+    #            capsize=0, 
+    #            elinewidth=2, 
+    #            label='prefit'
+    #            )
     ax.errorbar(x*(1+0.01), data_val/model_post, np.sqrt(data_val)/model_post, 
-                markersize=8,
-                fmt='C0o', 
+                markersize=10,
+                fmt='ko', 
                 capsize=0, 
                 elinewidth=2, 
                 label='postfit'
                 )
-    ax.plot(bins, model_pre/model_post, drawstyle='steps-post', 
-            c='C0', 
-            linestyle='--', 
-            label='prefit/postfit'
-            )
+    #ax.plot(bins, model_pre/model_post, drawstyle='steps-post', 
+    #        c='C0', 
+    #        linestyle='--', 
+    #        label='prefit/postfit'
+    #        )
     ax.fill_between(bins, 1 - model_stat_err/model_pre, 1 + model_stat_err/model_pre, 
             color='grey', 
             step='post', 

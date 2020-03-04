@@ -169,7 +169,7 @@ class FitData(object):
     def __init__(self, path, selections, processes, 
                  param_file  = 'data/model_parameters_default.csv',
                  use_prefit  = False,
-                 process_cut = 0
+                 process_cut = 0.01
                  ):
         self._selections     = selections
         self._processes      = processes
@@ -230,8 +230,8 @@ class FitData(object):
         self._npoi       = df_params.query('type == "poi"').shape[0]
         self._nnorm      = df_params.query('type == "norm"').shape[0]
         self._nshape     = df_params.query('type == "shape"').shape[0]
-        self._pval_init  = df_params['val_init'].values
-        self._pval_fit   = df_params['val_init'].values
+        self._pval_init  = df_params['val_init'].values.copy()
+        self._pval_fit   = df_params['val_init'].values.copy()
         self._perr_init  = df_params['err_init'].values
         self._pmask      = df_params['active'].values.astype(bool)
         self._parameters = df_params
@@ -239,8 +239,7 @@ class FitData(object):
         # temporary handling of top pt systematic (one-sided Gaussian)
         self._pi_mask = self._pmask.copy()
         self._pi_mask[:4] = False
-        self._top_pt_index = df_params.index.get_loc('top_pt')
-        self._pi_mask[self._top_pt_index] = False
+
         # define priors here
         #self._priors = []
         #for prior_pdf in df_params['pdf']:
@@ -652,13 +651,6 @@ class FitData(object):
         cost += pi_param.sum()
         self._np_cost = pi_param
 
-        # temporary implementation of one-sided Gaussian for  top pt morphing
-        p_top_pt = params[self._top_pt_index]
-        if p_top_pt >= 0.:
-            cost += (p_top_pt)**2 / 2
-        else:
-            cost += 1e8
-        
         # require that the branching fractions sum to 1
         cost += (np.sum(beta) - 1)**2/1e-10
 
@@ -748,14 +740,6 @@ class FitData(object):
         pi_param_jac = (params[mask] - self._pval_init[mask]) / self._perr_init[mask]**2
         dcost[mask] += pi_param_jac
 
-        # temporary implementation of one-sided Gaussian for  top pt morphing
-        p_top_pt = params[self._top_pt_index]
-        if p_top_pt >= 0.:
-            dcost[self._top_pt_index] += p_top_pt
-        else:
-            dcost[self._top_pt_index] = 0
-
-        # require that the branching fractions sum to 1
         dcost[:4] += 2*(np.sum(beta) - 1)/1e-10
 
         # constraining branching fractions for lepton universality testing (maybe not the best way)

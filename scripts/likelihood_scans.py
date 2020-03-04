@@ -1,6 +1,7 @@
 #!/home/naodell/opt/anaconda3/bin/python
 
 import pickle
+import os
 from functools import partial
 from collections import namedtuple
 import argparse
@@ -22,7 +23,7 @@ ScanData = namedtuple('ScanData', ['param_name', 'scan_points', 'results', 'cost
 if __name__ == '__main__':
 
     # input arguments
-    parser = argparse.ArgumentParser(description='Produce data/MC overlays')
+    parser = argparse.ArgumentParser(description='Run likelihood scans for all parameters.')
     parser.add_argument('input',
                         help = 'specify input directory',
                         type = str
@@ -45,13 +46,15 @@ if __name__ == '__main__':
     plot_labels = fh.fancy_labels
     
     # initialize fit data and generate asimov dataset
-    #infile = open(args.input, 'rb')
-    #fit_data    = pickle.load(infile)
-    #infile.close()
+    if os.path.isdir(args.input):
+        fit_data = fh.FitData(args.input, selections, processes, process_cut=0.05)
+    else:
+        infile = open(args.input, 'rb')
+        fit_data = pickle.load(infile)
+        infile.close()
 
-    fit_data    = fh.FitData(args.input, selections, processes)
     parameters  = fit_data._parameters.copy()
-    params_pre  = parameters['val_init'].copy()
+    params_pre  = parameters['val_init'].values.copy()
     asimov_data = {cat:fit_data.mixture_model(params_pre, cat) for cat in fit_data._model_data.keys()}
 
     # minimizer options
@@ -61,6 +64,7 @@ if __name__ == '__main__':
                        #stepmx=0.1, 
                        #maxCGit=50, 
                        #accuracy=1e-10,
+                       gtol=1e-4,
                        disp=None
                       )
 
@@ -69,28 +73,25 @@ if __name__ == '__main__':
     fobj = partial(fit_data.objective,
                    data = asimov_data,
                    do_bb_lite = True,
-                   lu_test = 2
+                   lu_test = None
                   )
 
     fobj_jac = partial(fit_data.objective_jacobian,
                        data = asimov_data,
                        do_bb_lite = True,
-                       lu_test = 2
+                       lu_test = None 
                       )
 
     # prepare scan data
     scan_dict = dict()
-    for ix, (pname, pdata) in tqdm(enumerate(parameters.iterrows()), total=parameters.active.sum()):
+    for ix, (pname, pdata) in tqdm(enumerate(parameters.iterrows()), total=parameters.shape[0]):
 
-        #if ix > 7:
-        #    break
-
-        if pdata.active == 0 or ix < 7:
+        if pdata.active == 0:# or ix < 7:
             continue
                             
         mask[ix] = False
-        #scan_vals = np.linspace(pdata.val_fit - 3*pdata.err_fit, pdata.val_fit + 3*pdata.err_fit, 7)
-        scan_vals = np.linspace(pdata.val_init - 3*pdata.err_init, pdata.val_init + 3*pdata.err_init, 7)
+        scan_vals = np.linspace(pdata.val_fit - 3*pdata.err_fit, pdata.val_fit + 3*pdata.err_fit, 7)
+        #scan_vals = np.linspace(pdata.val_init - 3*pdata.err_init, pdata.val_init + 3*pdata.err_init, 7)
 
         # carry out scan and save results
         results   = []
@@ -98,16 +99,10 @@ if __name__ == '__main__':
         sv_accept = []
         for sv in tqdm(scan_vals, leave=False):
 
-            # randomize n.p.
-            #fit_data._pval_init[4:] = params_pre[4:] + fit_data._perr_init[4:]*np.random.randn(params_pre[4:].size)
-            
-            # produce sample with statistical randomization
-            #sample = {cat:fit_data.mixture_model(params_pre, cat, randomize=True) for cat in fit_data._model_data.keys()}
-            
             # set scan value and carry out minimization
-            #print(fit_data._pval_fit[ix], fit_data._pval_init[ix])
             fit_data._pval_fit[ix] = sv
-            pinit  = fit_data._pval_fit[mask]
+            #pinit = fit_data._pval_fit[mask]
+            pinit = params_pre[mask].copy()
             result = minimize(fobj, pinit,
                               jac     = fobj_jac,
                               method  = 'BFGS',
@@ -119,7 +114,7 @@ if __name__ == '__main__':
             results.append(result.x)
             cost.append(result.fun)
             
-            tqdm.write(f'{pname} = {sv:.3f}: {fobj(pinit):.2f}, {result.fun:.2f}')
+            #tqdm.write(f'{pname} = {sv:.3f}: {fobj(pinit):.2f}, {result.fun:.2f}')
             #if result.success or result.status == 1:
             #    sv_accept.append(sv)
             #    results.append(result.x)
@@ -178,8 +173,6 @@ if __name__ == '__main__':
         plt.savefig(f'plots/nll_scans/{pname}.png')
         fig.clear()
         plt.close()
-
-        break
 
     outfile = open('local_data/nll_scan_data.pkl', 'wb')
     pickle.dump(scan_dict, outfile)
