@@ -141,7 +141,7 @@ def calculate_covariance(f, x0):
 
     hobj = hcalc(x0)[0]
     if np.linalg.det(hobj) != 0:
-        # calculate the full covariance matrix in the case that the H
+        # calculate the full covariance matrix
         hinv        = np.linalg.pinv(hobj)
         sig         = np.sqrt(hinv.diagonal())
         corr_matrix = hinv/np.outer(sig, sig)
@@ -616,7 +616,7 @@ class FitData(object):
                 data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
-            if no_shape: # or category.split('_')[0] in veto_list:
+            if no_shape: 
                 data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
                 model_val = np.sum(model_val)
@@ -671,6 +671,7 @@ class FitData(object):
                            data                = None,
                            do_bb_lite          = True,
                            randomize_templates = False,
+                           no_shape            = False,
                            lu_test             = None,
                           ):
         '''
@@ -715,6 +716,13 @@ class FitData(object):
                 data_val, data_var = template_data['data']
             else:
                 data_val, data_var = data[category]
+
+            # for testing parameter estimation while excluding kinematic shape information
+            if no_shape: 
+                data_val  = np.sum(data_val)
+                data_var  = np.sum(data_var)
+                model_val = np.sum(model_val)
+                model_var = np.sum(model_var)
 
             # get the jacobian of the model
             model_jac = self.mixture_model_jacobian(params, category, process_amplitudes)

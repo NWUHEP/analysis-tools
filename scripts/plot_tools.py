@@ -259,13 +259,13 @@ def add_lumi_text(ax, lumi):
             transform=ax.transAxes
             )
     ax.text(0.13, 1.01, 'Preliminary',
-            fontsize=16,
+            fontsize=18,
             fontname='Arial',
             fontstyle='italic',
             transform=ax.transAxes
             )
-    ax.text(0.62, 1.01,
-            r'$\mathsf{{ {0:.1f}\,fb^{{-1}}}}\,(\sqrt{{\mathit{{s}}}}=13\,\mathsf{{TeV}})$'.format(lumi),
+    ax.text(0.70, 1.01,
+            r'$\mathsf{{ {0:.1f}\,fb^{{-1}}}}\,(13\,\mathsf{{TeV}})$'.format(lumi),
             fontsize=20,
             fontname='Arial',
             transform=ax.transAxes
@@ -273,7 +273,7 @@ def add_lumi_text(ax, lumi):
 
 def fit_plot(bins, data_val, model_pre, model_post, 
              templates, template_labels,
-             model_stat_err, model_syst_err,
+             model_stat_err, syst_err_pre, syst_err_post,
              xlabel      = 'x [a.u.]',
              title       = None,
              output_path = 'plots/fits/plot.png',
@@ -345,55 +345,56 @@ def fit_plot(bins, data_val, model_pre, model_post,
                 markersize=10,
                 capsize=0,
                 elinewidth=2,
-                label='data'
+                label='Data'
                 )
     ax.plot(bins, model_pre/dx,
             drawstyle='steps-post',
             c='gray',
-            linestyle='--',
-            label='expected (prefit)'
+            linestyle=':',
+            linewidth=4,
+            label='Expected (prefit)'
             )
-    ax.fill_between(bins, (model_post - model_stat_err)/dx, (model_post + model_stat_err)/dx,
+    ax.fill_between(bins, (histsum - model_stat_err)/dx, (histsum + model_stat_err)/dx,
                     color='grey',
                     step='post',
-                    hatch='/',
-                    alpha=0.2,
-                    label=r'$\sigma_{\sf stat. exp.}$'
+                    #hatch='/',
+                    alpha=0.5,
+                    label=r'$\sigma_{\sf MC stat.}$'
                     )
-    ax.fill_between(bins, model_syst_err[0]/dx, model_syst_err[1]/dx,
-                    color='k',
+    #ax.fill_between(bins, (model_pre + syst_err_pre[0])/dx, (model_pre + syst_err_pre[1])/dx,
+    #                edgecolor='k',
+    #                facecolor='none',
+    #                step='post',
+    #                hatch='\\',
+    #                alpha=0.5,
+    #                label=r'$\sigma_{\sf syst. prefit}$'
+    #                )
+    ax.fill_between(bins, (histsum + syst_err_post[0])/dx, (histsum + syst_err_post[1])/dx,
+                    edgecolor='k',
+                    facecolor='none',
                     step='post',
-                    hatch='\\',
-                    alpha=0.2,
-                    label=r'$\sigma_{\sf syst. exp.}$'
+                    hatch='/',
+                    alpha=0.5,
+                    label=r'$\sigma_{\sf syst. postfit}$'
                     )
 
     ax.set_yscale('log')
-    ax.set_ylim(0.1*np.min(data_val/dx), 90.*np.max(data_val/dx))
-    ax.set_ylabel('Events / GeV')
-    ax.text(0.55, 0.65, title, 
-            fontsize=20, 
+    ax.set_ylim(0.2*np.min(data_val/dx), 90.*np.max(data_val/dx))
+    ax.set_ylabel('Events / GeV', fontsize=24)
+    ax.text(0.55, 0.6, title, 
+            fontsize=22, 
             fontname='Arial', 
             color='red', 
             transform=ax.transAxes
             )
     add_lumi_text(ax, 35.9)
-    ax.legend(fontsize=18, ncol=3, loc=9)
+    ax.legend(fontsize=18, loc=9, ncol=3)
     #ax.legend(labels + [r'$\sigma_{\sf stat.}$', r'$\sigma_{\sf syst.}$', 'Data'])
 
-    ax.grid()
+    #ax.grid()
 
     ax = axes[1]
-    ax.plot(bins[[0,-1]], [1, 1], 'k:')
-
-    #ax.errorbar(x, data_val/model_pre, np.sqrt(data_val)/model_pre, 
-    #ax.errorbar(x*(1-0.01), data_val/model_pre, np.sqrt(data_val)/model_pre, 
-    #            markersize=10,
-    #            fmt='C0o', 
-    #            capsize=0, 
-    #            elinewidth=2, 
-    #            label='prefit'
-    #            )
+    ax.plot(bins[[0,-1]], [1, 1], 'k--', linewidth=1)
     ax.errorbar(x*(1+0.01), data_val/model_post, np.sqrt(data_val)/model_post, 
                 markersize=10,
                 fmt='ko', 
@@ -401,30 +402,40 @@ def fit_plot(bins, data_val, model_pre, model_post,
                 elinewidth=2, 
                 label='postfit'
                 )
-    #ax.plot(bins, model_pre/model_post, drawstyle='steps-post', 
-    #        c='C0', 
-    #        linestyle='--', 
-    #        label='prefit/postfit'
-    #        )
-    ax.fill_between(bins, 1 - model_stat_err/model_pre, 1 + model_stat_err/model_pre, 
+    ax.plot(bins, data_val/model_pre, drawstyle='steps-post', 
+            c='gray', 
+            linestyle=':', 
+            linewidth=4,
+            #label='prefit/postfit'
+            )
+    ax.fill_between(bins, 1 - model_stat_err/model_post, 1 + model_stat_err/model_post, 
             color='grey', 
             step='post', 
-            hatch='/', 
-            alpha=0.2, 
+            #hatch='/', 
+            alpha=0.5, 
             label='$\sigma_{stat.}$'
             )
-    ax.fill_between(bins, model_syst_err[0]/model_pre, model_syst_err[1]/model_pre,
-                    color='k',
+    #ax.fill_between(bins, data_val/model_pre + syst_err_pre[0]/model_pre, data_val/model_pre + syst_err_pre[1]/model_pre,
+    #                edgecolor='k',
+    #                facecolor='none',
+    #                step='post',
+    #                hatch='\\',
+    #                alpha=0.5,
+    #                label=r'$\sigma_{\sf syst. exp.}$'
+    #                )
+    ax.fill_between(bins, 1 + syst_err_post[0]/model_post, 1 + syst_err_post[1]/model_post,
+                    edgecolor='k',
+                    facecolor='none',
                     step='post',
-                    hatch='\\',
-                    alpha=0.2,
+                    hatch='/',
+                    alpha=0.5,
                     label=r'$\sigma_{\sf syst. exp.}$'
                     )
 
     ax.set_xlim(x[0]-dx[0]/2, x[-2]+dx[-2]/2)
     ax.set_ylim(0.5, 1.5)
-    ax.set_ylabel('Obs./Exp.')
-    ax.set_xlabel(xlabel)
+    ax.set_ylabel('Obs./Exp.', fontsize=24)
+    ax.set_xlabel(xlabel, fontsize=22)
     #ax.legend()
     ax.grid(axis='y')
 
@@ -540,7 +551,7 @@ class DataManager():
 
             ### combining inclusive and exclusive ttbar samples
             if label == 'ttbar':
-                #df.loc[:, 'weight'] *= df.loc[:, 'top_pt_weight'] # good to have for plots, not to be used when producing templates
+                df.loc[:, 'weight'] *= df.loc[:, 'top_pt_weight'] # good to have for plots, not to be used when producing templates
 
                 if dataset == 'ttbar_inclusive':
                     # rescale leptonic component
@@ -907,7 +918,7 @@ class PlotManager():
                              )
 
             ### make the legend ###
-            ax.legend(legend_text, loc=1)
+            ax.legend(legend_text, loc=9, ncol=3)
 
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
             ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
@@ -1126,8 +1137,10 @@ class PlotManager():
             x = bins[:-1]
             herr = np.sqrt(hvar)
             ax.fill_between(x, hist[-1]-herr, hist[-1]+herr,
-                            color = 'k',
+                            edgecolor = 'k',
+                            facecolor = 'gray',
                             step = 'post',
+                            hatch = '/',
                             alpha = 0.25,
                             label = 'MC error',
                             )
@@ -1149,7 +1162,7 @@ class PlotManager():
 
             ### make the legend ###
             #legend_text = cuts # Need to do something with this
-            ax.legend(legend_text[::-1] + ['MC error', 'data'], loc=1)
+            ax.legend(legend_text[::-1] + ['MC error', 'data'], loc=9, ncol=3)
 
             ### labels and x limits ###
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))

@@ -149,8 +149,8 @@ if __name__ == '__main__':
     plot_manager.set_output_path(f'{output_path}/inclusive')
     plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                            cut         = inclusive_cut,
-                                           legend      = list(decay_map.alt_label) + [r'$other$'],
-                                           c_colors    = colors[:len(conditions) - 1] + ['gray'],
+                                           legend      = list(decay_map.alt_label) + ['other'],
+                                           c_colors    = colors[:len(conditions) - 1] + ['#00FFDB'],
                                            aux_labels  = bg_labels,
                                            do_ratio    = True,
                                            do_cms_text = True
@@ -169,9 +169,9 @@ if __name__ == '__main__':
         plot_manager.set_output_path(f'{output_path}/{category}_signal')
         plot_manager.make_conditional_overlays(features, ['ttbar', 't', 'ww'], conditions,
                                                cut        = cuts[category],
-                                               legend     = list(decay_map.fancy_label) + [r'$\sf t\bar{t}/tW/WW\rightarrow other$'],
+                                               legend     = list(decay_map.alt_label) + ['other'],
                                                #c_colors   = list(decay_map.colors) + ['gray'],
-                                               c_colors   = colors[:len(conditions) - 1] + ['gray'],
+                                               c_colors   = colors[:len(conditions) - 1] + ['#00FFDB'],
                                                aux_labels = bg_labels,
                                                do_ratio   = True,
                                                do_cms_text = True
