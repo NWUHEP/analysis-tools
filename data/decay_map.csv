@@ -6,10 +6,10 @@ id,decay,alt_label,fancy_label,colors,dileptonic,semileptonic,hadronic,ee,mumu,e
 5,wtau_mu_wtau_mu,$\tau_{\mu}\tau_{\mu}$,$\sf t\bar{t}/tW/WW\rightarrow \tau_{\mu}\tau_{\mu}$,#fd8d3c,1,0,0,0,1,0,0,0,0,0
 6,wtau_e_wtau_mu,$\tau_{e}\tau_{\mu}$,$\sf t\bar{t}/tW/WW\rightarrow \tau_{e}\tau_{\mu}$,#74c476,1,0,0,0,0,1,0,0,0,0
 7,wtau_e_wtau_h,$\tau_{e}\tau_{h}$,$\sf t\bar{t}/tW/WW\rightarrow \tau_{e}\tau_{h}$,#756bb1,1,0,0,0,0,0,1,0,1,0
-8,wtau_mu_wtau_h,$\tau_{mu}\tau_{h}$,$\sf t\bar{t}/tW/WW\rightarrow \tau_{\mu}\tau_{h}$,#636363,1,0,0,0,0,0,0,1,0,1
+8,wtau_mu_wtau_h,$\tau_{\mu}\tau_{h}$,$\sf t\bar{t}/tW/WW\rightarrow \tau_{\mu}\tau_{h}$,#636363,1,0,0,0,0,0,0,1,0,1
 9,wtau_h_wtau_h,$\tau_{h}\tau_{h}$,$\sf t\bar{t}/tW/WW\rightarrow \tau_{h}\tau_{h}$,k,1,0,0,0,0,0,0,0,0,0
 10,we_wtau_e,$e\tau_{e}$,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{e}$,#9ecae1,1,0,0,1,0,0,0,0,0,0
-11,we_wtau_mu,$e\tau_{mu}$,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{\mu}$,#a1d99b,1,0,0,0,0,1,0,0,0,0
+11,we_wtau_mu,$e\tau_{\mu}$,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{\mu}$,#a1d99b,1,0,0,0,0,1,0,0,0,0
 12,we_wtau_h,$e\tau_{h}$,$\sf t\bar{t}/tW/WW\rightarrow e\tau_{h}$,#9e9ac8,1,0,0,0,0,0,1,0,1,0
 13,wmu_wtau_e,$\mu\tau_{e}$,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{e}$,#c7e9c0,1,0,0,0,0,1,0,0,0,0
 14,wmu_wtau_mu,$\mu\tau_{\mu}$,$\sf t\bar{t}/tW/WW\rightarrow \mu\tau_{\mu}$,#fdae6b,1,0,0,0,1,0,0,0,0,0

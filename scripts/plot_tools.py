@@ -22,7 +22,6 @@ dataset_dict = dict(
                                  'electron_2016H'
                                  ],
                     ttbar     = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
-                    #ttbar     = ['ttbar_lep', 'ttbar_semilep'],
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt',
@@ -880,10 +879,12 @@ class PlotManager():
             stack_err = np.sqrt(stack_var)
 
             ax.fill_between(stack_x, stack_sum-stack_err, stack_sum+stack_err,
-                            color = 'k',
+                            edgecolor = 'k',
+                            facecolor = 'gray',
+                            hatch = '/',
                             step = 'mid',
-                            alpha = 0.25,
-                            label = 'MC error',
+                            alpha = 0.5,
+                            label = r'$\sigma_{MC stat.}$',
                            )
 
             denominator = (stack_sum, stack_err)
@@ -921,9 +922,9 @@ class PlotManager():
             ax.legend(legend_text, loc=9, ncol=3)
 
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
-            ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
+            ax.set_xlim(binning[0], binning[-2])
             ax.tick_params(axis='both', which='both', direction='in', length=5)
-            ax.grid()
+            #ax.grid()
 
             ### Add lumi text ###
             if do_cms_text:
@@ -951,8 +952,16 @@ class PlotManager():
                             capsize = 0,
                             elinewidth = 2
                            )
-                ax_ratio.plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
-                ax.tick_params(axis='both', which='both', direction='in', length=5)
+                ax_ratio.fill_between(stack_x[mask], 1 - denom_err/denom_val, 1 + denom_err/denom_val,
+                                      edgecolor = 'k',
+                                      facecolor = 'gray',
+                                      step = 'mid',
+                                      hatch = '/',
+                                      alpha = 0.5,
+                                     )
+                ax_ratio.plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'k:')
+                ax_ratio.tick_params(axis='both', which='both', direction='in', length=5)
+                ax.grid(axis='y')
             else:
                 ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
 
@@ -974,7 +983,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim(np.max([0.1, ymin]), 15.*ymax)
+            ax.set_ylim(np.max([0.1, 0.1*ymin]), 180.*ymax)
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path,
                                                      lut_entry.category,
                                                      feature,
@@ -1142,7 +1151,7 @@ class PlotManager():
                             step = 'post',
                             hatch = '/',
                             alpha = 0.25,
-                            label = 'MC error',
+                            label = r'$\sigma_{stat.}$',
                             )
 
             if do_ratio:
@@ -1162,18 +1171,27 @@ class PlotManager():
 
             ### make the legend ###
             #legend_text = cuts # Need to do something with this
-            ax.legend(legend_text[::-1] + ['MC error', 'data'], loc=9, ncol=3)
+            ax.legend(legend_text[::-1] + [r'$\sigma_{stat.}$', 'Data'], loc=9, ncol=3)
 
             ### labels and x limits ###
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
             ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
-            ax.grid()
+            ax.set_xlim(bins[0], bins[-2])
+            #ax.grid()
 
             ### labels and x limits ###
             if do_ratio and do_data:
                 ### calculate ratios 
                 mask = (numerator[1] > 0) & (denominator[1] > 0)
                  
+                axes[1].fill_between(denominator[0][mask], 1 - denominator[2][mask]/denominator[1][mask], 1 + denominator[2][mask]/denominator[1][mask],
+                                     edgecolor = 'k',
+                                     facecolor = 'gray',
+                                     step = 'post',
+                                     hatch = '/',
+                                     alpha = 0.5,
+                                     )
+
                 ratio = numerator[1][mask]/denominator[1][mask]
                 error = ratio*np.sqrt(numerator[2][mask]**2/numerator[1][mask]**2 + denominator[2][mask]**2/denominator[1][mask]**2)
                 axes[1].errorbar(numerator[0][mask], ratio, yerr=error,
@@ -1181,11 +1199,11 @@ class PlotManager():
                                  capsize = 0,
                                  elinewidth = 2
                                 )
-                axes[1].plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'r--')
+                axes[1].plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'k:')
                 axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
                 axes[1].set_ylabel(r'Data/MC')
                 axes[1].set_ylim((0.5, 1.49))
-                axes[1].grid()
+                axes[1].grid(axis='y')
 
             else:
                 ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
@@ -1204,7 +1222,7 @@ class PlotManager():
             fig.subplots_adjust(top=0.94)
 
             ### linear scale ###
-            ymax, ymin = np.max(hist), np.min(hist)
+            ymax, ymin = np.max(hist[-1]), np.min(hist[-1])
             ax.set_ylim((0., 1.5*ymax))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 
@@ -1214,7 +1232,7 @@ class PlotManager():
 
             ### log scale ###
             ax.set_yscale('log')
-            ax.set_ylim(np.max([0.1, ymin]), 15.*ymax)
+            ax.set_ylim(np.max([0.1, 0.1*ymin]), 180.*ymax)
             fig.savefig('{0}/log/{1}/{2}.{3}'.format(self._output_path, 
                                                      lut_entry.category, 
                                                      feature, 

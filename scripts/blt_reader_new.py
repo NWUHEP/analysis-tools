@@ -221,7 +221,7 @@ if __name__ == '__main__':
         df_ecounts = pd.DataFrame(event_count)
         file_name = f'{output_path}/event_counts.csv'
         if args.append and os.path.isfile(file_name):
-            df_ecounts_old = pd.read_csv(file_name)
+            df_ecounts_old = pd.read_csv(file_name, index_col=0)
             df_ecounts_old = df_ecounts_old.drop([c for c in df_ecounts_old.columns if c in df_ecounts.columns], axis=1)
             df_ecounts = pd.concat([df_ecounts, df_ecounts_old], axis=1)
             df_ecounts.to_csv(file_name)
