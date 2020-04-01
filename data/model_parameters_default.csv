@@ -11,8 +11,8 @@ xs_diboson,VV norm. (non-WW),1,0.1,norm,1,lognorm,norm,normalization,0,0,0,0,1,0
 xs_ww,WW norm.,1,0.1,norm,1,lognorm,norm,normalization,0,0,0,0,0,1,0,1,1,1,1,1,1,1
 xs_t,tW norm.,1,0.1,norm,1,lognorm,norm,normalization,0,1,0,0,0,0,0,1,1,1,1,1,1,1
 xs_wjets,W norm.,1,0.1,norm,1,lognorm,norm,normalization,0,0,0,1,0,0,0,1,1,1,1,1,1,1
-e_fakes,"QCD norm (e, iso)",1.6,0.2,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,1,0
-mu_fakes,"QCD norm ($\mu$, iso)",1,0.2,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,0,1
+e_fakes,"QCD norm (e, iso)",1,0.1,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,1,0
+mu_fakes,"QCD norm ($\mu$, iso)",1,0.1,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,0,1
 e_fakes_ss,"QCD norm (e, ss)",1,0.1,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,1,0,1,0,0,0
 mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.1,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,1,0,0,1,0,0
 trigger_mu,$\mu$ trigger,1,0.005,norm,1,lognorm,reco_lepton,$\ell$ reco,1,1,1,1,1,1,0,0,1,1,0,1,0,1
@@ -98,9 +98,9 @@ btag_statistic,b-tag: stat.,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,
 ctag,b-tag: c-tag,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 mistag,b-tag: mistag,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jer,JER,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_abs_scale,JES: absolute scale,0,1,shape,0,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_abs_stat,JES: absolute stat,0,1,shape,0,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_fragmentation,JES: fragmentation,0,1,shape,0,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_scale,JES: absolute scale,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_abs_stat,JES: absolute stat,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jes_fragmentation,JES: fragmentation,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_abs_mpf_bias,JES: mpf bias,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_pileup_data_mc,JES: pileup data/MC,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_pileup_pt_bb,JES: pileup $p_{T}$ (bb),0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1

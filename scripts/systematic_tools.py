@@ -379,26 +379,21 @@ class SystematicTemplateGenerator():
             self._df_sys['trigger_e_probe_up'], self._df_sys['trigger_e_probe_down'] = h_up, h_down
 
         ## electron energy scale
-        scale = 0.005 # need reference
+        scale = 0.001 # need reference
         if self._selection in ['ee', 'e4j']:
             h_up, h_down = energy_scale_morphing(bins, self._h, scale)
 
-        if self._selection == 'emu':
+        elif self._selection == 'emu':
             e_mask          = abs(df.trailing_lepton_flavor) == 11
             pt_masked       = df.loc[e_mask, 'trailing_lepton_pt'].values
-            h_masked, _     = np.histogram(pt_masked, bins=bins, weights=df.weight[e_mask])
             pt_antimasked   = df.loc[~e_mask, 'trailing_lepton_pt'].values
+            h_masked, _     = np.histogram(pt_masked, bins=bins, weights=df.weight[e_mask])
             h_antimasked, _ = np.histogram(pt_antimasked, bins=bins, weights=df.weight[~e_mask])
 
+            print(h_masked, h_antimasked, sep='\n')
             h_up, h_down = energy_scale_morphing(bins, h_masked, scale)
             h_up += h_antimasked
             h_down += h_antimasked
-
-            #df.loc[mask, 'trailing_lepton_pt'] *= 1 + scale
-            #h_up, _   = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            #df.loc[mask, 'trailing_lepton_pt'] *= (1 - scale)/(1 + scale)
-            #h_down, _ = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            #df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
 
         self._df_sys['escale_e_up'], self._df_sys['escale_e_down'] = h_up, h_down
 
@@ -485,26 +480,20 @@ class SystematicTemplateGenerator():
 
 
         ## muon energy scale
-        scale = 0.002 # need reference
+        scale = 0.001 # need reference
         if self._selection in ['mumu', 'mu4j']:
             h_up, h_down = energy_scale_morphing(bins, self._h, scale)
 
         elif self._selection == 'emu':
-            mu_mask = abs(df.trailing_lepton_flavor) == 13
-            pt_masked = df.loc[mu_mask, 'trailing_lepton_pt'].values 
-            pt_antimasked = df.loc[~mu_mask, 'trailing_lepton_pt'].values 
-            h_masked, _ = np.histogram(pt_masked, bins=bins, weights=df.weight[mu_mask])
+            mu_mask         = abs(df.trailing_lepton_flavor) == 13
+            pt_masked       = df.loc[mu_mask, 'trailing_lepton_pt'].values
+            pt_antimasked   = df.loc[~mu_mask, 'trailing_lepton_pt'].values
+            h_masked, _     = np.histogram(pt_masked, bins=bins, weights=df.weight[mu_mask])
             h_antimasked, _ = np.histogram(pt_antimasked, bins=bins, weights=df.weight[~mu_mask])
 
             h_up, h_down = energy_scale_morphing(bins, h_masked, scale)
             h_up += h_antimasked
             h_down += h_antimasked
-
-            #df.loc[mask, 'trailing_lepton_pt'] *= 1 + scale
-            #h_up, _   = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            #df.loc[mask, 'trailing_lepton_pt'] *= (1 - scale)/(1 + scale)
-            #h_down, _ = np.histogram(df.trailing_lepton_pt, bins=bins, weights=df.weight)
-            #df.loc[mask, 'trailing_lepton_pt'] /= (1 - scale)
 
         self._df_sys['escale_mu_up'], self._df_sys['escale_mu_down'] = h_up, h_down
 

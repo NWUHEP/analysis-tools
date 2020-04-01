@@ -75,6 +75,24 @@ cuts = dict(
             mu4j  = 'trigger_status == 1 and lepton1_pt > 25',
             )
 
+fancy_labels = dict(
+                    mumu  = [r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$'],
+                    ee    = [r'$\sf p_{T,e}$', r'$\sf ee$'],
+                    emu   = [r'$\sf p_{T,trailing}$', r'$\sf e\mu$'],
+                    mutau = [r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$'],
+                    etau  = [r'$\sf p_{T,\tau}$', r'$\sf e\tau$'],
+                    mu4j  = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
+                    e4j   = [r'$\sf p_{T,e}$', r'$\sf e+jets$'],
+                    )
+features = dict(
+                mumu  = 'lepton2_pt', # trailing muon pt
+                ee    = 'lepton2_pt', # trailing electron pt
+                emu   = 'trailing_lepton_pt', # like the name says
+                mutau = 'lepton2_pt', # tau pt
+                etau  = 'lepton2_pt', # tau pt
+                mu4j  = 'lepton1_pt', # muon pt
+                e4j   = 'lepton1_pt', # electron pt
+                )
 # WIP
 tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90 \
                and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'

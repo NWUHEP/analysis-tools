@@ -94,19 +94,11 @@ def signal_amplitudes_jacobian(beta, br_tau, npadding, single_w=False):
         amplitudes_jac = np.vstack([amplitudes_jac, np.zeros((npadding, 6))])
     else:
         amplitudes_jac = np.array([
-                                  [2*beta[0], 0, 2*beta[1], 0, 0, 0, 0, 0, 0,
-                                      2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 0, 0, 
-                                      2*beta[3], 0, 0, 0, 0, 0],
-                                  [0, 2*beta[1], 2*beta[0], 0, 0, 0, 0, 0, 0,
-                                      0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 
-                                      0, 2*beta[3], 0, 0, 0, 0],
-                                  [0, 0, 0, 2*beta[2]*br_tau[0]**2, 2*beta[2]*br_tau[1]**2, 
-                                      4*beta[2]*br_tau[0]*br_tau[1], 4*beta[2]*br_tau[0]*br_tau[2], 4*beta[2]*br_tau[1]*br_tau[2], 2*beta[2]*br_tau[2]**2, 
-                                      2*beta[0]*br_tau[0], 2*beta[0]*br_tau[1], 2*beta[0]*br_tau[2], 
-                                      2*beta[1]*br_tau[0], 2*beta[1]*br_tau[1], 2*beta[1]*br_tau[2], 0, 0,
-                                      2*beta[3]*br_tau[0], 2*beta[3]*br_tau[1], 2*beta[3]*br_tau[2], 0],
-                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-                                      2*beta[0], 2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]],
+                                  [2*beta[0], 0, 2*beta[1], 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 0, 0, 2*beta[3], 0, 0, 0, 0, 0],
+                                  [0, 2*beta[1], 2*beta[0], 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 2*beta[3], 0, 0, 0, 0],
+                                  [0, 0, 0, 2*beta[2]*br_tau[0]**2, 2*beta[2]*br_tau[1]**2, 4*beta[2]*br_tau[0]*br_tau[1], 4*beta[2]*br_tau[0]*br_tau[2], 4*beta[2]*br_tau[1]*br_tau[2], 2*beta[2]*br_tau[2]**2, 
+                                      2*beta[0]*br_tau[0], 2*beta[0]*br_tau[1], 2*beta[0]*br_tau[2], 2*beta[1]*br_tau[0], 2*beta[1]*br_tau[1], 2*beta[1]*br_tau[2], 0, 0, 2*beta[3]*br_tau[0], 2*beta[3]*br_tau[1], 2*beta[3]*br_tau[2], 0],
+                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[0], 2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]],
                                   [0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0, 0, 0],
                                   [0, 0, 0, 0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0, 0],
                                   [0, 0, 0, 0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0]
@@ -238,7 +230,7 @@ class FitData(object):
 
         # temporary handling of top pt systematic (one-sided Gaussian)
         self._pi_mask = self._pmask.copy()
-        self._pi_mask[:4] = False
+        #self._pi_mask[:4] = False
 
         # define priors here
         #self._priors = []
@@ -616,7 +608,7 @@ class FitData(object):
                 data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
-            if no_shape: 
+            if no_shape: # or category.split('_')[0] in veto_list:
                 data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
                 model_val = np.sum(model_val)
@@ -734,8 +726,8 @@ class FitData(object):
                 model_jac = model_jac*bin_amp.reshape(model_jac.shape[0], 1)
 
                 # add deviation of amplitudes to cost (assume Gaussian penalty)
-                #bb_penalty = (bin_amp - 1)/(model_var/model_val**2)
-                #dcost += np.sum(bb_penalty)
+                bb_penalty_jac = (bin_amp - 1)/(model_var/model_val**2)
+                dcost += np.sum(bb_penalty)
 
             # calculate the jacobian of the NLL
             mask = (model_val > 0) & (data_val > 0)
