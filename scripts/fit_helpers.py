@@ -608,7 +608,7 @@ class FitData(object):
                 data_val, data_var = data[category]
 
             # for testing parameter estimation while excluding kinematic shape information
-            if no_shape: # or category.split('_')[0] in veto_list:
+            if no_shape: 
                 data_val  = np.sum(data_val)
                 data_var  = np.sum(data_var)
                 model_val = np.sum(model_val)
@@ -709,6 +709,9 @@ class FitData(object):
             else:
                 data_val, data_var = data[category]
 
+            # get the jacobian of the model
+            model_jac = self.mixture_model_jacobian(params, category, process_amplitudes)
+
             # for testing parameter estimation while excluding kinematic shape information
             if no_shape: 
                 data_val  = np.sum(data_val)
@@ -716,18 +719,23 @@ class FitData(object):
                 model_val = np.sum(model_val)
                 model_var = np.sum(model_var)
 
-            # get the jacobian of the model
-            model_jac = self.mixture_model_jacobian(params, category, process_amplitudes)
+                # just testing this part out, not sure if correct yet
+                model_jac = model_jac.sum(axis=0)
 
             if do_bb_lite:
                 # update bin-by-bin amplitudes
                 bin_amp = bb_objective_aux(data_val, model_val, model_var)[0]
                 model_val *= bin_amp
-                model_jac = model_jac*bin_amp.reshape(model_jac.shape[0], 1)
 
-                # add deviation of amplitudes to cost (assume Gaussian penalty)
-                bb_penalty_jac = (bin_amp - 1)/(model_var/model_val**2)
-                dcost += np.sum(bb_penalty)
+                if no_shape:
+                    model_jac = model_jac*bin_amp
+                else:
+                    model_jac = model_jac*bin_amp.reshape(model_jac.shape[0], 1)
+
+                # add deviation of amplitudes to cost (this is not needed as
+                # long as bb amplitudes are calculated analytically)
+                #bb_penalty_jac = (bin_amp - 1)/(model_var/model_val**2)
+                #dcost += np.sum(bb_penalty_jac)
 
             # calculate the jacobian of the NLL
             mask = (model_val > 0) & (data_val > 0)

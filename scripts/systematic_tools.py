@@ -80,10 +80,10 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
         down_condition = jet_cut.replace('n_bjets', f'n_bjets_{sys_type}_down')
     else:
         up_condition   = jet_cut.replace('n_jets', f'n_jets_{sys_type}_up')
-        up_condition   = up_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
+        #up_condition   = up_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
 
         down_condition = jet_cut.replace('n_jets', f'n_jets_{sys_type}_down')
-        down_condition = down_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
+        #down_condition = down_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
 
     h_nominal, _ = np.histogram(df.query(jet_cut)[feature], 
                                 bins=bins, 
@@ -390,8 +390,9 @@ class SystematicTemplateGenerator():
             h_masked, _     = np.histogram(pt_masked, bins=bins, weights=df.weight[e_mask])
             h_antimasked, _ = np.histogram(pt_antimasked, bins=bins, weights=df.weight[~e_mask])
 
-            print(h_masked, h_antimasked, sep='\n')
             h_up, h_down = energy_scale_morphing(bins, h_masked, scale)
+            #print(h_masked, h_antimasked, h_up, h_down, sep='\n')
+            #print('---------------------------')
             h_up += h_antimasked
             h_down += h_antimasked
 
