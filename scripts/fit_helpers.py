@@ -233,9 +233,15 @@ class FitData(object):
         #self._pi_mask[:4] = False
 
         # define priors here
-        #self._priors = []
-        #for prior_pdf in df_params['pdf']:
-        #    self._priors.append()
+        self._priors = []
+        for pname, pdata in df_params.iterrows():
+            mu, sigma= pdata['val_init'], pdata['err_init']
+            if pdata['pdf'] == 'none':
+                self._priors.append(0)
+            elif pdata['pdf'] == 'lognorm':
+                self._priors.append(lognorm(s=np.log(1 + sigma/mu), scale=mu))
+            elif pdata['pdf'] == 'gaussian':
+                self._priors.append(norm(loc=mu, scale=sigma))
 
         return
 

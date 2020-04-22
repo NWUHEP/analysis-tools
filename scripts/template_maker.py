@@ -86,6 +86,7 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
     # tau misid 
     if selection in ['etau', 'mutau']:
         if decay_mode in [7, 8, 12, 15] or dataset == 'zjets_alt':
+            print(selection, dataset, decay_mode, cat_items.label)
             syst_gen.tau_systematics(df)
         elif decay_mode in [16, 17, 18, 19, 20, 21]:
             syst_gen.tau_j_misid_systematics(df)
@@ -174,8 +175,8 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_up' for n in btag_source_names]
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
-    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    #selections = ['emu']
+    #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
+    selections = ['etau']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')

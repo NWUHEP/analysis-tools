@@ -103,7 +103,8 @@ def calculate_zeta_vars(lep1_p4, lep2_p4, met_p2):
 
 def fill_event_vars(tree, dataset):
 
-    out_dict = dict(
+    evt_dict = dict(
+                    weight         = tree.eventWeight,
                     run_number     = tree.runNumber,
                     event_number   = tree.evtNumber,
                     lumi           = tree.lumiSection,
@@ -123,178 +124,186 @@ def fill_event_vars(tree, dataset):
                     met_phi        = tree.metPhi,
                     ht_mag         = tree.ht,
                     ht_phi         = tree.htPhi,
-
-                    # jet counting for systematics
-                    n_jets_jer_up       = tree.nJetsJERUp,
-                    n_jets_jer_down     = tree.nJetsJERDown,
-                    n_bjets_jer_up      = tree.nBJetsJERUp,
-                    n_bjets_jer_down    = tree.nBJetsJERDown,
-                    n_bjets_ctag_up     = tree.nBJetsCTagUp,
-                    n_bjets_ctag_down   = tree.nBJetsCTagDown,
-                    n_bjets_mistag_up   = tree.nBJetsMistagUp,
-                    n_bjets_mistag_down = tree.nBJetsMistagDown,
-
-                    lepton1_reco_weight = tree.leptonOneRecoWeight,
-                    lepton2_reco_weight = tree.leptonTwoRecoWeight,
-                    lepton1_id_weight   = tree.leptonOneIDWeight,
-                    lepton2_id_weight   = tree.leptonTwoIDWeight,
-                    trigger_weight      = tree.triggerWeight,
-                    pileup_weight       = tree.puWeight,
-                    top_pt_weight       = tree.topPtWeight,
-                    z_pt_weight         = tree.zPtWeight,
-                    ww_pt_weight        = tree.wwPtWeight,
-                    #event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
-
-                    # uncertainties
-                    ww_pt_scale_up   = tree.wwPtScaleUp,
-                    ww_pt_scale_down = tree.wwPtScaleDown,
-                    ww_pt_resum_up   = tree.wwPtResumUp,
-                    ww_pt_resum_down = tree.wwPtResumDown,
-                    lepton1_reco_var = tree.leptonOneRecoVar,
-                    lepton2_reco_var = tree.leptonTwoRecoVar,
-                    lepton1_id_var   = tree.leptonOneIDVar,
-                    lepton2_id_var   = tree.leptonTwoIDVar,
-                    trigger_var      = tree.triggerVar,
-
-                   )
-
-    if dataset in ['zjets_m-50', 'zjets_m-10to50'] and 0 < tree.nPartons < 5:
-        out_dict['weight'] = 0.
-    else:
-        out_dict['weight'] = tree.eventWeight
+                    )
 
     # factorized JEC systematic
     if tree.runNumber == 1: # checks if dataset is real data or MC
+        syst_dict = dict(
+                        # jet counting for systematics
+                        n_jets_jer_up       = tree.nJetsJERUp,
+                        n_jets_jer_down     = tree.nJetsJERDown,
+                        n_bjets_jer_up      = tree.nBJetsJERUp,
+                        n_bjets_jer_down    = tree.nBJetsJERDown,
+                        n_bjets_ctag_up     = tree.nBJetsCTagUp,
+                        n_bjets_ctag_down   = tree.nBJetsCTagDown,
+                        n_bjets_mistag_up   = tree.nBJetsMistagUp,
+                        n_bjets_mistag_down = tree.nBJetsMistagDown,
+
+                        # lepton systematics
+                        lepton1_reco_weight = tree.leptonOneRecoWeight,
+                        lepton1_reco_var    = tree.leptonOneRecoVar,
+                        lepton1_id_weight   = tree.leptonOneIDWeight,
+                        lepton1_id_var      = tree.leptonOneIDVar,
+
+                        trigger_weight      = tree.triggerWeight,
+                        pileup_weight       = tree.puWeight,
+                        top_pt_weight       = tree.topPtWeight,
+                        z_pt_weight         = tree.zPtWeight,
+                        ww_pt_weight        = tree.wwPtWeight,
+                        #event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
+
+                        ww_pt_scale_up   = tree.wwPtScaleUp,
+                        ww_pt_scale_down = tree.wwPtScaleDown,
+                        ww_pt_resum_up   = tree.wwPtResumUp,
+                        ww_pt_resum_down = tree.wwPtResumDown,
+                        trigger_var      = tree.triggerVar,
+                       )
+
+        if tree.nElectrons + tree.nMuons + tree.nTaus > 1:
+            syst_dict['lepton2_reco_weight'] = tree.leptonTwoRecoWeight
+            syst_dict['lepton2_reco_var']    = tree.leptonTwoRecoVar
+            syst_dict['lepton2_id_weight']   = tree.leptonTwoIDWeight
+            syst_dict['lepton2_id_var']      = tree.leptonTwoIDVar
 
         for i, n in enumerate(jec_source_names):
-            out_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
-            out_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
-            out_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
-            out_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
+            syst_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
+            syst_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
+            syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
+            syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
 
         for i, n in enumerate(btag_source_names):
-            out_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
-            out_dict[f'n_bjets_btag_{n}_down'] = tree.nBJetsBTagDown[i]
+            syst_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
+            syst_dict[f'n_bjets_btag_{n}_down'] = tree.nBJetsBTagDown[i]
 
         # generator weights and systematics
-        out_dict['gen_weight'] = tree.genWeight
-        out_dict['n_partons']  = tree.nPartons
+        syst_dict['gen_weight'] = tree.genWeight
+        syst_dict['n_partons']  = tree.nPartons
         if dataset in ['ttbar_lep', 'ttbar_semilep', 'ttbar_inclusive', 
                        'zjets_m-10to50_alt', 'zjets_m-50_alt',
                        'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
 
                       ]:
-            out_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
-            out_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
-            out_dict['qcd_weight_nom_down']  = tree.qcdWeights[2]
-            out_dict['qcd_weight_up_nom']    = tree.qcdWeights[3]
-            out_dict['qcd_weight_up_up']     = tree.qcdWeights[4]
-            #out_dict['qcd_weight_up_down']   = tree.qcdWeights[5]
-            out_dict['qcd_weight_down_nom']  = tree.qcdWeights[6]
-            #out_dict['qcd_weight_down_up']   = tree.qcdWeights[7]
-            out_dict['qcd_weight_down_down'] = tree.qcdWeights[8]
-            out_dict['pdf_var']              = tree.pdfWeight 
-            out_dict['alpha_s_err']          = tree.alphaS
+            syst_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
+            syst_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
+            syst_dict['qcd_weight_nom_down']  = tree.qcdWeights[2]
+            syst_dict['qcd_weight_up_nom']    = tree.qcdWeights[3]
+            syst_dict['qcd_weight_up_up']     = tree.qcdWeights[4]
+            #syst_dict['qcd_weight_up_down']   = tree.qcdWeights[5]
+            syst_dict['qcd_weight_down_nom']  = tree.qcdWeights[6]
+            #syst_dict['qcd_weight_down_up']   = tree.qcdWeights[7]
+            syst_dict['qcd_weight_down_down'] = tree.qcdWeights[8]
+            syst_dict['pdf_var']              = tree.pdfWeight 
+            syst_dict['alpha_s_err']          = tree.alphaS
+
+        out_dict = {**evt_dict, **syst_dict}
+    else:
+        out_dict = evt_dict
 
     return out_dict
 
-def fill_dilepton_vars(tree):
+def fill_lepton_vars(tree):
 
-    lep1, lep2 = tree.leptonOneP4, tree.leptonTwoP4
-    dilepton1  = lep1 + lep2
+    lep1 = tree.leptonOneP4
     met_p2 = r.TVector2(tree.met*np.cos(tree.metPhi), tree.met*np.sin(tree.metPhi))
-
     lep1_mt, lep1_met_dphi = calculate_mt(lep1, met_p2)
-    lep2_mt, lep2_met_dphi = calculate_mt(lep2, met_p2)
+    lepton_dict = dict(
+                       lepton1_pt       = lep1.Pt(),
+                       lepton1_eta      = lep1.Eta(),
+                       lepton1_phi      = lep1.Phi(),
+                       lepton1_mt       = lep1_mt,
+                       lepton1_met_dphi = abs(lep1_met_dphi),
+                       lepton1_d0       = tree.leptonOneD0,
+                       lepton1_dz       = tree.leptonOneDZ,
+                       lepton1_q        = np.sign(tree.leptonOneFlavor),
+                       lepton1_flavor   = np.abs(tree.leptonOneFlavor),
+                       lepton1_pt_corr  = tree.leptonOnePtCorr,
+                       lepton1_iso      = tree.leptonOneIso,
+                       lepton1_reliso   = tree.leptonOneIso/lep1.Pt(),
+                       lepton1_mother   = tree.leptonOneMother,
+                       )
 
-    p_vis_zeta, p_miss_zeta = calculate_zeta_vars(lep1, lep2, met_p2)
+    if tree.nElectrons + tree.nMuons + tree.nTaus > 1:
+        lep2 = tree.leptonOneP4
+        lep2_mt, lep2_met_dphi = calculate_mt(lep2, met_p2)
+        dilepton1  = lep1 + lep2
+        p_vis_zeta, p_miss_zeta = calculate_zeta_vars(lep1, lep2, met_p2)
 
-    if lep1.Pt() > lep2.Pt():
-        lead_lepton_pt       = lep1.Pt()
-        lead_lepton1_phi     = lep1.Phi()
-        lead_lepton_mt       = lep1_mt
-        lead_lepton_met_dphi = lep1_met_dphi
-        lead_lepton_mother   = tree.leptonOneMother
-        lead_lepton_flavor   = tree.leptonOneFlavor
-        lead_lepton_pt_corr  = tree.leptonOnePtCorr
+        if lep1.Pt() >= lep2.Pt():
+            lead_lepton_pt       = lep1.Pt()
+            lead_lepton1_phi     = lep1.Phi()
+            lead_lepton_mt       = lep1_mt
+            lead_lepton_met_dphi = lep1_met_dphi
+            lead_lepton_mother   = tree.leptonOneMother
+            lead_lepton_flavor   = tree.leptonOneFlavor
+            lead_lepton_pt_corr  = tree.leptonOnePtCorr
 
-        trailing_lepton_pt       = lep2.Pt()
-        trailing_lepton_phi      = lep2.Phi()
-        trailing_lepton_mt       = lep2_mt
-        trailing_lepton_met_dphi = lep2_met_dphi
-        trailing_lepton_mother   = tree.leptonTwoMother
-        trailing_lepton_flavor   = tree.leptonTwoFlavor
-        trailing_lepton_pt_corr  = tree.leptonTwoPtCorr
+            trailing_lepton_pt       = lep2.Pt()
+            trailing_lepton_phi      = lep2.Phi()
+            trailing_lepton_mt       = lep2_mt
+            trailing_lepton_met_dphi = lep2_met_dphi
+            trailing_lepton_mother   = tree.leptonTwoMother
+            trailing_lepton_flavor   = tree.leptonTwoFlavor
+            trailing_lepton_pt_corr  = tree.leptonTwoPtCorr
+        else:
+            lead_lepton_pt       = lep2.Pt()
+            lead_lepton1_phi     = lep2.Phi()
+            lead_lepton_mt       = lep2_mt
+            lead_lepton_met_dphi = lep2_met_dphi
+            lead_lepton_mother   = tree.leptonTwoMother
+            lead_lepton_flavor   = tree.leptonTwoFlavor
+            lead_lepton_pt_corr  = tree.leptonTwoPtCorr
+
+            trailing_lepton_pt       = lep1.Pt()
+            trailing_lepton_phi      = lep1.Phi()
+            trailing_lepton_mt       = lep1_mt
+            trailing_lepton_met_dphi = lep1_met_dphi
+            trailing_lepton_mother   = tree.leptonOneMother
+            trailing_lepton_flavor   = tree.leptonOneFlavor
+            trailing_lepton_pt_corr  = tree.leptonOnePtCorr
+
+        dilepton_dict = dict(
+     
+                             lepton2_pt             = lep2.Pt(),
+                             lepton2_eta            = lep2.Eta(),
+                             lepton2_phi            = lep2.Phi(),
+                             lepton2_mt             = lep2_mt,
+                             lepton2_met_dphi       = abs(lep2_met_dphi),
+                             lepton2_d0             = tree.leptonTwoD0,
+                             lepton2_dz             = tree.leptonTwoDZ,
+                             lepton2_q              = np.sign(tree.leptonTwoFlavor),
+                             lepton2_flavor         = np.abs(tree.leptonTwoFlavor),
+                             lepton2_pt_corr        = tree.leptonTwoPtCorr,
+                             lepton2_iso            = tree.leptonTwoIso,
+                             lepton2_reliso         = tree.leptonTwoIso/lep2.Pt(),
+                             lepton2_mother         = tree.leptonTwoMother,
+
+                             lead_lepton_pt         = lead_lepton_pt,
+                             lead_lepton_mt         = lead_lepton_mt,
+                             lead_lepton_mother     = lead_lepton_mother,
+                             lead_lepton_flavor     = lead_lepton_flavor,
+                             trailing_lepton_pt     = trailing_lepton_pt,
+                             trailing_lepton_mt     = trailing_lepton_mt,
+                             trailing_lepton_mother = trailing_lepton_mother,
+                             trailing_lepton_flavor = trailing_lepton_flavor,
+     
+                             dilepton1_delta_eta    = abs(lep1.Eta() - lep2.Eta()),
+                             dilepton1_delta_phi    = abs(lep1.DeltaPhi(lep2)),
+                             dilepton1_delta_r      = lep1.DeltaR(lep2),
+                             dilepton1_mass         = dilepton1.M(),
+                             dilepton1_pt           = dilepton1.Pt(),
+                             dilepton1_eta          = dilepton1.Eta(),
+                             dilepton1_phi          = dilepton1.Phi(),
+                             dilepton1_pt_over_m    = dilepton1.Pt()/dilepton1.M(),
+                             dilepton1_pt_diff      = (lep1.Pt() - lep2.Pt()),
+                             dilepton1_pt_asym      = (lep1.Pt() - lep2.Pt())/(lep1.Pt() + lep2.Pt()),
+
+                             p_vis_zeta             = p_vis_zeta,
+                             p_miss_zeta            = p_miss_zeta,
+                             delta_p_zeta           = p_miss_zeta - 0.85*p_vis_zeta
+                            )
+        out_dict = {**lepton_dict, **dilepton_dict}
     else:
-        lead_lepton_pt       = lep2.Pt()
-        lead_lepton1_phi     = lep2.Phi()
-        lead_lepton_mt       = lep2_mt
-        lead_lepton_met_dphi = lep2_met_dphi
-        lead_lepton_mother   = tree.leptonTwoMother
-        lead_lepton_flavor   = tree.leptonTwoFlavor
-        lead_lepton_pt_corr  = tree.leptonTwoPtCorr
-
-        trailing_lepton_pt       = lep1.Pt()
-        trailing_lepton_phi      = lep1.Phi()
-        trailing_lepton_mt       = lep1_mt
-        trailing_lepton_met_dphi = lep1_met_dphi
-        trailing_lepton_mother   = tree.leptonOneMother
-        trailing_lepton_flavor   = tree.leptonOneFlavor
-        trailing_lepton_pt_corr  = tree.leptonOnePtCorr
-
-    out_dict = dict(
-                    lepton1_pt             = lep1.Pt(),
-                    lepton1_eta            = lep1.Eta(),
-                    lepton1_phi            = lep1.Phi(),
-                    lepton1_mt             = lep1_mt,
-                    lepton1_met_dphi       = abs(lep1_met_dphi),
-                    lepton1_d0             = tree.leptonOneD0,
-                    lepton1_dz             = tree.leptonOneDZ,
-                    lepton1_q              = np.sign(tree.leptonOneFlavor),
-                    lepton1_flavor         = np.abs(tree.leptonOneFlavor),
-                    lepton1_pt_corr        = tree.leptonOnePtCorr,
-                    lepton1_iso            = tree.leptonOneIso,
-                    lepton1_reliso         = tree.leptonOneIso/lep1.Pt(),
-                    lepton1_mother         = tree.leptonOneMother,
- 
-                    lepton2_pt             = lep2.Pt(),
-                    lepton2_eta            = lep2.Eta(),
-                    lepton2_phi            = lep2.Phi(),
-                    lepton2_mt             = lep2_mt,
-                    lepton2_met_dphi       = abs(lep2_met_dphi),
-                    lepton2_d0             = tree.leptonTwoD0,
-                    lepton2_dz             = tree.leptonTwoDZ,
-                    lepton2_q              = np.sign(tree.leptonTwoFlavor),
-                    lepton2_flavor         = np.abs(tree.leptonTwoFlavor),
-                    lepton2_pt_corr        = tree.leptonTwoPtCorr,
-                    lepton2_iso            = tree.leptonTwoIso,
-                    lepton2_reliso         = tree.leptonTwoIso/lep2.Pt(),
-                    lepton2_mother         = tree.leptonTwoMother,
-
-                    lead_lepton_pt         = lead_lepton_pt,
-                    lead_lepton_mt         = lead_lepton_mt,
-                    lead_lepton_mother     = lead_lepton_mother,
-                    lead_lepton_flavor     = lead_lepton_flavor,
-                    trailing_lepton_pt     = trailing_lepton_pt,
-                    trailing_lepton_mt     = trailing_lepton_mt,
-                    trailing_lepton_mother = trailing_lepton_mother,
-                    trailing_lepton_flavor = trailing_lepton_flavor,
- 
-                    dilepton1_delta_eta    = abs(lep1.Eta() - lep2.Eta()),
-                    dilepton1_delta_phi    = abs(lep1.DeltaPhi(lep2)),
-                    dilepton1_delta_r      = lep1.DeltaR(lep2),
-                    dilepton1_mass         = dilepton1.M(),
-                    dilepton1_pt           = dilepton1.Pt(),
-                    dilepton1_eta          = dilepton1.Eta(),
-                    dilepton1_phi          = dilepton1.Phi(),
-                    dilepton1_pt_over_m    = dilepton1.Pt()/dilepton1.M(),
-                    dilepton1_pt_diff      = (lep1.Pt() - lep2.Pt()),
-                    dilepton1_pt_asym      = (lep1.Pt() - lep2.Pt())/(lep1.Pt() + lep2.Pt()),
-
-                    p_vis_zeta             = p_vis_zeta,
-                    p_miss_zeta            = p_miss_zeta,
-                    delta_p_zeta           = p_miss_zeta - 0.85*p_vis_zeta
-                   )
+        out_dict = lepton_dict
 
     # calculate vertex information
     #pv, sv = tree.rPV, tree.rDimuon
@@ -305,36 +314,54 @@ def fill_dilepton_vars(tree):
     return out_dict
 
 
-def fill_jet_vars(tree):
-    # aliases
+def fill_jet_vars(tree, selection):
     jet1, jet2 = tree.jetOneP4, tree.jetTwoP4
     dijet      = jet1 + jet2
-
     out_dict = dict(
-                    jet1_pt         = jet1.Pt(),
-                    jet1_eta        = jet1.Eta(),
-                    jet1_phi        = jet1.Phi(),
-                    jet1_e          = jet1.E(),
-                    jet1_tag        = tree.jetOneTag,
-                    jet1_flavor     = tree.jetOneFlavor,
+                     jet1_pt         = jet1.Pt(),
+                     jet1_eta        = jet1.Eta(),
+                     jet1_phi        = jet1.Phi(),
+                     jet1_e          = jet1.E(),
+                     jet1_tag        = tree.jetOneTag,
+                     jet1_flavor     = tree.jetOneFlavor,
  
-                    jet2_pt         = jet2.Pt(),
-                    jet2_eta        = jet2.Eta(),
-                    jet2_phi        = jet2.Phi(),
-                    jet2_e          = jet2.E(),
-                    jet2_tag        = tree.jetTwoTag,
-                    jet2_flavor     = tree.jetTwoFlavor,
+                     jet2_pt         = jet2.Pt(),
+                     jet2_eta        = jet2.Eta(),
+                     jet2_phi        = jet2.Phi(),
+                     jet2_e          = jet2.E(),
+                     jet2_tag        = tree.jetTwoTag,
+                     jet2_flavor     = tree.jetTwoFlavor,
  
-                    jet_delta_eta   = abs(jet1.Eta() - jet2.Eta()),
-                    jet_delta_phi   = abs(jet1.DeltaPhi(jet2)),
-                    jet_delta_r     = jet1.DeltaR(jet2),
+                     jet_delta_eta   = abs(jet1.Eta() - jet2.Eta()),
+                     jet_delta_phi   = abs(jet1.DeltaPhi(jet2)),
+                     jet_delta_r     = jet1.DeltaR(jet2),
  
-                    dijet_mass      = dijet.M(),
-                    dijet_pt        = dijet.Pt(),
-                    dijet_eta       = dijet.Eta(),
-                    dijet_phi       = dijet.Phi(),
-                    dijet_pt_over_m = dijet.Pt()/dijet.M() if dijet.M() > 0 else -1,
-                   )
+                     dijet_mass      = dijet.M(),
+                     dijet_pt        = dijet.Pt(),
+                     dijet_eta       = dijet.Eta(),
+                     dijet_phi       = dijet.Phi(),
+                     dijet_pt_over_m = dijet.Pt()/dijet.M() if dijet.M() > 0 else -1,
+                 )
+
+    if selection in ['e4j', 'mu4j', 'e4j_fakes', 'mu4j_fakes']:
+
+        if tree.nJets >= 3:
+            jet3 = tree.jetThreeP4
+            out_dict['jet3_pt']     = jet3.Pt(),
+            out_dict['jet3_eta']    = jet3.Eta(),
+            out_dict['jet3_phi']    = jet3.Phi(),
+            out_dict['jet3_e']      = jet3.E(),
+            out_dict['jet3_tag']    = tree.jetThreeTag,
+            out_dict['jet3_flavor'] = tree.jetThreeFlavor,
+
+        if tree.nJets >= 4:
+            jet4 = tree.jetFourP4
+            out_dict['jet4_pt']     = jet4.Pt(),
+            out_dict['jet4_eta']    = jet4.Eta(),
+            out_dict['jet4_phi']    = jet4.Phi(),
+            out_dict['jet4_e']      = jet4.E(),
+            out_dict['jet4_tag']    = tree.jetFourTag,
+            out_dict['jet4_flavor'] = tree.jetFourFlavor,
 
     return out_dict
 
@@ -456,118 +483,6 @@ def fill_gen_particle_vars(tree):
 
     return out_dict
 
-def fill_lepton4j_vars(tree):
-
-    # aliases
-    #met = r.TVector2(tree.met*np.cos(tree.metPhi), tree.met*np.sin(tree.metPhi))
-    lep = tree.leptonOneP4
-    jet1, jet2  = tree.jetOneP4, tree.jetTwoP4
-    jet3, jet4  = tree.jetThreeP4, tree.jetFourP4
-    lepton_j1  = lep + jet1
-    lepton_j2  = lep + jet2
-    lepton_j3  = lep + jet3
-    lepton_j4  = lep + jet4
-    
-    w_cand = jet1 + jet2
-    htop_cand = w_cand + jet3
-
-    met_p2 = r.TVector2(tree.met*np.cos(tree.metPhi), tree.met*np.sin(tree.metPhi))
-    lep_mt, lep_met_dphi = calculate_mt(lep, met_p2)
-
-    out_dict = dict(
-                    lepton1_pt      = lep.Pt(),
-                    lepton1_mt      = lep_mt,
-                    lepton1_eta     = lep.Eta(),
-                    lepton1_phi     = lep.Phi(),
-                    lepton1_q       = np.sign(tree.leptonOneFlavor),
-                    lepton1_flavor  = np.abs(tree.leptonOneFlavor),
-                    lepton1_pt_corr = tree.leptonTwoPtCorr,
-                    lepton1_iso     = tree.leptonOneIso,
-                    lepton1_reliso  = tree.leptonOneIso/lep.Pt(),
-
-                    jet1_pt     = jet1.Pt(),
-                    jet1_phi    = jet1.Phi(),
-                    jet1_eta    = jet1.Eta(),
-                    jet1_e      = jet1.E(),
-                    jet1_tag    = tree.jetOneTag,
-                    jet1_flavor = tree.jetOneFlavor,
- 
-                    jet2_pt     = jet2.Pt(),
-                    jet2_eta    = jet2.Eta(),
-                    jet2_phi    = jet2.Phi(),
-                    jet2_e      = jet2.E(),
-                    jet2_tag    = tree.jetTwoTag,
-                    jet2_flavor = tree.jetTwoFlavor,
-
-                    jet3_pt     = jet3.Pt(),
-                    jet3_eta    = jet3.Eta(),
-                    jet3_phi    = jet3.Phi(),
-                    jet3_e      = jet3.E(),
-                    jet3_tag    = tree.jetThreeTag,
-                    jet3_flavor = tree.jetThreeFlavor,
- 
-                    jet4_pt     = jet4.Pt(),
-                    jet4_eta    = jet4.Eta(),
-                    jet4_phi    = jet4.Phi(),
-                    jet4_e      = jet4.E(),
-                    jet4_tag    = tree.jetFourTag,
-                    jet4_flavor = tree.jetFourFlavor,
-
-                    w_pt         = w_cand.Pt(),
-                    w_eta        = w_cand.Eta(),
-                    w_phi        = w_cand.Phi(),
-                    w_mass       = w_cand.M(),
-                    w_delta_eta  = abs(jet1.Eta() - jet2.Eta()),
-                    w_delta_phi  = abs(jet1.DeltaPhi(jet2)),
-                    w_delta_r    = jet1.DeltaR(jet2),
-
-                    htop_pt         = htop_cand.Pt(),
-                    htop_eta        = htop_cand.Eta(),
-                    htop_phi        = htop_cand.Phi(),
-                    htop_mass       = htop_cand.M(),
-                    htop_delta_eta  = abs(w_cand.Eta() - jet3.Eta()),
-                    htop_delta_phi  = abs(w_cand.DeltaPhi(jet3)),
-                    htop_delta_r    = w_cand.DeltaR(jet3),
- 
-                    lepton_j1_mass       = lepton_j1.M(),
-                    lepton_j1_pt         = lepton_j1.Pt(),
-                    lepton_j1_delta_eta  = abs(lep.Eta() - jet1.Eta()),
-                    lepton_j1_delta_phi  = abs(lep.DeltaPhi(jet1)),
-                    lepton_j1_delta_r    = lep.DeltaR(jet1),
-
-                    lepton_j2_mass       = lepton_j2.M(),
-                    lepton_j2_pt         = lepton_j2.Pt(),
-                    lepton_j2_delta_eta  = abs(lep.Eta() - jet2.Eta()),
-                    lepton_j2_delta_phi  = abs(lep.DeltaPhi(jet2)),
-                    lepton_j2_delta_r    = lep.DeltaR(jet2),
-
-                    lepton_j3_mass       = lepton_j3.M(),
-                    lepton_j3_pt         = lepton_j3.Pt(),
-                    lepton_j3_delta_eta  = abs(lep.Eta() - jet3.Eta()),
-                    lepton_j3_delta_phi  = abs(lep.DeltaPhi(jet3)),
-                    lepton_j3_delta_r    = lep.DeltaR(jet3),
-
-                    lepton_j4_mass       = lepton_j4.M(),
-                    lepton_j4_pt         = lepton_j4.Pt(),
-                    lepton_j4_delta_eta  = abs(lep.Eta() - jet4.Eta()),
-                    lepton_j4_delta_phi  = abs(lep.DeltaPhi(jet4)),
-                    lepton_j4_delta_r    = lep.DeltaR(jet4),
-
-                   )
-
-    #if tree.nBJets > 0:
-    #    if tree.leptonOneFlavor < 0:
-    #        out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_j1, dilepton, lep1)
-    #        out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_j1, dilepton, lep2)
-    #    else:
-    #        out_dict['lepton_minus_cos_theta'] = calculate_cos_theta(dilepton_j1, dilepton, lep2)
-    #        out_dict['lepton_plus_cos_theta']  = calculate_cos_theta(dilepton_j1, dilepton, lep1)
-    #else:
-    #    out_dict['lepton_plus_cos_theta']  = 0.
-    #    out_dict['lepton_minus_cos_theta'] = 0.
-
-    return out_dict
-
 def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
 
     if type(event_range) == None:
@@ -575,34 +490,32 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
     else:
         entries = range(event_range[0], event_range[1], 1)
 
-    #print(selection, dataset)
     for i in tqdm(entries, 
                   position = job_id[0],
                   desc     = f'[{selection}|{dataset}] {job_id[1]+1}/{job_id[2]} |',
                   ncols    = 0,
                   ascii    = True,
-                  #leave    = True
+                  leave    = False
                   ):
         tree.GetEntry(i)
         entry = {}
         entry.update(fill_event_vars(tree, dataset))
+        entry.update(fill_lepton_vars(tree))
+        entry.update(fill_jet_vars(tree, selection))
 
         if selection in ['ee', 'emu', 'etau', 'e4j']:
             entry['el_trigger_syst_tag']   = tree.eleTriggerVarTagSyst
             entry['el_trigger_syst_probe'] = tree.eleTriggerVarProbeSyst
 
-        if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
-            entry.update(fill_jet_vars(tree))
-            entry.update(fill_jet_lepton_vars(tree))
-            entry.update(fill_dilepton_vars(tree))
+        ##if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
+        ##    entry.update(fill_jet_lepton_vars(tree))
 
-            if selection in ['etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
-                entry.update(fill_tau_vars(tree))
+        if selection in ['etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
+            entry.update(fill_tau_vars(tree))
 
-        elif selection in ['e4j', 'mu4j', 'e4j_fakes', 'mu4j_fakes']:
-            entry.update(fill_lepton4j_vars(tree))
+        if tree.runNumber == 1:
+            entry.update(fill_gen_particle_vars(tree))
 
-        entry.update(fill_gen_particle_vars(tree))
         yield entry
 
 def pickle_ntuple(tree, dataset, output_path, selection):

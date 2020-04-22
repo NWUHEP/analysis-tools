@@ -125,7 +125,7 @@ categories = dict(
 
                   cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} = 1$',            4),
                   cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$',         4),
-                  #cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['mu4j'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
+                  cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['e4j', 'mu4j'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
                  )
 
 def make_directory(file_path, clear=True):

@@ -59,7 +59,7 @@ escale_e,$e$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0
 trigger_e_tag,$e$ trigger (tag),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,1,0,1,0
 trigger_e_probe,$e$ trigger (probe),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,1,1,0,1,0,1,0
 eff_iso_mu,"$\epsilon_{\mu,iso}$",0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
-eff_id_mu,"$\epsilon_{\mu,id}$",0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
+eff_id_mu,"$\epsilon_{\mu,id}$",0,1,shape,0,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,1,0,1
 eff_mu_0,$\epsilon_{\mu}$ ($10 \leq p_{T} < 15$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 eff_mu_1,$\epsilon_{\mu}$ ($15 \leq p_{T} < 20$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 eff_mu_2,$\epsilon_{\mu}$ ($20 \leq p_{T} < 25$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
@@ -70,10 +70,10 @@ eff_mu_6,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,gaussian,reco_lepto
 eff_mu_7,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 escale_mu,$\mu$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,gaussian,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-isr,ISR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-fsr,FSR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-hdamp,ME-PS,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-tune,UE/MPI,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+isr,ISR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+fsr,FSR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+hdamp,ME-PS,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+tune,UE/MPI,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 ww_resum,WW $p_{T}$ (resum),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 z_pt,Z $p_{T}$,0,1,shape,0,gaussian,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
@@ -97,7 +97,7 @@ btag_pileup,b-tag: pileup,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,
 btag_statistic,b-tag: stat.,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 ctag,b-tag: c-tag,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 mistag,b-tag: mistag,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jer,JER,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
+jer,JER,0,1,shape,0,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_abs_scale,JES: absolute scale,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_abs_stat,JES: absolute stat,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_fragmentation,JES: fragmentation,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
