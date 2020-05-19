@@ -1,6 +1,7 @@
-#!/usr/bin/env python
-
-import os, sys
+import os
+import sys
+import logging
+import traceback
 import shutil
 import argparse
 from copy import deepcopy
@@ -19,24 +20,25 @@ Script for getting blt data out of ROOT files and into CSV format.
 '''
 
 jec_source_names = [
-                    "abs_scale", "abs_stat",
-                    "fragmentation", "abs_mpf_bias", 
-                    "pileup_data_mc", "pileup_pt_bb", "pileup_pt_ec1", "pileup_pt_ref",
-                    "relative_bal", "relative_jer_ec1",
-                    "relative_pt_bb","relative_pt_ec1",
-                    "relative_stat_fsr", "relative_stat_ec",
-                    "single_pion_ecal", "single_pion_hcal",
-                    "time_pt_eta", "flavor_qcd",
-                    "total"
+                    'abs_scale', 'abs_stat', 'abs_mpf_bias', 
+                    'abs_flav_map', 'fragmentation', 
+                    'single_pion_ecal', 'single_pion_hcal',
+                    'flavor_qcd', 'time_pt_eta', 
+                    'relative_bal', 'relative_pt_bb', 'relative_pt_ec1',
+                    'relative_fsr', 'relative_stat_fsr', 'relative_stat_ec',
+                    'pileup_data_mc', 'pileup_pt_bb', 'pileup_pt_ec1', 'pileup_pt_ref',
+                    'subtotal_pileup', 'subtotal_relative', 'subtotal_pt', 
+                    'subtotal_scale', 'subtotal_absolute', 'subtotal_mc',
+                    'total'
                    ]
 
 btag_source_names = [
-                     "bfragmentation", "btempcorr", "cb",       
-                     "cfragmentation", "dmux", "gluonsplitting",
-                     "jes", "jetaway", "ksl", "l2c",            
-                     "ltothers", "mudr", 
-                     "mupt", "sampledependence", "pileup",      
-                     "ptrel", "statistic" 
+                     'bfragmentation', 'btempcorr', 'cb',       
+                     'cfragmentation', 'dmux', 'gluonsplitting',
+                     'jes', 'jetaway', 'ksl', 'l2c',            
+                     'ltothers', 'mudr', 
+                     'mupt', 'sampledependence', 'pileup',      
+                     'ptrel', 'statistic' 
                     ]
 
 def calculate_cos_theta(ref_p4, boost_p4, target_p4):
@@ -135,8 +137,8 @@ def fill_event_vars(tree, dataset):
                         # jet counting for systematics
                         n_jets_jer_up       = tree.nJetsJERUp,
                         n_jets_jer_down     = tree.nJetsJERDown,
-                        n_bjets_jer_up      = tree.nBJetsJERUp,
-                        n_bjets_jer_down    = tree.nBJetsJERDown,
+                        #n_bjets_jer_up      = tree.nBJetsJERUp,
+                        #n_bjets_jer_down    = tree.nBJetsJERDown,
                         n_bjets_ctag_up     = tree.nBJetsCTagUp,
                         n_bjets_ctag_down   = tree.nBJetsCTagDown,
                         n_bjets_mistag_up   = tree.nBJetsMistagUp,
@@ -171,8 +173,8 @@ def fill_event_vars(tree, dataset):
         for i, n in enumerate(jec_source_names):
             syst_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
             syst_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
-            syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
-            syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
+            #syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
+            #syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
 
         for i, n in enumerate(btag_source_names):
             syst_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
@@ -204,9 +206,9 @@ def fill_event_vars(tree, dataset):
 
     return out_dict
 
-def fill_lepton_vars(tree):
+def fill_lepton_vars(tree, selection):
 
-    lep1 = tree.leptonOneP4
+    lep1   = tree.leptonOneP4
     met_p2 = r.TVector2(tree.met*np.cos(tree.metPhi), tree.met*np.sin(tree.metPhi))
     lep1_mt, lep1_met_dphi = calculate_mt(lep1, met_p2)
     lepton_dict = dict(
@@ -225,8 +227,8 @@ def fill_lepton_vars(tree):
                        lepton1_mother   = tree.leptonOneMother,
                        )
 
-    if tree.nElectrons + tree.nMuons + tree.nTaus > 1:
-        lep2 = tree.leptonOneP4
+    if tree.nElectrons + tree.nMuons + tree.nTaus > 1 and selection not in ['e4j_fakes', 'mu4j_fakes']:
+        lep2 = tree.leptonTwoP4
         lep2_mt, lep2_met_dphi = calculate_mt(lep2, met_p2)
         dilepton1  = lep1 + lep2
         p_vis_zeta, p_miss_zeta = calculate_zeta_vars(lep1, lep2, met_p2)
@@ -318,6 +320,7 @@ def fill_lepton_vars(tree):
 
 
 def fill_jet_vars(tree, selection):
+
     jet1, jet2 = tree.jetOneP4, tree.jetTwoP4
     dijet      = jet1 + jet2
     out_dict = dict(
@@ -347,24 +350,20 @@ def fill_jet_vars(tree, selection):
                  )
 
     if selection in ['e4j', 'mu4j', 'e4j_fakes', 'mu4j_fakes']:
+        jet3, jet4 = tree.jetThreeP4, tree.jetFourP4
+        out_dict['jet3_pt']     = jet3.Pt()
+        out_dict['jet3_eta']    = jet3.Eta()
+        out_dict['jet3_phi']    = jet3.Phi()
+        out_dict['jet3_e']      = jet3.E()
+        out_dict['jet3_tag']    = tree.jetThreeTag
+        out_dict['jet3_flavor'] = tree.jetThreeFlavor
 
-        if tree.nJets >= 3:
-            jet3 = tree.jetThreeP4
-            out_dict['jet3_pt']     = jet3.Pt(),
-            out_dict['jet3_eta']    = jet3.Eta(),
-            out_dict['jet3_phi']    = jet3.Phi(),
-            out_dict['jet3_e']      = jet3.E(),
-            out_dict['jet3_tag']    = tree.jetThreeTag,
-            out_dict['jet3_flavor'] = tree.jetThreeFlavor,
-
-        if tree.nJets >= 4:
-            jet4 = tree.jetFourP4
-            out_dict['jet4_pt']     = jet4.Pt(),
-            out_dict['jet4_eta']    = jet4.Eta(),
-            out_dict['jet4_phi']    = jet4.Phi(),
-            out_dict['jet4_e']      = jet4.E(),
-            out_dict['jet4_tag']    = tree.jetFourTag,
-            out_dict['jet4_flavor'] = tree.jetFourFlavor,
+        out_dict['jet4_pt']     = jet4.Pt()
+        out_dict['jet4_eta']    = jet4.Eta()
+        out_dict['jet4_phi']    = jet4.Phi()
+        out_dict['jet4_e']      = jet4.E()
+        out_dict['jet4_tag']    = tree.jetFourTag
+        out_dict['jet4_flavor'] = tree.jetFourFlavor
 
     return out_dict
 
@@ -503,15 +502,15 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
         tree.GetEntry(i)
         entry = {}
         entry.update(fill_event_vars(tree, dataset))
-        entry.update(fill_lepton_vars(tree))
+        entry.update(fill_lepton_vars(tree, selection))
         entry.update(fill_jet_vars(tree, selection))
 
         if selection in ['ee', 'emu', 'etau', 'e4j']:
             entry['el_trigger_syst_tag']   = tree.eleTriggerVarTagSyst
             entry['el_trigger_syst_probe'] = tree.eleTriggerVarProbeSyst
 
-        ##if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
-        ##    entry.update(fill_jet_lepton_vars(tree))
+        #if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
+        #    entry.update(fill_jet_lepton_vars(tree))
 
         if selection in ['etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
             entry.update(fill_tau_vars(tree))
@@ -521,8 +520,12 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
 
         yield entry
 
-def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
-    process = mp.current_process()
+def pickle_ntuple(input_file, tree_name, output_path, event_range, ix, mp_mode=True):
+    if mp_mode:
+        process = mp.current_process()
+        pid = process._identity[0]
+    else:
+        pid = 0
 
     # get the tree, convert to dataframe, and save df to pickle
     root_file = r.TFile(input_file)
@@ -531,7 +534,7 @@ def pickle_ntuple(input_file, tree_name, output_path, event_range, ix):
 
     ntuple = fill_ntuple(tree, selection, dataset, 
                          event_range = event_range, 
-                         job_id = (process._identity[0], ix[0], ix[1])
+                         job_id = (pid, ix[0], ix[1])
                         )
 
     df = pd.DataFrame(ntuple)
@@ -589,12 +592,17 @@ if __name__ == '__main__':
                         default = True,
                         type    = bool
                         )
+    parser.add_argument('-d', '--debug',
+                        help    = 'Run in debug mode.',
+                        default = False,
+                        type    = bool
+                        )
     args = parser.parse_args()
 
 
     ### Configuration ###
-    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['e4j']
+    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    #selections  = ['e4j']
     do_data     = False
     do_mc       = True
     do_syst     = False
@@ -602,8 +610,8 @@ if __name__ == '__main__':
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar'] #['zjets_alt', 'ttbar', 'diboson', 'ww', 't', 'wjets']
-    
+    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets']
+    #mc_labels = ['wjets_alt']
 
     dataset_list = []
     if do_data:
@@ -643,7 +651,7 @@ if __name__ == '__main__':
 
             # get the tree and make sure that it's not empty
             tree_name = f'{selection}/bltTree_{dataset}'
-            tree      = root_file.Get(f'{selection}/bltTree_{dataset}')
+            tree      = root_file.Get(tree_name)
             n_entries = tree.GetEntriesFast()
             if n_entries == 0: 
                 continue
@@ -668,15 +676,16 @@ if __name__ == '__main__':
             if event_ranges[-1] < max_event:
                 event_ranges.append(max_event)
 
-            # start pool process
+            # start pool processes
             tmp_path = f'{output_path}/{dataset}'
             pt.make_directory(tmp_path, clear=True)
             for i, ievt in enumerate(event_ranges[:-1]):
-                result = pool.apply_async(pickle_ntuple, 
-                                          args = (args.input, tree_name, tmp_path, 
-                                                  (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
-                                                 )
-                                          )
+                mp_args = (args.input, tree_name, tmp_path, (ievt, event_ranges[i+1]), (i, len(event_ranges)-1))
+                if args.debug:
+                    pickle_ntuple(*mp_args, mp_mode=False)
+                    break
+                else:
+                    result  = pool.apply_async(pickle_ntuple, args = args)
             #print(result.get(timeout=1))
 
         # run over isolation inverted selections (fakes)
@@ -717,11 +726,12 @@ if __name__ == '__main__':
                 tmp_path = f'{output_path}/{dataset}_fakes'
                 pt.make_directory(tmp_path, clear=True)
                 for i, ievt in enumerate(event_ranges[:-1]):
-                    result = pool.apply_async(pickle_ntuple, 
-                                              args = (args.input, tree_name, tmp_path,
-                                                      (ievt, event_ranges[i+1]), (i, len(event_ranges)-1)
-                                                     )
-                                              )
+                    mp_args = (args.input, tree_name, tmp_path, (ievt, event_ranges[i+1]), (i, len(event_ranges)-1))
+                    if args.debug:
+                        pickle_ntuple(*mp_args, mp_mode=False)
+                        break
+                    else:
+                        result  = pool.apply_async(pickle_ntuple, args = args)
 
         df_ecounts = pd.DataFrame(event_count)
         file_name = f'{output_path}/event_counts.csv'

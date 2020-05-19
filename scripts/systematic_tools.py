@@ -107,8 +107,8 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     #print('down', h_down.sum())
 
     # average over bin-by-bin variations for now
-    #h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
-    #h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
+    h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
+    h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
     
     return h_up, h_down
 
@@ -152,41 +152,10 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
         x = (binning[:-1] + binning[1:])/2
         h_up, h_down = template_smoothing(x, h_nominal, h_up, h_down)
 
-        # symmetrization and smoothing: use something more standard in the
-        # future...  if the fluctuations are highly assymetric, they are
-        # symmetrized and set to 1/3 of the larger fluctuations (1/3 makes the
-        # linear extrapolation on the short side not do anything)
-        #diff_up   = h_up - h_nominal
-        #diff_down = h_down - h_nominal
-        #mask_up = ((diff_up > 0) & (diff_up > diff_down) & (diff_down > -diff_up/3)) \
-        #          | ((diff_up < 0) & (diff_up < diff_down) & (diff_down < -diff_up/3))
-        #mask_down = ((diff_down > 0) & (diff_down > diff_up) & (diff_up > -diff_down/3)) \
-        #            | ((diff_down < 0) & (diff_down < diff_up) & (diff_up < -diff_down/3))
-
-        ##print(diff_up)
-        ##print(diff_down)
-        ##print(mask_up)
-        ##print(mask_down)
-        #diff_up[mask_up] = 2*diff_up[mask_up]/3
-        #diff_down[mask_up] = -diff_up[mask_up]/3
-        #diff_up[mask_down] = -diff_down[mask_down]/3
-        #diff_down[mask_up] = 2*diff_up[mask_up]/3
-        ##print(diff_up)
-        ##print(diff_down)
-
-        #h_up = h_nominal + diff_up
-        #h_down = h_nominal + diff_down
-               
-        #r_up, r_down = (h_up - h_nominal)/h_nominal, (h_down - h_nominal)/h_nominal
-        #sig_r_up = r_up*np.sqrt(var_up/h_up**2 + var_nominal/h_nominal**2)
-        #sig_r_down = r_down*np.sqrt(var_down/h_down**2 + var_nominal/h_nominal**2)
-        #print(f'--{syst}--')
-        #print('nominal: ', h_nominal)
-        #print('err nominal: ', np.sqrt(var_nominal)/h_nominal)
-        #print('err up: ', sig_r_up)
-        #print('err down: ', sig_r_down)
-        #print('dh_up: ', r_up)
-        #print('dh_down: ', r_down)
+        # symmetrizations (*shrugs*)
+        h_diff = h_nominal - (h_up + h_down)/2
+        h_up += h_diff
+        h_down += h_diff
 
         df_syst[f'{syst}_up'], df_syst[f'{syst}_down'] = h_up, h_down
 
@@ -673,6 +642,7 @@ class SystematicTemplateGenerator():
         '''
 
         weights = df['weight'].values.copy()
+        mask = weights != 1
        
         # scale variation
         k_up, k_down = 0.993, 1.001

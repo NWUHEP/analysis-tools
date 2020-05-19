@@ -16,13 +16,16 @@ tqdm.monitor_interval = 0
 
 dataset_dict = dict(
                     muon      = ['muon_2016B', 'muon_2016C', 'muon_2016D', 
-                                 'muon_2016E', 'muon_2016F', 'muon_2016G', 'muon_2016H'],
+                                 'muon_2016E', 'muon_2016F', 'muon_2016G', 
+                                 'muon_2016H'
+                                 ],
                     electron  = ['electron_2016B', 'electron_2016C', 'electron_2016D', 
                                  'electron_2016E', 'electron_2016F', 'electron_2016G', 
                                  'electron_2016H'
                                  ],
                     ttbar     = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
                     t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
+                    wjets_alt = ['wjets_alt', 'wjets_alt_ext1', 'wjets_alt_ext2'],
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt',
                                  'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
@@ -87,15 +90,15 @@ fancy_labels = dict(
 features = dict(
                 mumu  = 'lepton2_pt', # trailing muon pt
                 ee    = 'lepton2_pt', # trailing electron pt
-                emu   = 'trailing_lepton_pt', # like the name says
+                emu   = 'trailing_lepton_pt', # muon or electron pt
                 mutau = 'lepton2_pt', # tau pt
                 etau  = 'lepton2_pt', # tau pt
                 mu4j  = 'lepton1_pt', # muon pt
                 e4j   = 'lepton1_pt', # electron pt
                 )
 # WIP
-tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90 \
-               and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
+tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90)'
+               #and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
 Category = namedtuple('Category', ['cut', 'jet_cut', 'selections', 'label', 'njets'])
 categories = dict(
@@ -125,7 +128,7 @@ categories = dict(
 
                   cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} = 1$',            4),
                   cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$',         4),
-                  cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['e4j', 'mu4j'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
+                  #cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['e4j', 'mu4j'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
                  )
 
 def make_directory(file_path, clear=True):
@@ -184,7 +187,6 @@ def ebar_wrapper(data, ax, bins, limits, style):
                 markersize = 5
                 )
 
-
 def ratio_errors(num, sig_num, den, sig_den):
     '''
     Error of ratio assuming numerator and denominator are uncorrelated.
@@ -199,7 +201,6 @@ def ratio_errors(num, sig_num, den, sig_den):
     ratio = num/den
     error = ratio*np.sqrt(sig_num**2/num**2 + sig_den**2/den**2)
     return error
-
 
 def poisson_errors(bin_content, suppress_zero=False):
     '''
@@ -454,7 +455,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
     ax.set_ylabel('Obs./Exp.', fontsize=24)
     ax.set_xlabel(xlabel, fontsize=22)
     #ax.legend()
-    ax.grid(axis='y')
+    ax.grid(axis='x')
 
     plt.tight_layout(h_pad=0., rect=[0., 0., 1., 0.95])
     plt.savefig(output_path)
@@ -472,11 +473,12 @@ def systematics_plot():
 
 class DataManager():
     def __init__(self, input_dir, dataset_names, selection,
-                 period   = 2016,
-                 scale    = 1,
-                 cuts     = '',
-                 combine  = True,
-                 features = None
+                 period        = 2016,
+                 scale         = 1,
+                 cuts          = '',
+                 combine       = True,
+                 features      = None,
+                 template_mode = False
                  ):
         self._input_dir     = input_dir
         self._dataset_names = dataset_names
@@ -486,6 +488,7 @@ class DataManager():
         self._cuts          = cuts
         self._combine       = combine
         self._features      = features
+        self._template_mode = template_mode
         self._load_luts()
         self._load_dataframes()
 
@@ -555,20 +558,22 @@ class DataManager():
                     neg_count = self._event_counts[dataset][9]
                     scale /= init_count - 2*neg_count
 
-                    ### fix tau id scale factor
+                    ### apply tau id scale factor
                     if self._selection in ['etau', 'mutau']:
                         df.loc[:,'lepton2_id_weight'] = 0.95
-                        df.loc[:,'lepton2_id_var'] = 0.05**2
+                        df.loc[:,'lepton2_id_var'] = 0.05 # actually the standard error
                         df.loc[:,'weight'] *= 0.95
 
                 else:
                     scale /= init_count
 
                 df.loc[:, 'weight'] *= scale
+                #df.loc[:, 'weight'] = scale
 
             ### combining inclusive and exclusive ttbar samples
             if label == 'ttbar':
-                df.loc[:, 'weight'] *= df.loc[:, 'top_pt_weight'] # good to have for plots, not to be used when producing templates
+                if not self._template_mode:
+                    df.loc[:, 'weight'] *= df.loc[:, 'top_pt_weight'] # good to have for plots, not to be used when producing templates
 
                 if dataset == 'ttbar_inclusive':
                     # rescale leptonic component
@@ -876,6 +881,9 @@ class PlotManager():
             ### Get stack data and apply mask if necessary ###
             binning = np.linspace(lut_entry.xmin, lut_entry.xmax, lut_entry.n_bins+1)
             stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, cut)
+            if len(stack_data) != len(self._stack_colors) or len( stack_data) == 0:
+                continue
+
             stack, _, _ = ax.hist(stack_data, 
                                   bins      = binning,
                                   color     = self._stack_colors,
@@ -895,7 +903,6 @@ class PlotManager():
             stack_x   = (binning[1:] + binning[:-1])/2.
             stack_sum = stack[-1] if len(stack_data) > 1 else stack
             stack_err = np.sqrt(stack_var)
-
             ax.fill_between(stack_x, stack_sum-stack_err, stack_sum+stack_err,
                             edgecolor = 'k',
                             facecolor = 'gray',
@@ -940,7 +947,7 @@ class PlotManager():
             ax.legend(legend_text, loc=9, ncol=3)
 
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
-            ax.set_xlim(binning[0], binning[-2])
+            ax.set_xlim(binning[0], binning[-1])
             ax.tick_params(axis='both', which='both', direction='in', length=5)
             #ax.grid()
 
@@ -979,7 +986,7 @@ class PlotManager():
                                      )
                 ax_ratio.plot([lut_entry.xmin, lut_entry.xmax], [1., 1.], 'k:')
                 ax_ratio.tick_params(axis='both', which='both', direction='in', length=5)
-                ax.grid(axis='y')
+                ax.grid(axis='x')
             else:
                 ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
 
@@ -1055,7 +1062,7 @@ class PlotManager():
             ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
             ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
-            ax.grid()
+            #ax.grid()
 
             ### Add lumi text ###
             #if do_cms_text:
@@ -1142,9 +1149,16 @@ class PlotManager():
             else:
                 fig, ax   = plt.subplots(1, 1, figsize=(10, 7))
 
+            ### Get style data for the feature ###
             lut_entry = self._dm._lut_features.loc[feature]
-            hist_data = [df[feature].values for df in df_model]
-            weights   = [df['weight'].values for df in df_model]
+            if lut_entry.condition == 'None':
+                hist_data = [df[feature].values for df in df_model]
+                weights   = [df['weight'].values for df in df_model]
+            else:
+                plot_condition = lut_entry.condition 
+                hist_data = [df.query(plot_condition)[feature].values for df in df_model]
+                weights   = [df.query(plot_condition)['weight'].values for df in df_model]
+            
             hist, bins, _ = ax.hist(hist_data,
                                     bins      = int(lut_entry.n_bins),
                                     range     = (lut_entry.xmin, lut_entry.xmax),
@@ -1176,7 +1190,12 @@ class PlotManager():
                 denominator = (x, hist[-1], herr)
 
             if do_data:
-                x, y, yerr = hist_to_errorbar(df_data[feature], bins)
+                if lut_entry.condition == 'None':
+                    x, y, yerr = hist_to_errorbar(df_data[feature], bins)
+                else:
+                    plot_condition = lut_entry.condition
+                    x, y, yerr = hist_to_errorbar(df_data.query(plot_condition)[feature], bins)
+
                 if do_ratio:
                     numerator = (x, y, yerr)
 
@@ -1193,8 +1212,7 @@ class PlotManager():
 
             ### labels and x limits ###
             ax.set_ylabel(r'$\sf {0}$'.format(lut_entry.y_label))
-            ax.set_xlim((lut_entry.xmin, lut_entry.xmax))
-            ax.set_xlim(bins[0], bins[-2])
+            ax.set_xlim(bins[0], bins[-1])
             #ax.grid()
 
             ### labels and x limits ###
@@ -1221,7 +1239,7 @@ class PlotManager():
                 axes[1].set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))
                 axes[1].set_ylabel(r'Data/MC')
                 axes[1].set_ylim((0.5, 1.49))
-                axes[1].grid(axis='y')
+                axes[1].grid(axis='x')
 
             else:
                 ax.set_xlabel(r'$\sf {0}$'.format(lut_entry.x_label))

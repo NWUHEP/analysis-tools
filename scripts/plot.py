@@ -35,7 +35,6 @@ if __name__ == '__main__':
     selection = args.selection
     data_labels  = ['muon', 'electron']
     model_labels = ['diboson', 'ww', 'zjets_alt', 'wjets', 't', 'ttbar']
-
     if selection in ['mu4j', 'e4j']: 
         model_labels = ['fakes'] + model_labels
     elif selection in ['emu', 'mutau', 'etau']:
@@ -53,8 +52,8 @@ if __name__ == '__main__':
 
                 'lepton1_pt', 'lepton1_eta', 'lepton1_phi', 'lepton1_mt', 
                 'lepton1_iso', 'lepton1_reliso', 
-                'jet1_pt', 'jet1_eta', 'jet1_phi',
-                'jet2_pt', 'jet2_eta', 'jet2_phi',
+                'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_tag',
+                'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_tag',
                ]
 
     if selection not in ['e4j', 'mu4j']:

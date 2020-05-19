@@ -86,12 +86,13 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
     # tau misid 
     if selection in ['etau', 'mutau']:
         if decay_mode in [7, 8, 12, 15] or dataset == 'zjets_alt':
-            print(selection, dataset, decay_mode, cat_items.label)
+            #print(selection, dataset, decay_mode, cat_items.label)
             syst_gen.tau_systematics(df)
         elif decay_mode in [16, 17, 18, 19, 20, 21]:
             syst_gen.tau_j_misid_systematics(df)
         elif decay_mode in [1, 3, 6, 10, 11, 13]:
             syst_gen.tau_e_misid_systematics(df)
+
     #elif selection in ['e4j', 'mu4j']: # add (1 - eff) for l+jet categories
     #    if decay_mode in [7, 8, 12, 15]:
     #        syst_gen.tau_systematics(df)
@@ -176,7 +177,7 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
     #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['etau']
+    selections = ['ee']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -185,13 +186,7 @@ if __name__ == '__main__':
         outfile    = open(f'{args.output}/{selection}_templates.pkl', 'wb')
 
         # get the data dataframe
-        if selection in ['ee', 'etau', 'e4j']:
-            data_labels = ['electron']
-        elif selection in ['mumu', 'mutau', 'mu4j']:
-            data_labels = ['muon']
-        elif selection == 'emu':
-            data_labels = ['electron', 'muon']
-
+        data_labels = ['electron', 'muon']
         datasets = [d for l in data_labels for d in pt.dataset_dict[l]]
         dm = pt.DataManager(input_dir     = ntuple_dir,
                             dataset_names = datasets,
@@ -210,7 +205,8 @@ if __name__ == '__main__':
                             selection     = selection,
                             scale         = 35.9e3,
                             cuts          = pt.cuts[selection],
-                            features      = feature_list
+                            features      = feature_list,
+                            template_mode = True
                            )
 
         data = dict()
