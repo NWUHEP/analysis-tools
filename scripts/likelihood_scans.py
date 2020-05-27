@@ -29,10 +29,11 @@ if __name__ == '__main__':
                         type = str
                         )
     parser.add_argument('-p', '--prescan',
-                        help = 'Uses results from previously completed n.p. scan.  Only will produce plots.',
+                        help = 'Uses results from previously completed n.p. scan.  Will only produce plots.',
                         default = 'None',
                         type = str
                         )
+
     args = parser.parse_args()
     ##########################
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
                  ]
     plot_labels = fh.fancy_labels
     
-    # initialize fit data and generate asimov dataset
+    # initialize fit data 
     if os.path.isdir(args.input):
         fit_data = fh.FitData(args.input, selections, processes, process_cut=0.05)
     else:
@@ -53,14 +54,13 @@ if __name__ == '__main__':
         fit_data = pickle.load(infile)
         infile.close()
 
-        if args.prescan:
+        if args.prescan != 'None':
             scan_file = open(args.prescan, 'rb')
             scan_dict = pickle.load(scan_file)
             scan_file.close()
 
     parameters  = fit_data._parameters.copy()
     params_pre  = parameters['val_init'].values.copy()
-    asimov_data = {cat:fit_data.mixture_model(params_pre, cat) for cat in fit_data._model_data.keys()}
 
     # minimizer options
     min_options = dict(#eps=1e-9, 
@@ -77,19 +77,19 @@ if __name__ == '__main__':
     mask = fit_data._pmask
     sample = None
     fobj = partial(fit_data.objective,
-                   data = sample,
+                   data       = sample,
                    do_bb_lite = True,
-                   lu_test = None
+                   lu_test    = None
                   )
 
     fobj_jac = partial(fit_data.objective_jacobian,
-                       data = sample,
+                       data       = sample,
                        do_bb_lite = True,
-                       lu_test = None 
+                       lu_test    = None
                       )
 
     # prepare scan data
-    if args.prescan is None:
+    if args.prescan == 'None':
         scan_dict = dict()
 
     for ix, (pname, pdata) in tqdm(enumerate(parameters.iterrows()), total=parameters.shape[0]):
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         if pdata.active == 0:
             continue
                             
-        if args.prescan is None:
+        if args.prescan is 'None':
 
             mask[ix] = False
             scan_vals = np.linspace(pdata.val_fit - 3*pdata.err_fit, pdata.val_fit + 3*pdata.err_fit, 7)

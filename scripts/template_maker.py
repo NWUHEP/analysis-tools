@@ -88,7 +88,7 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
         if decay_mode in [7, 8, 12, 15] or dataset == 'zjets_alt':
             #print(selection, dataset, decay_mode, cat_items.label)
             syst_gen.tau_systematics(df)
-        elif decay_mode in [16, 17, 18, 19, 20, 21]:
+        elif decay_mode in [16, 17, 18, 19, 20, 21] or dataset == 'wjets':
             syst_gen.tau_j_misid_systematics(df)
         elif decay_mode in [1, 3, 6, 10, 11, 13]:
             syst_gen.tau_e_misid_systematics(df)
@@ -224,6 +224,7 @@ if __name__ == '__main__':
 
             # generate the data template
             h, binning = get_binning(df_data.query(full_cut), feature) 
+            binning = binning.astype(int)
 
             ### get signal and background templates
             templates = dict(data = dict(val = h, var = h))

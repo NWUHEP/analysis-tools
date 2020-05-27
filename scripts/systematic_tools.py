@@ -80,10 +80,10 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
         down_condition = jet_cut.replace('n_bjets', f'n_bjets_{sys_type}_down')
     else:
         up_condition   = jet_cut.replace('n_jets', f'n_jets_{sys_type}_up')
-        #up_condition   = up_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
+        up_condition   = up_condition.replace('n_bjets', f'n_bjets_{sys_type}_up')
 
         down_condition = jet_cut.replace('n_jets', f'n_jets_{sys_type}_down')
-        #down_condition = down_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
+        down_condition = down_condition.replace('n_bjets', f'n_bjets_{sys_type}_down')
 
     h_nominal, _ = np.histogram(df.query(jet_cut)[feature], 
                                 bins=bins, 
@@ -100,15 +100,18 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
                              weights=df.query(down_condition).weight
                              )
 
-    #print(f'--{sys_type}--')
-    #print(f'--"{jet_cut}"--')
-    #print('up', h_up.sum())
-    #print('nominal', h_nominal.sum())
-    #print('down', h_down.sum())
+    print(f'--{sys_type}--')
+    print(f'--"{jet_cut}"--')
+    print('up', h_up.sum())
+    print('nominal', h_nominal.sum())
+    print('down', h_down.sum())
 
     # average over bin-by-bin variations for now
-    h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
-    h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
+    #h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
+    #h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
+
+    print('up (averaged)', h_up.sum())
+    print('down (averaged)', h_down.sum())
     
     return h_up, h_down
 

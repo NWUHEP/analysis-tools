@@ -127,7 +127,7 @@ def calculate_covariance(f, x0):
 
     hcalc = nd.Hessian(f,
                        step        = 1e-3,
-                       method      = 'forward',
+                       method      = 'central',
                        full_output = True
                        )
 

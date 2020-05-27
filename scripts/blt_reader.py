@@ -137,8 +137,8 @@ def fill_event_vars(tree, dataset):
                         # jet counting for systematics
                         n_jets_jer_up       = tree.nJetsJERUp,
                         n_jets_jer_down     = tree.nJetsJERDown,
-                        #n_bjets_jer_up      = tree.nBJetsJERUp,
-                        #n_bjets_jer_down    = tree.nBJetsJERDown,
+                        n_bjets_jer_up      = tree.nBJetsJERUp,
+                        n_bjets_jer_down    = tree.nBJetsJERDown,
                         n_bjets_ctag_up     = tree.nBJetsCTagUp,
                         n_bjets_ctag_down   = tree.nBJetsCTagDown,
                         n_bjets_mistag_up   = tree.nBJetsMistagUp,
@@ -173,8 +173,8 @@ def fill_event_vars(tree, dataset):
         for i, n in enumerate(jec_source_names):
             syst_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
             syst_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
-            #syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
-            #syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
+            syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
+            syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
 
         for i, n in enumerate(btag_source_names):
             syst_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
@@ -238,6 +238,7 @@ def fill_lepton_vars(tree, selection):
             lead_lepton1_phi     = lep1.Phi()
             lead_lepton_mt       = lep1_mt
             lead_lepton_met_dphi = lep1_met_dphi
+            lead_lepton_d0       = abs(tree.leptonOneD0)
             lead_lepton_mother   = tree.leptonOneMother
             lead_lepton_flavor   = tree.leptonOneFlavor
             lead_lepton_pt_corr  = tree.leptonOnePtCorr
@@ -246,6 +247,7 @@ def fill_lepton_vars(tree, selection):
             trailing_lepton_phi      = lep2.Phi()
             trailing_lepton_mt       = lep2_mt
             trailing_lepton_met_dphi = lep2_met_dphi
+            trailing_lepton_d0       = abs(tree.leptonTwoD0)
             trailing_lepton_mother   = tree.leptonTwoMother
             trailing_lepton_flavor   = tree.leptonTwoFlavor
             trailing_lepton_pt_corr  = tree.leptonTwoPtCorr
@@ -254,6 +256,7 @@ def fill_lepton_vars(tree, selection):
             lead_lepton1_phi     = lep2.Phi()
             lead_lepton_mt       = lep2_mt
             lead_lepton_met_dphi = lep2_met_dphi
+            lead_lepton_d0       = abs(tree.leptonTwoD0)
             lead_lepton_mother   = tree.leptonTwoMother
             lead_lepton_flavor   = tree.leptonTwoFlavor
             lead_lepton_pt_corr  = tree.leptonTwoPtCorr
@@ -262,6 +265,7 @@ def fill_lepton_vars(tree, selection):
             trailing_lepton_phi      = lep1.Phi()
             trailing_lepton_mt       = lep1_mt
             trailing_lepton_met_dphi = lep1_met_dphi
+            trailing_lepton_d0       = abs(tree.leptonOneD0)
             trailing_lepton_mother   = tree.leptonOneMother
             trailing_lepton_flavor   = tree.leptonOneFlavor
             trailing_lepton_pt_corr  = tree.leptonOnePtCorr
@@ -286,10 +290,12 @@ def fill_lepton_vars(tree, selection):
                              lead_lepton_mt         = lead_lepton_mt,
                              lead_lepton_mother     = lead_lepton_mother,
                              lead_lepton_flavor     = lead_lepton_flavor,
+                             lead_lepton_d0         = lead_lepton_d0,
                              trailing_lepton_pt     = trailing_lepton_pt,
                              trailing_lepton_mt     = trailing_lepton_mt,
                              trailing_lepton_mother = trailing_lepton_mother,
                              trailing_lepton_flavor = trailing_lepton_flavor,
+                             trailing_lepton_d0     = trailing_lepton_d0,
      
                              dilepton1_delta_eta    = abs(lep1.Eta() - lep2.Eta()),
                              dilepton1_delta_phi    = abs(lep1.DeltaPhi(lep2)),
@@ -587,23 +593,25 @@ if __name__ == '__main__':
                         default = sys.maxsize,
                         type    = int
                         )
-    parser.add_argument('-a', '--append',
-                        help    = 'Run in append mode (existing datasets will not be overwritten)',
-                        default = True,
-                        type    = bool
+    parser.add_argument('-c', '--clear',
+                        dest    = 'clear',
+                        action  = 'store_true',
+                        help    = 'Clear destination directory of existing content.',
                         )
     parser.add_argument('-d', '--debug',
-                        help    = 'Run in debug mode.',
-                        default = False,
-                        type    = bool
+                        dest   = 'debug',
+                        action = 'store_true',
+                        help   = 'Run in debug mode.  This will only run over \
+                                  a single chunk of data for each of the processes and \
+                                  will not use multiprocessing',
                         )
     args = parser.parse_args()
 
 
     ### Configuration ###
-    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    #selections  = ['e4j']
-    do_data     = False
+    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
+    selections  = ['ee', 'mumu']
+    do_data     = True
     do_mc       = True
     do_syst     = False
     period      = 2016
@@ -639,7 +647,7 @@ if __name__ == '__main__':
     pool = Pool(processes = min(12, args.nprocesses))
     for selection in selections:
         output_path = f'{args.output}/{selection}_{period}'
-        pt.make_directory(output_path, clear=(not args.append))
+        pt.make_directory(output_path, clear=(not args.clear))
         event_count = {}
 
         for dataset in dataset_list:
@@ -685,7 +693,7 @@ if __name__ == '__main__':
                     pickle_ntuple(*mp_args, mp_mode=False)
                     break
                 else:
-                    result  = pool.apply_async(pickle_ntuple, args = args)
+                    result  = pool.apply_async(pickle_ntuple, args = mp_args)
             #print(result.get(timeout=1))
 
         # run over isolation inverted selections (fakes)
@@ -731,11 +739,11 @@ if __name__ == '__main__':
                         pickle_ntuple(*mp_args, mp_mode=False)
                         break
                     else:
-                        result  = pool.apply_async(pickle_ntuple, args = args)
+                        result = pool.apply_async(pickle_ntuple, args=mp_args)
 
         df_ecounts = pd.DataFrame(event_count)
         file_name = f'{output_path}/event_counts.csv'
-        if args.append and os.path.isfile(file_name):
+        if not args.clear and os.path.isfile(file_name):
             df_ecounts_old = pd.read_csv(file_name, index_col=0)
             df_ecounts_old = df_ecounts_old.drop([c for c in df_ecounts_old.columns if c in df_ecounts.columns], axis=1)
             df_ecounts = pd.concat([df_ecounts, df_ecounts_old], axis=1)

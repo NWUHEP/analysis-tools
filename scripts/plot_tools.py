@@ -509,7 +509,7 @@ class DataManager():
                                             sheet_name='variables_{0}'.format(self._selection),
                                             index_col='variable_name'
                                            ).dropna(how='all')
-        self._lut_features = pd.concat([lut_features_default, lut_features_select], sort=True)
+        self._lut_features = pd.concat([lut_features_default, lut_features_select], sort=True)#.astype({'n_bins':int})
 
     def _load_dataframes(self):
         '''
@@ -879,7 +879,7 @@ class PlotManager():
                 fig, ax = plt.subplots(1, 1)
 
             ### Get stack data and apply mask if necessary ###
-            binning = np.linspace(lut_entry.xmin, lut_entry.xmax, lut_entry.n_bins+1)
+            binning = np.linspace(lut_entry.xmin, lut_entry.xmax, int(lut_entry.n_bins)+1)
             stack_data, stack_weights = get_data_and_weights(dataframes, feature, self._stack_labels, cut)
             if len(stack_data) != len(self._stack_colors) or len( stack_data) == 0:
                 continue
@@ -1259,6 +1259,11 @@ class PlotManager():
 
             ### linear scale ###
             ymax, ymin = np.max(hist[-1]), np.min(hist[-1])
+            if ymax == ymin:
+                fig.clear()
+                plt.close()
+                break
+
             ax.set_ylim((0., 1.5*ymax))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 
                                                         lut_entry.category, 

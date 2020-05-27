@@ -29,6 +29,7 @@ if __name__ == '__main__':
                         default = 35.9e3,
                         type = float
                         )
+    #parser.add_argument() 
     args = parser.parse_args()
     ###
 
@@ -59,6 +60,7 @@ if __name__ == '__main__':
     if selection not in ['e4j', 'mu4j']:
         features.extend([
                          'lead_lepton_pt', 'trailing_lepton_pt',
+                         'lead_lepton_d0', 'trailing_lepton_d0',
                          'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_mt', 
                          'lepton2_iso', 'lepton2_reliso', 
                          'lepton1_d0', 'lepton1_dz', 
