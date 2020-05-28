@@ -94,14 +94,41 @@ def signal_amplitudes_jacobian(beta, br_tau, npadding, single_w=False):
         amplitudes_jac = np.vstack([amplitudes_jac, np.zeros((npadding, 6))])
     else:
         amplitudes_jac = np.array([
-                                  [2*beta[0], 0, 2*beta[1], 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 0, 0, 2*beta[3], 0, 0, 0, 0, 0],
-                                  [0, 2*beta[1], 2*beta[0], 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 2*beta[3], 0, 0, 0, 0],
-                                  [0, 0, 0, 2*beta[2]*br_tau[0]**2, 2*beta[2]*br_tau[1]**2, 4*beta[2]*br_tau[0]*br_tau[1], 4*beta[2]*br_tau[0]*br_tau[2], 4*beta[2]*br_tau[1]*br_tau[2], 2*beta[2]*br_tau[2]**2, 
-                                      2*beta[0]*br_tau[0], 2*beta[0]*br_tau[1], 2*beta[0]*br_tau[2], 2*beta[1]*br_tau[0], 2*beta[1]*br_tau[1], 2*beta[1]*br_tau[2], 0, 0, 2*beta[3]*br_tau[0], 2*beta[3]*br_tau[1], 2*beta[3]*br_tau[2], 0],
-                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2*beta[0], 2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]],
-                                  [0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0, 0, 0],
-                                  [0, 0, 0, 0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0, 0],
-                                  [0, 0, 0, 0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2], 0, 0, 2*beta[1]*beta[2], 0, 0, 0, 0, 2*beta[2]*beta[3], 0]
+                                  [2*beta[0], 0, 2*beta[1], 0, 
+                                      0, 0, 0, 0, 
+                                      0, 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 
+                                      0, 0, 0, 2*beta[3], 
+                                      0, 0, 0, 0, 0],
+                                  [0, 2*beta[1], 2*beta[0], 0, 
+                                      0, 0, 0, 0, 
+                                      0, 0, 0, 0, 
+                                      2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 0, 
+                                      2*beta[3], 0, 0, 0, 0],
+                                  [0, 0, 0, 2*beta[2]*br_tau[0]**2, 
+                                      2*beta[2]*br_tau[1]**2, 4*beta[2]*br_tau[0]*br_tau[1], 4*beta[2]*br_tau[0]*br_tau[2], 4*beta[2]*br_tau[1]*br_tau[2], 
+                                      2*beta[2]*br_tau[2]**2, 2*beta[0]*br_tau[0], 2*beta[0]*br_tau[1], 2*beta[0]*br_tau[2],
+                                      2*beta[1]*br_tau[0], 2*beta[1]*br_tau[1], 2*beta[1]*br_tau[2], 0, 
+                                      0, 2*beta[3]*br_tau[0], 2*beta[3]*br_tau[1], 2*beta[3]*br_tau[2], 0],
+                                  [0, 0, 0, 0, 
+                                      0, 0, 0, 0, 
+                                      0, 0, 0, 0, 
+                                      0, 0, 0, 2*beta[0], 
+                                      2*beta[1], 2*beta[2]*br_tau[0], 2*beta[2]*br_tau[1], 2*beta[2]*br_tau[2], 2*beta[3]],
+                                  [0, 0, 0, 2*beta[2]*beta[2]*br_tau[0], 
+                                      0, 2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[2], 0, 
+                                      0, 2*beta[0]*beta[2], 0, 0, 
+                                      2*beta[1]*beta[2], 0, 0, 0,
+                                      0, 2*beta[2]*beta[3], 0, 0, 0],
+                                  [0, 0, 0, 0,
+                                      2*beta[2]*beta[2]*br_tau[1], 2*beta[2]*beta[2]*br_tau[0], 0, 2*beta[2]*beta[2]*br_tau[2],
+                                      0, 0, 2*beta[0]*beta[2], 0,
+                                      0, 2*beta[1]*beta[2], 0, 0,
+                                      0, 0, 2*beta[2]*beta[3], 0, 0],
+                                  [0, 0, 0, 0,
+                                      0, 0, 2*beta[2]*beta[2]*br_tau[0], 2*beta[2]*beta[2]*br_tau[1],
+                                      2*beta[2]*beta[2]*br_tau[2], 0, 0, 2*beta[0]*beta[2],
+                                      0, 0, 2*beta[1]*beta[2], 0,
+                                      0, 0, 0, 2*beta[2]*beta[3], 0]
                                   ]
                                  )
         amplitudes_jac = np.vstack([amplitudes_jac, np.zeros((npadding,21))])
@@ -161,7 +188,9 @@ class FitData(object):
     def __init__(self, path, selections, processes, 
                  param_file  = 'data/model_parameters_default.csv',
                  use_prefit  = False,
-                 process_cut = 0.01
+                 process_cut = 0.01,
+                 veto_list   = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0'] 
+
                  ):
         self._selections     = selections
         self._processes      = processes
@@ -180,7 +209,7 @@ class FitData(object):
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
         # initialize fit data
-        self.veto_list = [] # used to remove categories from fit
+        self.veto_list = veto_list # used to remove categories from fit
         self._initialize_fit_tensor(process_cut)
 
         # initialize cost (do this last)
@@ -257,7 +286,6 @@ class FitData(object):
         self._bb_np      = dict()
         self._categories = []
         for sel in self._selections:
-            category_tensor = []
             for category, templates in self.get_selection_data(sel).items():
 
                 # omit categories 

@@ -107,8 +107,8 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     print('down', h_down.sum())
 
     # average over bin-by-bin variations for now
-    #h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
-    #h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
+    h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
+    h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
 
     print('up (averaged)', h_up.sum())
     print('down (averaged)', h_down.sum())
@@ -216,7 +216,7 @@ class SystematicTemplateGenerator():
         df: dataframe for target dataset without the jet cuts applied
         '''
 
-        jet_syst_list = [f'jes_{n}' for n in jec_source_names]
+        jet_syst_list = [f'jes_{n}' for n in jec_source_names if 'subtotal' in n]
         jet_syst_list += ['jer']
         for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, jet_cut)
