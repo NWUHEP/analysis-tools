@@ -9,14 +9,12 @@ import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib
 from scipy.optimize import minimize, basinhopping
 from tqdm import tqdm
 
 import scripts.plot_tools as pt
 import scripts.fit_helpers as fh
 from nllfit.nllfitter import ScanParameters
-
 
 ScanData = namedtuple('ScanData', ['param_name', 'scan_points', 'results', 'costs'])
 
@@ -30,7 +28,7 @@ if __name__ == '__main__':
                         )
     parser.add_argument('-p', '--prescan',
                         help = 'Uses results from previously completed n.p. scan.  Will only produce plots.',
-                        default = 'None',
+                        default = '',
                         type = str
                         )
 
@@ -42,9 +40,13 @@ if __name__ == '__main__':
                   'ee', 'mumu',
                   'emu',
                   'mutau', 'etau',
-                  'mu4j', 'e4j'
+                  #'mujet', 'ejet'
                  ]
     plot_labels = fh.fancy_labels
+    pt.set_default_style()
+    timestamp = pt.get_current_time()
+    pt.make_directory(f'local_data/nll_scans/{timestamp}')
+    pt.make_directory(f'plots/nll_scans/{timestamp}')
     
     # initialize fit data 
     if os.path.isdir(args.input):
@@ -52,9 +54,10 @@ if __name__ == '__main__':
     else:
         infile = open(args.input, 'rb')
         fit_data = pickle.load(infile)
+        fit_data._initialize_fit_tensor(0.05)  # won't need this at some point
         infile.close()
 
-        if args.prescan != 'None':
+        if args.prescan != '':
             scan_file = open(args.prescan, 'rb')
             scan_dict = pickle.load(scan_file)
             scan_file.close()
@@ -74,6 +77,7 @@ if __name__ == '__main__':
                       )
 
     # configure the objective
+    asimov_data = {cat:fit_data.mixture_model(parameters.val_init.values, cat) for cat in fit_data._model_data.keys()}
     mask = fit_data._pmask
     sample = None
     fobj = partial(fit_data.objective,
@@ -89,24 +93,35 @@ if __name__ == '__main__':
                       )
 
     # prepare scan data
-    if args.prescan == 'None':
+    if args.prescan == '':
         scan_dict = dict()
 
+    n_masked = 0
     for ix, (pname, pdata) in tqdm(enumerate(parameters.iterrows()), total=parameters.shape[0]):
 
-        if pdata.active == 0:
+        if pdata.active == 0 or ('jes' not in pname and 'escale' not in pname):
+            if pdata.active == 0:
+                n_masked += 1
             continue
                             
-        if args.prescan is 'None':
+        if args.prescan is '':
 
             mask[ix] = False
-            scan_vals = np.linspace(pdata.val_fit - 3*pdata.err_fit, pdata.val_fit + 3*pdata.err_fit, 7)
+
+            # carry out finer binned scan near the MLE value
+            scan_vals_central = np.linspace(pdata.val_fit - pdata.err_fit, pdata.val_fit + pdata.err_fit, 5)
+            scan_vals_down    = np.linspace(pdata.val_fit - 4*pdata.err_fit, pdata.val_fit - 2*pdata.err_fit, 3)
+            scan_vals_up      = np.linspace(pdata.val_fit + 2*pdata.err_fit, pdata.val_fit + 4*pdata.err_fit, 3)
+            scan_vals         = np.concatenate([scan_vals_down, scan_vals_central, scan_vals_up])
 
             # carry out scan and save results
             results   = []
             cost      = []
             sv_accept = []
-            for sv in tqdm(scan_vals, leave=False):
+            for sv in tqdm(scan_vals, 
+                           desc = 'scanning profiled nuisance parameters',
+                           leave=False
+                           ):
 
                 # set scan value and carry out minimization
                 fit_data._pval_fit[ix] = sv
@@ -117,8 +132,7 @@ if __name__ == '__main__':
                                   method  = 'BFGS',
                                   options = min_options,
                                  )
-
-                
+            
                 sv_accept.append(sv)
                 results.append(result.x)
                 cost.append(result.fun)
@@ -142,6 +156,7 @@ if __name__ == '__main__':
             mask[ix] = True
             fit_data._pval_fit[ix] = params_pre[ix]
 
+
             # process scan data
             results   = np.array(results)
             cost      = np.array(cost)
@@ -157,53 +172,99 @@ if __name__ == '__main__':
             # unpack scan dict
             cost      = scan_dict[pname].costs
             sv_accept = scan_dict[pname].scan_points
+            results   = scan_dict[pname].results
 
-        # fit data to a second order polynomial
-        #mask       = cost >= 0
-        nll_coeff  = np.polyfit(sv_accept, cost, deg=3)
+        cost_nll, cost_np, cost_constraint, cost_bb = [], [], [], []
+        for sv, r in zip(sv_accept, results):
+
+            params       = parameters['val_init'].values.copy()
+            mask[ix]     = False
+            params[ix]   = sv
+            params[mask] = r
+            mask[ix]     = True
+
+            cost_full = fobj(params[mask])
+            bb_penalty = 0
+            for k, v in fit_data._bb_penalty.items():
+                bb_penalty += v.sum()
+
+            cost_bb.append(bb_penalty)
+            cost_nll.append(cost_full - fit_data._np_cost.sum() - bb_penalty)
+            cost_np.append(fit_data._np_cost[ix-n_masked])
+            cost_constraint.append(fit_data._np_cost.sum() - cost_np[-1])
+
+            tqdm.write(f'{cost_nll[-1]}, {cost_constraint[-1]}, {cost_np[-1]}, {cost_bb[-1]}')
+
+        cost_nll, cost_np = np.array(cost_nll), np.array(cost_np)
+        cost_constraint, cost_bb = np.array(cost_constraint), np.array(cost_bb) 
+        cost_nll        -= cost_nll.min()
+        cost_constraint -= cost_constraint.min()
+        cost_bb         -= cost_bb.min()
+
+        # fit profile scan data to a second order polynomial
+        cmask      = cost < 20
+        x_fit      = np.linspace(sv_accept.min(), sv_accept.max(), 1000)
+        nll_coeff  = np.polyfit(sv_accept[cmask], cost[cmask], deg=3)
         nll_poly   = np.poly1d(nll_coeff)
         d_nll_poly = np.polyder(nll_poly, m=2)
         sigma_post = 1./np.sqrt(d_nll_poly(0))
 
-        if params_pre[ix] != 0:
-            err = sigma_post/params_pre[ix]
-        else:
-            err = sigma_post
+        # get non-profiled values of the cost
+        params = parameters['val_fit'].copy()
+        cost_noprofile = []
+        for sv in x_fit:
+            params[pname] = sv
+            cost_obj = fobj(params[fit_data._pmask])
+            cost_noprofile.append(cost_obj)
 
-        #tqdm.write(f'{pname} error: {err:.2f}') 
+        cost_noprofile = np.array(cost_noprofile)
+        cost_noprofile -= cost_noprofile.min()
+
+        # fit profile scan data to a second order polynomial
+        cmask           = cost_noprofile < 20
+        nll_coeff      = np.polyfit(x_fit[cmask], cost_noprofile[cmask], deg=3)
+        nll_poly_nopro = np.poly1d(nll_coeff)
+        d_nll_poly     = np.polyder(nll_poly_nopro, m=2)
+        sigma_nopro    = 1./np.sqrt(d_nll_poly(0))
 
         # output plot
         fig, ax = plt.subplots(1, 1, figsize=(8,8), facecolor='white')
 
-        x_fit = np.linspace(sv_accept[0], sv_accept[-1], 1000)
-        ax.plot(sv_accept, cost, 'ko', label='nll scan')
-        ax.plot(x_fit, nll_poly(x_fit), 'r--', label='quadratic fit')
+        ax.plot(sv_accept, cost, 'ko', label='scan points')
+        ax.plot(sv_accept, cost_nll, 'C3o', label=r'$NLL(\theta)$')
+        ax.plot(sv_accept, cost_bb, 'C2o', label='MC stat.')
+        ax.plot(sv_accept, cost_np, 'C0o', label=r'$\pi(\theta_{i})$')
+        ax.plot(sv_accept, cost_constraint, 'C4o', label=r'$\sum\pi(\theta_{j\neq i})$')
+
+        ax.plot(x_fit, nll_poly(x_fit), 'k--', label='polynomial fit')
+        #ax.plot(x_fit, cost_noprofile, 'C4', label='nll (no profiling)')
 
         x = np.linspace(pdata.val_init - 5*pdata.err_init, pdata.val_init + 5*pdata.err_init, 1000)
-        ax.plot(x, (x - pdata.val_init)**2/(2*pdata.err_init**2), 'C0:', alpha=0.5, label='prefit')
-        ax.plot(x, (x - pdata.val_fit)**2/(2*pdata.err_fit**2), 'C1:', alpha=0.5, label='postfit')
+        ax.plot(x, (x - pdata.val_init)**2/(2*pdata.err_init**2), 'C0:', alpha=1., label='prefit')
+        ax.plot(x, (x - pdata.val_fit)**2/(2*pdata.err_fit**2), 'C1:', alpha=1., label='postfit')
 
         ax.grid()
         ax.legend(loc='upper right')
         ax.set_title(parameters.loc[pname].label)
-        ax.set_ylabel('NLL')
+        ax.set_ylabel('NLL - min(NLL)')
         ax.set_xlabel(r'$\theta$')
         param_string = '\n'.join((
-            r'$\theta_{0} = $' + f'{pdata.val_init:.3f}' + r'$\pm$' + f'{pdata.err_init:.3f}',
-            r'$\hat{\theta} = $'  + f'{pdata.val_fit:.3f}' + r'$\pm$' + f'{sigma_post:.3f}' 
+            r'$\theta_{prefit} = $' + f'{pdata.val_init:.3f}' + r'$\pm$' + f'{pdata.err_init:.3f}',
+            r'${\theta}_{postfit} = $'  + f'{pdata.val_fit:.3f}' + r'$\pm$' + f'{pdata.err_fit:.3f}',
+            r'$\sigma_{{scan}} = {0:.3f}$'.format(sigma_post),
+            r'$\sigma_{{no profile}} = {0:.3f}$'.format(sigma_nopro)
             ))
-        ax.text(0.05, 0.85, param_string, transform=ax.transAxes, 
+        ax.text(0.05, 0.75, param_string, transform=ax.transAxes, fontsize=20,
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.95))
-        ax.set_ylim(0, 1.4*cost.max())
+        ax.set_ylim(0, 10)
 
         if pname in ['beta_e', 'beta_mu', 'beta_tau', 'beta_h']:
             ax.set_xlim(0.9*sv_accept[0], 1.1*sv_accept[-1])
 
-        plt.savefig(f'plots/nll_scans/{pname}.png')
+        plt.savefig(f'plots/nll_scans/{timestamp}/{pname}.png')
         fig.clear()
         plt.close()
 
-    outfile = open('local_data/nll_scan_data.pkl', 'wb')
+    outfile = open('local_data/nll_scans/timestamp.pkl', 'wb')
     pickle.dump(scan_dict, outfile)
-
 

@@ -1,4 +1,4 @@
-id,decay,alt_label,fancy_label,colors,dileptonic,semileptonic,hadronic,ee,mumu,emu,etau,mutau,e4j,mu4j
+id,decay,alt_label,fancy_label,colors,dileptonic,semileptonic,hadronic,ee,mumu,emu,etau,mutau,ejet,mujet
 1,we_we,$ee$,$\sf t\bar{t}/tW/WW\rightarrow ee$,#3182bd,1,0,0,1,0,0,0,0,0,0
 2,wmu_wmu,$\mu\mu$,$\sf t\bar{t}/tW/WW\rightarrow \mu\mu$,#e6550d,1,0,0,0,1,0,0,0,0,0
 3,we_wmu,$e\mu$,$\sf t\bar{t}/tW/WW\rightarrow e\mu$,#31a354,1,0,0,0,0,1,0,0,0,0

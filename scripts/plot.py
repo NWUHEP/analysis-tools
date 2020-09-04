@@ -36,8 +36,8 @@ if __name__ == '__main__':
     selection = args.selection
     data_labels  = ['muon', 'electron']
     model_labels = ['diboson', 'ww', 'zjets_alt', 'wjets', 't', 'ttbar']
-    if selection in ['mu4j', 'e4j']: 
-        model_labels = ['fakes'] + model_labels
+    if selection in ['mujet', 'ejet']:
+        model_labels = ['gjets', 'fakes', 'fakes_mc'] + model_labels
     elif selection in ['emu', 'mutau', 'etau']:
         model_labels = ['fakes_ss'] + model_labels
 
@@ -57,10 +57,9 @@ if __name__ == '__main__':
                 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_tag',
                ]
 
-    if selection not in ['e4j', 'mu4j']:
+    if selection not in ['ejet', 'mujet']:
         features.extend([
                          'lead_lepton_pt', 'trailing_lepton_pt',
-                         'lead_lepton_d0', 'trailing_lepton_d0',
                          'lepton2_pt', 'lepton2_eta', 'lepton2_phi', 'lepton2_mt', 
                          'lepton2_iso', 'lepton2_reliso', 
                          'lepton1_d0', 'lepton1_dz', 
@@ -76,6 +75,8 @@ if __name__ == '__main__':
                          ])
         if selection in ['etau', 'mutau']:
             features.append('tau_decay_mode')
+        else:
+            features.extend(['lead_lepton_d0', 'trailing_lepton_d0'])
 
     # cuts for relevant categories
     selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
@@ -93,7 +94,8 @@ if __name__ == '__main__':
         cuts['inclusive'] = f'({pt.cuts[selection]}) and n_jets >= 2'# and (dilepton1_mass < 81 or dilepton1_mass > 101)'
     elif selection in ['etau', 'mutau']:
         cuts['inclusive'] = f'({pt.cuts[selection]}) and (n_jets >= 0)'
-    elif selection in ['e4j', 'mu4j']:
+    elif selection in ['ejet', 'mujet']:
+        #cuts['inclusive'] = f'({pt.cuts[selection]}) and ((n_jets >= 4 and n_bjets >= 1) or (n_jets == 3 and n_bjets >= 2))'
         cuts['inclusive'] = f'({pt.cuts[selection]}) and (n_jets >= 4 and n_bjets >= 1)'
 
 
@@ -102,13 +104,20 @@ if __name__ == '__main__':
     pt.make_directory(output_path, clear=True)
     pt.set_default_style()
     data_manager = pt.DataManager(input_dir     = f'{args.input}/{args.selection}_{args.period}',
-                                  dataset_names = [d for l in data_labels+model_labels for d in pt.dataset_dict[l]],
+                                  dataset_names = [d for l in data_labels + model_labels for d in pt.dataset_dict[l]],
                                   selection     = selection,
                                   period        = args.period,
                                   scale         = args.lumi,
                                   cuts          = cuts['inclusive']
                                  )
-    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=cuts, do_string=True)
+    if selection in ['ejet', 'mujet']:
+        #print(data_manager._dataframes['fakes']['weight'].sum())
+        data_manager.calibrate_fakes()
+        #print(data_manager._dataframes['fakes']['weight'].sum())
+        model_labels.remove('fakes_mc')
+
+    ### make a table with yields for each category ###
+    table = data_manager.print_yields(dataset_names=['data'] + model_labels, conditions=cuts, do_string=False)
     table.transpose().to_latex(f'{output_path}/yields_{selection}.tex', escape=False)
     table.transpose().to_csv(f'{output_path}/yields_{selection}.csv')
 
@@ -131,8 +140,8 @@ if __name__ == '__main__':
     conditions.append(else_condition)
 
     bg_labels = ['wjets', 'diboson', 'zjets_alt']
-    if selection in ['mu4j', 'e4j']: 
-        bg_labels = ['fakes'] + bg_labels
+    if selection in ['mujet', 'ejet']: 
+        bg_labels = ['gjets', 'fakes'] + bg_labels
     elif selection in ['emu', 'mutau', 'etau']:
         bg_labels = ['fakes_ss'] + bg_labels
 
@@ -143,7 +152,7 @@ if __name__ == '__main__':
         inclusive_cut = 'n_jets >= 2' # and (dilepton1_mass < 81 or dilepton1_mass > 101)'
     elif selection in ['etau', 'mutau']:
         inclusive_cut = 'n_jets >= 0'
-    elif selection in ['e4j', 'mu4j']:
+    elif selection in ['ejet', 'mujet']:
         inclusive_cut = 'n_jets >= 4 and n_bjets >= 1'
 
     colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']

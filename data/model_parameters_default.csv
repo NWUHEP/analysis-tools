@@ -11,7 +11,7 @@ xs_diboson,VV norm. (non-WW),1,0.1,norm,1,lognorm,norm,normalization,0,0,0,0,1,0
 xs_ww,WW norm.,1,0.1,norm,1,lognorm,norm,normalization,0,0,0,0,0,1,0,1,1,1,1,1,1,1
 xs_t,tW norm.,1,0.1,norm,1,lognorm,norm,normalization,0,1,0,0,0,0,0,1,1,1,1,1,1,1
 xs_wjets,W norm.,1,0.1,norm,1,lognorm,norm,normalization,0,0,0,1,0,0,0,1,1,1,1,1,1,1
-e_fakes,"QCD norm (e, iso)",1,0.2,norm,0,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,1,0,1,0
+e_fakes,"QCD norm (e, iso)",1,0.2,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,1,0
 mu_fakes,"QCD norm ($\mu$, iso)",1,0.2,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,0,0,0,0,0,1
 e_fakes_ss,"QCD norm (e, ss)",1,0.2,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,1,0,1,0,0,0
 mu_fakes_ss,"QCD norm ($\mu$, ss)",1,0.2,norm,1,lognorm,norm,QCD estimate,0,0,0,0,0,0,1,0,1,0,0,1,0,0
@@ -70,13 +70,12 @@ eff_mu_6,$\epsilon_{\mu}$ ($50 \leq p_{T} < 65$),0,1,shape,1,gaussian,reco_lepto
 eff_mu_7,$\epsilon_{\mu}$ ($p_{T} \geq 65$),0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 escale_mu,$\mu$ ES,0,1,shape,1,gaussian,reco_lepton,$\ell$ reco,1,1,1,1,0,1,0,0,1,1,0,0,0,1
 pileup,pileup,0,1,shape,1,gaussian,misc,misc.,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-isr,ISR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-fsr,FSR,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-hdamp,ME-PS,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
-tune,UE/MPI,0,1,shape,0,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+isr,ISR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+fsr,FSR,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+hdamp,ME-PS,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
+tune,UE/MPI,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 ww_scale,WW $p_{T}$ (scale),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
 ww_resum,WW $p_{T}$ (resum),0,1,shape,1,gaussian,misc,misc.,0,0,0,0,0,1,0,0,1,0,0,0,0,0
-z_pt,Z $p_{T}$,0,1,shape,0,gaussian,misc,misc.,0,0,1,0,0,0,0,1,1,1,1,1,0,0
 top_pt,t $p_{T}$,0,1,shape,1,gaussian,misc,misc.,1,0,0,0,0,0,0,1,1,1,1,1,1,1
 btag_bfragmentation,b-tag: b frag.,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 btag_btempcorr,b-tag: b templ. corr.,0,1,shape,1,gaussian,btag,b tag,1,1,1,1,0,1,0,1,1,1,1,1,1,1
@@ -107,7 +106,6 @@ jes_pileup_pt_bb,JES: pileup $p_{T}$ (bb),0,1,shape,1,gaussian,jes,JES/JER,1,1,1
 jes_pileup_pt_ec1,JES: pileup $p_{T}$ (ec),0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_pileup_pt_ref,JES: pileup $p_{T}$ (ref),0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_relative_bal,JES: rel. balance,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
-jes_relative_jer_ec1,JES: rel. JER (ec),0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_relative_pt_bb,JES: rel. $p_{T}$ (bb),0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_relative_pt_ec1,JES: rel. $p_{T}$ (ec),0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1
 jes_relative_stat_fsr,JES: rel. stat. FSR,0,1,shape,1,gaussian,jes,JES/JER,1,1,1,1,0,1,0,1,1,1,1,1,1,1

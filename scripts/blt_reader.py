@@ -106,7 +106,7 @@ def calculate_zeta_vars(lep1_p4, lep2_p4, met_p2):
     
     return p_vis_zeta, p_miss_zeta
 
-def fill_event_vars(tree, dataset):
+def fill_event_vars(tree, dataset, selection):
 
     evt_dict = dict(
                     weight         = tree.eventWeight,
@@ -132,53 +132,56 @@ def fill_event_vars(tree, dataset):
                     )
 
     # factorized JEC systematic
-    if tree.runNumber == 1: # checks if dataset is real data or MC
-        syst_dict = dict(
-                        # jet counting for systematics
-                        n_jets_jer_up       = tree.nJetsJERUp,
-                        n_jets_jer_down     = tree.nJetsJERDown,
-                        n_bjets_jer_up      = tree.nBJetsJERUp,
-                        n_bjets_jer_down    = tree.nBJetsJERDown,
-                        n_bjets_ctag_up     = tree.nBJetsCTagUp,
-                        n_bjets_ctag_down   = tree.nBJetsCTagDown,
-                        n_bjets_mistag_up   = tree.nBJetsMistagUp,
-                        n_bjets_mistag_down = tree.nBJetsMistagDown,
+    if tree.runNumber == 1:
+        if selection.split('_')[-1] != 'fakes': # checks if dataset is real data or MC
+            syst_dict = dict(
+                            # jet counting for systematics
+                            n_jets_jer_up       = tree.nJetsJERUp,
+                            n_jets_jer_down     = tree.nJetsJERDown,
+                            n_bjets_jer_up      = tree.nBJetsJERUp,
+                            n_bjets_jer_down    = tree.nBJetsJERDown,
+                            n_bjets_ctag_up     = tree.nBJetsCTagUp,
+                            n_bjets_ctag_down   = tree.nBJetsCTagDown,
+                            n_bjets_mistag_up   = tree.nBJetsMistagUp,
+                            n_bjets_mistag_down = tree.nBJetsMistagDown,
 
-                        # lepton systematics
-                        lepton1_reco_weight = tree.leptonOneRecoWeight,
-                        lepton1_reco_var    = tree.leptonOneRecoVar,
-                        lepton1_id_weight   = tree.leptonOneIDWeight,
-                        lepton1_id_var      = tree.leptonOneIDVar,
+                            # lepton systematics
+                            lepton1_reco_weight = tree.leptonOneRecoWeight,
+                            lepton1_reco_var    = tree.leptonOneRecoVar,
+                            lepton1_id_weight   = tree.leptonOneIDWeight,
+                            lepton1_id_var      = tree.leptonOneIDVar,
 
-                        trigger_weight      = tree.triggerWeight,
-                        pileup_weight       = tree.puWeight,
-                        top_pt_weight       = tree.topPtWeight,
-                        z_pt_weight         = tree.zPtWeight,
-                        ww_pt_weight        = tree.wwPtWeight,
-                        #event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
+                            trigger_weight      = tree.triggerWeight,
+                            pileup_weight       = tree.puWeight,
+                            top_pt_weight       = tree.topPtWeight,
+                            z_pt_weight         = tree.zPtWeight,
+                            ww_pt_weight        = tree.wwPtWeight,
+                            #event_weight        = tree.eventWeight, #*tree.wwPtWeight*tree.zPtWeight,
 
-                        ww_pt_scale_up   = tree.wwPtScaleUp,
-                        ww_pt_scale_down = tree.wwPtScaleDown,
-                        ww_pt_resum_up   = tree.wwPtResumUp,
-                        ww_pt_resum_down = tree.wwPtResumDown,
-                        trigger_var      = tree.triggerVar,
-                       )
+                            ww_pt_scale_up   = tree.wwPtScaleUp,
+                            ww_pt_scale_down = tree.wwPtScaleDown,
+                            ww_pt_resum_up   = tree.wwPtResumUp,
+                            ww_pt_resum_down = tree.wwPtResumDown,
+                            trigger_var      = tree.triggerVar,
+                           )
 
-        if tree.nElectrons + tree.nMuons + tree.nTaus > 1:
-            syst_dict['lepton2_reco_weight'] = tree.leptonTwoRecoWeight
-            syst_dict['lepton2_reco_var']    = tree.leptonTwoRecoVar
-            syst_dict['lepton2_id_weight']   = tree.leptonTwoIDWeight
-            syst_dict['lepton2_id_var']      = tree.leptonTwoIDVar
+            if tree.nElectrons + tree.nMuons + tree.nTaus > 1:
+                syst_dict['lepton2_reco_weight'] = tree.leptonTwoRecoWeight
+                syst_dict['lepton2_reco_var']    = tree.leptonTwoRecoVar
+                syst_dict['lepton2_id_weight']   = tree.leptonTwoIDWeight
+                syst_dict['lepton2_id_var']      = tree.leptonTwoIDVar
 
-        for i, n in enumerate(jec_source_names):
-            syst_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
-            syst_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
-            syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
-            syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
+            for i, n in enumerate(jec_source_names):
+                syst_dict[f'n_jets_jes_{n}_up']    = tree.nJetsJESUp[i]
+                syst_dict[f'n_jets_jes_{n}_down']  = tree.nJetsJESDown[i]
+                syst_dict[f'n_bjets_jes_{n}_up']   = tree.nBJetsJESUp[i]
+                syst_dict[f'n_bjets_jes_{n}_down'] = tree.nBJetsJESDown[i]
 
-        for i, n in enumerate(btag_source_names):
-            syst_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
-            syst_dict[f'n_bjets_btag_{n}_down'] = tree.nBJetsBTagDown[i]
+            for i, n in enumerate(btag_source_names):
+                syst_dict[f'n_bjets_btag_{n}_up']   = tree.nBJetsBTagUp[i]
+                syst_dict[f'n_bjets_btag_{n}_down'] = tree.nBJetsBTagDown[i]
+        else:
+            syst_dict = dict()
 
         # generator weights and systematics
         syst_dict['gen_weight'] = tree.genWeight
@@ -227,7 +230,7 @@ def fill_lepton_vars(tree, selection):
                        lepton1_mother   = tree.leptonOneMother,
                        )
 
-    if tree.nElectrons + tree.nMuons + tree.nTaus > 1 and selection not in ['e4j_fakes', 'mu4j_fakes']:
+    if tree.nElectrons + tree.nMuons + tree.nTaus > 1 and selection not in ['ejet_fakes', 'mujet_fakes']:
         lep2 = tree.leptonTwoP4
         lep2_mt, lep2_met_dphi = calculate_mt(lep2, met_p2)
         dilepton1  = lep1 + lep2
@@ -355,7 +358,7 @@ def fill_jet_vars(tree, selection):
                      dijet_pt_over_m = dijet.Pt()/dijet.M() if dijet.M() > 0 else -1,
                  )
 
-    if selection in ['e4j', 'mu4j', 'e4j_fakes', 'mu4j_fakes']:
+    if selection in ['ejet', 'mujet', 'ejet_fakes', 'mujet_fakes']:
         jet3, jet4 = tree.jetThreeP4, tree.jetFourP4
         out_dict['jet3_pt']     = jet3.Pt()
         out_dict['jet3_eta']    = jet3.Eta()
@@ -507,13 +510,15 @@ def fill_ntuple(tree, selection, dataset, event_range=None, job_id=(1, 1, 1)):
                   ):
         tree.GetEntry(i)
         entry = {}
-        entry.update(fill_event_vars(tree, dataset))
+        entry.update(fill_event_vars(tree, dataset, selection))
         entry.update(fill_lepton_vars(tree, selection))
         entry.update(fill_jet_vars(tree, selection))
 
-        if selection in ['ee', 'emu', 'etau', 'e4j']:
+        if selection in ['ee', 'emu', 'etau', 'ejet']:
             entry['el_trigger_syst_tag']   = tree.eleTriggerVarTagSyst
             entry['el_trigger_syst_probe'] = tree.eleTriggerVarProbeSyst
+            entry['el_prefiring_weight']   = tree.prefiringWeight
+            entry['el_prefiring_var']      = tree.prefiringVar
 
         #if selection in ['ee', 'mumu', 'emu', 'etau', 'mutau', 'etau_fakes', 'mutau_fakes']:
         #    entry.update(fill_jet_lepton_vars(tree))
@@ -609,16 +614,17 @@ if __name__ == '__main__':
 
 
     ### Configuration ###
-    #selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mu4j', 'e4j']
-    selections  = ['mutau', 'etau', 'mu4j', 'e4j']
-    do_data     = True
-    do_mc       = True
-    do_syst     = False
+    selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mujet', 'ejet']
+    #selections  = ['ee', 'emu', 'etau', 'ejet']
+    do_data     = False
+    do_mc       = False
+    do_syst     = True
     period      = 2016
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets']
+    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets', 'gjets', 'qcd']
+    #mc_labels    = ['qcd']
 
     dataset_list = []
     if do_data:
@@ -646,7 +652,7 @@ if __name__ == '__main__':
     pool = Pool(processes = min(12, args.nprocesses))
     for selection in selections:
         output_path = f'{args.output}/{selection}_{period}'
-        pt.make_directory(output_path, clear=(not args.clear))
+        pt.make_directory(output_path, clear=args.clear)
         event_count = {}
 
         for dataset in dataset_list:
@@ -654,6 +660,7 @@ if __name__ == '__main__':
             # get the root file and check that the tree exists
             root_file = r.TFile(args.input)
             if not root_file.Get(selection).GetListOfKeys().Contains(f'bltTree_{dataset}'):
+                print(f'{dataset} not found for selection {selection}_fakes.')
                 continue
 
             # get the tree and make sure that it's not empty
@@ -693,18 +700,23 @@ if __name__ == '__main__':
                     break
                 else:
                     result  = pool.apply_async(pickle_ntuple, args = mp_args)
+
             #print(result.get(timeout=1))
 
         # run over isolation inverted selections (fakes)
-        if selection in ['mutau', 'mu4j', 'etau', 'e4j'] and do_data:
-            #for dataset in [d for l in data_labels for d in pt.dataset_dict[l]]:
+        if selection in ['etau', 'mutau', 'ejet', 'mujet'] and not do_syst:
             for dataset in dataset_list:
+                #print(selection, dataset, end=' ')
                 root_file = r.TFile(args.input)
+                if not root_file.Get(f'{selection}_fakes').GetListOfKeys().Contains(f'bltTree_{dataset}'):
+                    print(f'{dataset} not found for selection {selection}_fakes.')
+                    continue
+
                 tree_name = f'{selection}_fakes/bltTree_{dataset}'
                 tree      = root_file.Get(tree_name)
                 n_entries = tree.GetEntriesFast()
+                #print(n_entries)
 
-                #print(selection, dataset, n_entries)
                 if n_entries == 0: 
                     continue
 
@@ -716,6 +728,7 @@ if __name__ == '__main__':
                 else:
                     print(f'Could not find dataset {dataset} in root file...')
                     continue
+
                 root_file.Close()
 
                 # split dataset up according to configuration

@@ -100,18 +100,18 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
                              weights=df.query(down_condition).weight
                              )
 
-    print(f'--{sys_type}--')
-    print(f'--"{jet_cut}"--')
-    print('up', h_up.sum())
-    print('nominal', h_nominal.sum())
-    print('down', h_down.sum())
+    #print(f'--{sys_type}--')
+    #print(f'--"{jet_cut}"--')
+    #print('up', h_up.sum())
+    #print('nominal', h_nominal.sum())
+    #print('down', h_down.sum())
 
     # average over bin-by-bin variations for now
     h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
     h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
 
-    print('up (averaged)', h_up.sum())
-    print('down (averaged)', h_down.sum())
+    #print('up (averaged)', h_up.sum())
+    #print('down (averaged)', h_down.sum())
     
     return h_up, h_down
 
@@ -140,7 +140,7 @@ def ttbar_systematics(dm, df_syst, cut, decay_mode, feature, binning, smooth=Non
             h_up   = h_nominal + (h_up - h_nominal)/np.sqrt(2)
             h_down = h_nominal + (h_down - h_nominal)/np.sqrt(2)
 
-            if dm._selection in ['etau', 'mutau']:
+            if dm.selection in ['etau', 'mutau']:
                 # corrections for FSR sample
                 k_down, k_up = 1., 1.
                 if decay_mode in [7, 8, 12, 15]: #real taus
@@ -216,7 +216,7 @@ class SystematicTemplateGenerator():
         df: dataframe for target dataset without the jet cuts applied
         '''
 
-        jet_syst_list = [f'jes_{n}' for n in jec_source_names if 'subtotal' in n]
+        jet_syst_list = [f'jes_{n}' for n in jec_source_names]
         jet_syst_list += ['jer']
         for syst_type in jet_syst_list:
             h_up, h_down = jet_scale(df, self._feature, self._binning, syst_type, jet_cut)
@@ -271,7 +271,7 @@ class SystematicTemplateGenerator():
                 self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
 
         
-        elif self._selection in ['etau', 'e4j']:
+        elif self._selection in ['etau', 'ejet']:
 
             ## reco scale factor
             w_nominal = df.weight/df['lepton1_reco_weight']
@@ -281,7 +281,7 @@ class SystematicTemplateGenerator():
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self._df_sys['eff_reco_e_up'], self._df_sys['eff_reco_e_down'] = h_up, h_down
 
-            if self._selection == 'e4j':
+            if self._selection == 'ejet':
                 # electron pt-dependent efficiency systematic
                 pt_bins = [30, 35, 40, 45, 50, 60, np.inf]
                 for ipt, pt_bin in enumerate(pt_bins[:-1]):
@@ -333,7 +333,7 @@ class SystematicTemplateGenerator():
                 h_up, h_down = conditional_scaling(df, self._binning, scale, mask, feature, type='weight')
                 self._df_sys[f'eff_e_{ipt}_up'], self._df_sys[f'eff_e_{ipt}_down'] = h_up, h_down
 
-        if self._selection != 'e4j':
+        if self._selection != 'ejet':
             ## tag systematic
             w_nominal = df.weight/df['trigger_weight']
             w_up      = w_nominal*(df['trigger_weight'] + df['el_trigger_syst_tag'])
@@ -350,9 +350,16 @@ class SystematicTemplateGenerator():
             h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
             self._df_sys['trigger_e_probe_up'], self._df_sys['trigger_e_probe_down'] = h_up, h_down
 
+        # electron prefiring condition
+        w_up   = df['weight']*(1 + np.sqrt(df['el_prefiring_var']))
+        w_down = df['weight']*(1 - np.sqrt(df['el_prefiring_var']))
+        h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
+        h_down, _ = np.histogram(df[feature], bins=bins, weights=w_down)
+        self._df_sys['e_prefire_up'], self._df_sys['e_prefire_down'] = h_up, h_down
+
         ## electron energy scale
         scale = 0.001 # need reference
-        if self._selection in ['ee', 'e4j']:
+        if self._selection in ['ee', 'ejet']:
             h_up, h_down = energy_scale_morphing(bins, self._h, scale)
 
         elif self._selection == 'emu':
@@ -405,7 +412,7 @@ class SystematicTemplateGenerator():
                 self._df_sys[f'eff_mu_{ipt}_up'], self._df_sys[f'eff_mu_{ipt}_down'] = h_up, h_down
 
 
-        elif self._selection in ['mutau', 'mu4j']:
+        elif self._selection in ['mutau', 'mujet']:
             ## iso scale factor (called "reco" in ntuples)
             w_up      = df['weight']*(1 + np.sqrt(df['lepton1_reco_var'])/df['lepton1_reco_weight'])
             w_down    = df['weight']*(1 - np.sqrt(df['lepton1_reco_var'])/df['lepton1_reco_weight'])
@@ -454,7 +461,7 @@ class SystematicTemplateGenerator():
 
         ## muon energy scale
         scale = 0.001 # need reference
-        if self._selection in ['mumu', 'mu4j']:
+        if self._selection in ['mumu', 'mujet']:
             h_up, h_down = energy_scale_morphing(bins, self._h, scale)
 
         elif self._selection == 'emu':
@@ -532,22 +539,25 @@ class SystematicTemplateGenerator():
         self._df_sys[f'eff_tau_up'], self._df_sys[f'eff_tau_down'] = h_up, h_down
 
         ## tau energy scale
-        for decay_mode in [0, 1, 10]:
-            # varies individual taus
-            scale = 0.012
-            #h_up, h_down = conditional_scaling(df, self._binning, 0.012, df.tau_decay_mode == decay_mode, 'lepton2_pt')
+        scale = 0.012
+        h_up, h_down = energy_scale_morphing(self._binning, self._h, scale)
+        self._df_sys[f'escale_tau_up'], self._df_sys[f'escale_tau_down'] = h_up, h_down
 
-            dm_mask      = df.tau_decay_mode == decay_mode
-            pt_masked    = df.loc[dm_mask, 'lepton2_pt'].values
-            h_masked, _  = np.histogram(pt_masked, bins=self._binning, weights=df.weight[dm_mask])
-            h_up, h_down = energy_scale_morphing(self._binning, h_masked, scale)
+        #for decay_mode in [0, 1, 10]:
+        #    # varies individual taus
+        #    scale = 0.012
 
-            pt_antimasked   = df.loc[~dm_mask, 'lepton2_pt'].values
-            h_antimasked, _ = np.histogram(pt_antimasked, bins=self._binning, weights=df.weight[~dm_mask])
-            h_up += h_antimasked
-            h_down += h_antimasked
+        #    dm_mask      = df.tau_decay_mode == decay_mode
+        #    pt_masked    = df.loc[dm_mask, 'lepton2_pt'].values
+        #    h_masked, _  = np.histogram(pt_masked, bins=self._binning, weights=df.weight[dm_mask])
+        #    h_up, h_down = energy_scale_morphing(self._binning, h_masked, scale)
 
-            self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up, h_down
+        #    pt_antimasked   = df.loc[~dm_mask, 'lepton2_pt'].values
+        #    h_antimasked, _ = np.histogram(pt_antimasked, bins=self._binning, weights=df.weight[~dm_mask])
+        #    h_up += h_antimasked
+        #    h_down += h_antimasked
+
+        #    self._df_sys[f'escale_tau_{decay_mode}_up'], self._df_sys[f'escale_tau_{decay_mode}_down'] = h_up, h_down
 
     def misc_systematics(self, df):
         '''

@@ -77,10 +77,10 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
     # apply jet cut for all other systematics
     df = df.query(cat_items.jet_cut)
     syst_gen.misc_systematics(df)
-    if selection in ['mumu', 'emu', 'mutau', 'mu4j']:
+    if selection in ['mumu', 'emu', 'mutau', 'mujet']:
         syst_gen.muon_systematics(df)
 
-    if selection in ['ee', 'emu', 'etau', 'e4j']:
+    if selection in ['ee', 'emu', 'etau', 'ejet']:
         syst_gen.electron_systematics(df)
 
     # tau misid 
@@ -93,7 +93,7 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
         elif decay_mode in [1, 3, 6, 10, 11, 13]:
             syst_gen.tau_e_misid_systematics(df)
 
-    #elif selection in ['e4j', 'mu4j']: # add (1 - eff) for l+jet categories
+    #elif selection in ['ejet', 'mujet']: # add (1 - eff) for l+jet categories
     #    if decay_mode in [7, 8, 12, 15]:
     #        syst_gen.tau_systematics(df)
         
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
     # features to keep in memory
     feature_list = [
-                    'lepton1_pt', 'lepton2_pt',
+                    'lepton1_pt', 'lepton1_eta', 'lepton2_pt',
                     'lead_lepton_pt','trailing_lepton_pt',
                     'lead_lepton_flavor', 'trailing_lepton_flavor',
                     'dilepton1_mass', 'dilepton1_delta_phi', 'lepton1_mt',
@@ -162,6 +162,7 @@ if __name__ == '__main__':
                     'lepton1_id_var', 'lepton2_id_var',
                     'lepton1_reco_var', 'lepton2_reco_var',
                     'trigger_var', 'el_trigger_syst_tag', 'el_trigger_syst_probe',
+                    'el_prefiring_var',
 
                     'n_jets_jer_up', 'n_jets_jer_down',
                     'n_bjets_jer_up', 'n_bjets_jer_down',
@@ -176,8 +177,8 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_up' for n in btag_source_names]
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
-    #selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'e4j', 'mu4j']
-    selections = ['ee']
+    selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'ejet', 'mujet']
+    #selections = ['ee', 'emu', 'etau', 'ejet']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -193,7 +194,7 @@ if __name__ == '__main__':
                             selection     = selection,
                             scale         = 35.9e3,
                             cuts          = pt.cuts[selection],
-                            features      = feature_list[:11]
+                            features      = feature_list[:12]
                            )
         df_data = dm.get_dataframe('data')
 
@@ -209,6 +210,12 @@ if __name__ == '__main__':
                             template_mode = True
                            )
 
+        if selection in ['ejet', 'mujet']:
+            dm.calibrate_fakes()
+            labels.remove('fakes_mc')
+
+        break()
+
         data = dict()
         selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
         for category in tqdm(selection_categories,
@@ -216,6 +223,7 @@ if __name__ == '__main__':
                              unit_scale = True,
                              ncols      = 75,
                             ):
+
             cat_items = pt.categories[category]
             if cat_items.cut is None:
                 full_cut = f'{cat_items.jet_cut}'
@@ -307,7 +315,7 @@ if __name__ == '__main__':
                                'ttbar_inclusive_tuneup_ext1', 'ttbar_inclusive_tunedown_ext1',
                               ]
 
-        dm = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics_new/{selection}_2016',
+        dm = pt.DataManager(input_dir     = f'local_data/flatuples/test_08242020/{selection}_2016',
                             dataset_names = datasets_ttbar_syst,
                             selection     = selection,
                             scale         = 35.9e3,

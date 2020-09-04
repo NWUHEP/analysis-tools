@@ -4,6 +4,7 @@
 
 import os
 from collections import namedtuple
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -37,45 +38,55 @@ dataset_dict = dict(
                                  'z3jets_m-50', 'z3jets_m-10to50',
                                  'z4jets_m-50', 'z4jets_m-10to50'
                                  ],
-                    qcd       = ['qcd_ht100to200', 'qcd_ht200to300', 'qcd_ht300to500',
-                                 'qcd_ht500to1000', 'qcd_ht1000to1500', 'qcd_ht1500to2000',
-                                 'qcd_ht2000'
+                    gjets     = ['gjets_ht40to100', 'gjets_ht100to200', 'gjets_ht200to400', 
+                                 'gjets_ht400to600', 'gjets_ht600toinf'
+                                 ], 
+                    qcd       = ['qcd_ht50to100', 'qcd_ht100to200', 'qcd_ht200to300', 
+                                 'qcd_ht300to500', 'qcd_ht500to700', 'qcd_ht1000to1500', 
+                                 'qcd_ht1500to2000', 'qcd_ht2000'
                                  ],
                     ww        = ['ww_qq', 'ww_gg'],
                     diboson   = ['wz_2l2q', 'wz_3lnu', 'zz_2l2q'], #'zz_4l',
                     fakes     = ['muon_2016B_fakes', 'muon_2016C_fakes', 'muon_2016D_fakes',
                                  'muon_2016E_fakes', 'muon_2016F_fakes', 'muon_2016G_fakes',
-                                 'muon_2016H_fakes'
+                                 'muon_2016H_fakes',
                                  'electron_2016B_fakes', 'electron_2016C_fakes', 'electron_2016D_fakes', 
                                  'electron_2016E_fakes', 'electron_2016F_fakes', 'electron_2016G_fakes', 
-                                 'electron_2016H_fakes'
+                                 'electron_2016H_fakes',
                                  ],
+                    fakes_mc  = ['ttbar_inclusive_fakes',
+                                 't_tw_fakes', 'tbar_tw_fakes',
+                                 'zjets_m-10to50_alt_fakes', 'zjets_m-50_alt_fakes', 
+                                 'w1jets_fakes', 'w2jets_fakes', 'w3jets_fakes', 'w4jets_fakes',
+                                 'gjets_ht40to100_fakes', 'gjets_ht100to200_fakes', 'gjets_ht200to400_fakes', 
+                                 'gjets_ht400to600_fakes', 'gjets_ht600toinf_fakes'
+                                ],
                     fakes_ss  = ['fakes_ss']
                    )
 
 selection_dataset_dict = dict(
-                              ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
-                              mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
-                              emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
-                              etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
-                              mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
-                              e4j   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
-                              mu4j  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes'],
+                               ee    = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
+                               mumu  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson'],
+                               emu   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                               etau  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                               mutau = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'fakes_ss'],
+                               ejet   = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'gjets', 'fakes', 'fakes_mc'],
+                               mujet  = ['ttbar', 't', 'zjets_alt', 'wjets', 'ww', 'diboson', 'gjets', 'fakes', 'fakes_mc'],
                               )
 
 cuts = dict(
-            ee    = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
+            ee    = 'n_electrons == 2 and trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12', 
-            mumu  = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
+            mumu  = 'n_muons == 2 and trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 10 \
                      and dilepton1_mass > 12',
-            emu   = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 20 \
+            emu   = 'n_electrons == 1 and n_muons == 1 and trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 10 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            etau  = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
+            etau  = 'n_electrons == 1 and n_taus == 1 and trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 30 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            mutau = 'trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
+            mutau = 'n_muons == 1 and n_taus == 1 and trigger_status == 1 and lepton1_q != lepton2_q and lepton1_pt > 25 and lepton2_pt > 20 \
                      and dilepton1_mass > 12',
-            e4j   = 'trigger_status == 1 and lepton1_pt > 30',
-            mu4j  = 'trigger_status == 1 and lepton1_pt > 25',
+            ejet   = 'n_electrons == 1 and trigger_status == 1 and lepton1_pt > 30',
+            mujet  = 'n_muons == 1 and trigger_status == 1 and lepton1_pt > 25',
             )
 
 fancy_labels = dict(
@@ -84,52 +95,58 @@ fancy_labels = dict(
                     emu   = [r'$\sf p_{T,trailing}$', r'$\sf e\mu$'],
                     mutau = [r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$'],
                     etau  = [r'$\sf p_{T,\tau}$', r'$\sf e\tau$'],
-                    mu4j  = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
-                    e4j   = [r'$\sf p_{T,e}$', r'$\sf e+jets$'],
+                    mujet  = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
+                    ejet   = [r'$\sf p_{T,e}$', r'$\sf e+jets$'],
                     )
-features = dict(
-                mumu  = 'lepton2_pt', # trailing muon pt
-                ee    = 'lepton2_pt', # trailing electron pt
-                emu   = 'trailing_lepton_pt', # muon or electron pt
-                mutau = 'lepton2_pt', # tau pt
-                etau  = 'lepton2_pt', # tau pt
-                mu4j  = 'lepton1_pt', # muon pt
-                e4j   = 'lepton1_pt', # electron pt
-                )
+fit_features = dict(
+                    mumu  = 'lepton2_pt', # trailing muon pt
+                    ee    = 'lepton2_pt', # trailing electron pt
+                    emu   = 'trailing_lepton_pt', # muon or electron pt
+                    mutau = 'lepton2_pt', # tau pt
+                    etau  = 'lepton2_pt', # tau pt
+                    mujet  = 'lepton1_pt', # muon pt
+                    ejet   = 'lepton1_pt', # electron pt
+                   )
 # WIP
-tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 90)'
-               #and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
+tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
 Category = namedtuple('Category', ['cut', 'jet_cut', 'selections', 'label', 'njets'])
 categories = dict(
-                  #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} = 1$'),
+                  #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'ejet', 'mujet'], '$N_{j} \geq 2, N_{b} = 1$'),
                   #cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
-                  #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'e4j', 'mu4j'], '$N_{j} \geq 2, N_{b} \geq 2$'),
+                  #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'ejet', 'mujet'], '$N_{j} \geq 2, N_{b} \geq 2$'),
                   #cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
 
-                  cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau', 'ee', 'mumu', 'emu'], '$N_{j} \geq 2, N_{b} = 0$', 2),
+                  cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau', 'ee', 'mumu', 'emu'], r'$N_{j} \geq 2, N_{b} = 0$', 2),
 
-                  cat_eq0_eq0   = Category(tau_dy_cut, 'n_jets == 0 and n_bjets == 0', ['etau', 'mutau'], '$N_{j} = 0, N_{b} = 0$, W veto',       0),
-                  cat_eq1_eq0   = Category(tau_dy_cut, 'n_jets == 1 and n_bjets == 0', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 0$, W veto',       1),
-                  cat_eq1_eq1   = Category(None,       'n_jets == 1 and n_bjets == 1', ['etau', 'mutau'], '$N_{j} = 1, N_{b} = 1$',               1),
-                  cat_eq2_eq1   = Category(None,       'n_jets == 2 and n_bjets == 1', ['etau', 'mutau'], '$N_{j} = 2, N_{b} = 1$',               2),
-                  cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} = 1$',            3),
-                  cat_eq2_gt2   = Category(None,       'n_jets == 2 and n_bjets >= 2', ['etau', 'mutau'], '$N_{j} = 2, N_{b} \geq 2$',            2),
-                  cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
+                  # ltau categorization
+                  cat_eq0_eq0   = Category(tau_dy_cut, 'n_jets == 0 and n_bjets == 0', ['etau', 'mutau'], r'$N_{j} = 0, N_{b} = 0$, W veto',       0),
+                  cat_eq1_eq0   = Category(tau_dy_cut, 'n_jets == 1 and n_bjets == 0', ['etau', 'mutau'], r'$N_{j} = 1, N_{b} = 0$, W veto',       1),
+                  cat_eq1_eq1   = Category(None,       'n_jets == 1 and n_bjets == 1', ['etau', 'mutau'], r'$N_{j} = 1, N_{b} = 1$',               1),
+                  cat_eq2_eq1   = Category(None,       'n_jets == 2 and n_bjets == 1', ['etau', 'mutau'], r'$N_{j} = 2, N_{b} = 1$',               2),
+                  cat_eq2_eq2   = Category(None,       'n_jets == 2 and n_bjets == 2', ['etau', 'mutau'], r'$N_{j} = 2, N_{b} = 2$',               2),
+                  cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'], r'$N_{j} \geq 3, N_{b} = 1$',            3),
+                  cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'], r'$N_{j} \geq 3, N_{b} \geq 2$',         3),
 
-                  cat_eq0_eq0_a = Category(None,       'n_jets == 0 and n_bjets == 0', ['emu'], '$N_{j} = 0, N_{b} = 0$',       0),
-                  cat_eq1_eq0_a = Category(None,       'n_jets == 1 and n_bjets == 0', ['emu'], '$N_{j} = 1, N_{b} = 0$',       1),
-                  cat_eq1_eq1_a = Category(None,       'n_jets == 1 and n_bjets == 1', ['emu'], '$N_{j} = 1, N_{b} = 1$',       1),
-                  cat_gt2_eq1_a = Category(None,       'n_jets >= 2 and n_bjets == 1', ['emu'], '$N_{j} \geq 2, N_{b} = 1$',    2),
-                  cat_gt2_gt2_a = Category(None,       'n_jets >= 2 and n_bjets >= 2', ['emu'], '$N_{j} \geq 2, N_{b} \geq 2$', 2),
+                  # emu categorization
+                  cat_eq0_eq0_a = Category(None,       'n_jets == 0 and n_bjets == 0', ['emu'], r'$N_{j} = 0, N_{b} = 0$',       0),
+                  cat_eq1_eq0_a = Category(None,       'n_jets == 1 and n_bjets == 0', ['emu'], r'$N_{j} = 1, N_{b} = 0$',       1),
+                  cat_eq1_eq1_a = Category(None,       'n_jets == 1 and n_bjets == 1', ['emu'], r'$N_{j} = 1, N_{b} = 1$',       1),
+                  cat_gt2_eq1_a = Category(None,       'n_jets >= 2 and n_bjets == 1', ['emu'], r'$N_{j} \geq 2, N_{b} = 1$',    2),
+                  cat_gt2_gt2_a = Category(None,       'n_jets >= 2 and n_bjets >= 2', ['emu'], r'$N_{j} \geq 2, N_{b} \geq 2$', 2),
 
-                  cat_gt2_eq1_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets == 1', ['ee',   'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto',    2),
-                  cat_gt2_gt2_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets >= 2', ['ee',   'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
+                  cat_gt2_eq1_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets == 1', ['ee',   'mumu'], r'$N_{j} \geq 2, N_{b} = 1$, Z veto',    2),
+                  cat_gt2_gt2_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets >= 2', ['ee',   'mumu'], r'$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
 
-                  cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} = 1$',            4),
-                  cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['e4j',  'mu4j'], '$N_{j} \geq 4, N_{b} \geq 2$',         4),
-                  #cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['e4j', 'mu4j'], '$N_{j} \geq 3, N_{b} \geq 2$',         3),
+                  cat_gt4_eq1   = Category(None,       'n_jets >= 4 and n_bjets == 1', ['ejet',  'mujet'], r'$N_{j} \geq 4, N_{b} = 1$',            4),
+                  cat_gt4_gt2   = Category(None,       'n_jets >= 4 and n_bjets >= 2', ['ejet',  'mujet'], r'$N_{j} \geq 4, N_{b} \geq 2$',         4),
+                  cat_eq3_gt2   = Category(None,       'n_jets == 3 and n_bjets >= 2', ['ejet', 'mujet'], '$N_{j} = 3, N_{b} \geq 2$',         3),
                  )
+
+def get_current_time():
+    now = datetime.datetime.now()
+    currentTime = '{0:02d}{1:02d}{2:02d}_{3:02d}{4:02d}{5:02d}'.format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+    return currentTime
 
 def make_directory(file_path, clear=True):
     if not os.path.exists(file_path):
@@ -480,15 +497,17 @@ class DataManager():
                  features      = None,
                  template_mode = False
                  ):
-        self._input_dir     = input_dir
-        self._dataset_names = dataset_names
-        self._selection     = selection
-        self._period        = period
-        self._scale         = scale
+        self.input_dir      = input_dir
+        self.dataset_names  = dataset_names
+        self.selection      = selection
+        self.period         = period
+        self.scale          = scale
         self._cuts          = cuts
         self._combine       = combine
         self._features      = features
         self._template_mode = template_mode
+
+        # load lookup tables and dataframes
         self._load_luts()
         self._load_dataframes()
 
@@ -496,9 +515,9 @@ class DataManager():
         '''
         Retrieve look-up tables for datasets and variables
         '''
-        self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self._input_dir, self._selection))
+        self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self.input_dir, self.selection))
         self._lut_datasets = pd.read_excel('data/plotting_lut.xlsx',
-                                           sheet_name='datasets_{0}'.format(self._period),
+                                           sheet_name='datasets_{0}'.format(self.period),
                                            index_col='dataset_name'
                                           ).dropna(how='all')
         lut_features_default = pd.read_excel('data/plotting_lut.xlsx',
@@ -506,7 +525,7 @@ class DataManager():
                                              index_col='variable_name'
                                             ).dropna(how='all')
         lut_features_select = pd.read_excel('data/plotting_lut.xlsx',
-                                            sheet_name='variables_{0}'.format(self._selection),
+                                            sheet_name='variables_{0}'.format(self.selection),
                                             index_col='variable_name'
                                            ).dropna(how='all')
         self._lut_features = pd.concat([lut_features_default, lut_features_select], sort=True)#.astype({'n_bins':int})
@@ -517,15 +536,15 @@ class DataManager():
         while initializing the class instance.
         '''
         dataframes = {}
-        for dataset in tqdm(self._dataset_names,
+        for dataset in tqdm(self.dataset_names,
                             desc       = 'Loading dataframes',
                             unit_scale = True,
                             ncols      = 75,
                             leave      = False,
-                            total      = len(self._dataset_names),
+                            total      = len(self.dataset_names),
                             ):
 
-            fname = f'{self._input_dir}/ntuple_{dataset}.pkl'
+            fname = f'{self.input_dir}/ntuple_{dataset}.pkl'
             if not os.path.isfile(fname):
                 continue
 
@@ -548,7 +567,7 @@ class DataManager():
             elif label in ['fakes', 'fakes_ss']:
                 df.loc[:, 'weight'] *= lut_entry.cross_section
             else:
-                scale = self._scale
+                scale = self.scale
                 scale *= lut_entry.cross_section
                 scale *= lut_entry.branching_fraction
 
@@ -559,7 +578,7 @@ class DataManager():
                     scale /= init_count - 2*neg_count
 
                     ### apply tau id scale factor
-                    if self._selection in ['etau', 'mutau']:
+                    if self.selection in ['etau', 'mutau']:
                         df.loc[:,'lepton2_id_weight'] = 0.95
                         df.loc[:,'lepton2_id_var'] = 0.05 # actually the standard error
                         df.loc[:,'weight'] *= 0.95
@@ -684,14 +703,59 @@ class DataManager():
                     dataframes[label] = dataframes[label].append(df, sort=False)
             else:
                 dataframes[dataset] = df
-    
 
         # hack to remove overlapping data; remove when this is fixed upstream :(
         if 'data' in dataframes.keys():
             df = dataframes['data']
             dataframes['data'] = df.drop_duplicates(subset=['run_number', 'event_number'])
 
+        if 'data' in dataframes.keys():
+            df = dataframes['data']
+            dataframes['data'] = df.drop_duplicates(subset=['run_number', 'event_number'])
+
         self._dataframes = dataframes
+
+    def calibrate_fakes(self):
+        '''
+        This combines the estimate of QCD from the anti-isolated sideband with
+        the MC estimate of the prompt contamination in the same region.  
+        
+        The practical effect is that the dataframe accessed by calling
+        self._get_dataframe('fakes') will include the MC estimate with MC
+        weights multiplied by -1.
+        '''
+
+        try:
+            df_fakes = self.get_dataframe('fakes')
+        except:
+            print('There is no fake estimate to calibrate.  Check that the data \
+                    manager is properly configured.')
+            return
+        
+        df_fakes_mc = pd.concat([self.get_dataframe(f'{l}_fakes') for l in ['ttbar', 't', 'gjets', 'zjets', 'wjets']])
+        df_fakes_mc.loc[:, 'weight'] *= -1
+        df_fakes = pd.concat([df_fakes, df_fakes_mc])
+
+        eta_bins = np.array([-2.55, -2.0, -1.8, -1.444, -1.1, -0.6, 0.0, 0.6, 1.1, 1.444, 1.8, 2.0, 2.55])
+        if self.selection == 'ejet':
+            scale_factors = np.load('data/qcd_scale_factors/SF_e_2d.npy')
+            pt_bins  = np.array([30, 32, 34, 36, 38, 40, 45, 50, 60, np.inf])
+            ibin = np.searchsorted(pt_bins, df_fakes['lepton1_pt'].values) - 1
+            jbin = np.searchsorted(eta_bins, df_fakes['lepton1_eta'].values) - 1
+            df_fakes.loc[:, 'weight'] *= 0.5*scale_factors[ibin, jbin]
+
+        elif self.selection == 'mujet':
+            scale_factors = np.load('data/qcd_scale_factors/SF_mu_2d.npy')
+            pt_bins  = np.array([25, 26, 28, 30, 32, 34, 36, 38, 40, 45, 50, 60, np.inf])
+            ibin = np.searchsorted(pt_bins, df_fakes['lepton1_pt'].values)  - 1
+            jbin = np.searchsorted(eta_bins, df_fakes['lepton1_eta'].values)  - 1
+            df_fakes.loc[:, 'weight'] *= scale_factors[ibin, jbin]
+
+        df_fakes.loc[:, 'lepton1_iso'] = 0.
+        df_fakes.loc[:, 'lepton1_reliso'] = 0.
+        self._dataframes['fakes'] = df_fakes
+
+        return
 
     def get_dataframe(self, dataset_name, condition=''):
         df = self._dataframes[dataset_name]
@@ -718,9 +782,6 @@ class DataManager():
             return df
         else:
             return dataframes
-
-    def get_dataset_names(self):
-        return self._dataset_names
 
     def get_bounds_dict(self):
         df = self._lut_features[['xmin', 'xmax']]
@@ -835,6 +896,7 @@ class PlotManager():
     def make_overlays(self, features,
                       plot_data     = True,
                       do_ratio      = True,
+                      do_comp       = False,
                       do_cms_text   = True,
                       normed        = False,
                       ):
@@ -938,10 +1000,10 @@ class PlotManager():
 
                 x, y, yerr = x[y>0], y[y>0], yerr[y>0]
                 eb = ax.errorbar(x, y, yerr=yerr, 
-                              fmt        = 'ko',
-                              capsize    = 0,
-                              elinewidth = 2
-                             )
+                                 fmt        = 'ko',
+                                 capsize    = 0,
+                                 elinewidth = 2
+                                )
 
             ### make the legend ###
             ax.legend(legend_text, loc=9, ncol=3)
@@ -953,7 +1015,7 @@ class PlotManager():
 
             ### Add lumi text ###
             if do_cms_text:
-                add_lumi_text(ax, dm._scale/1000)
+                add_lumi_text(ax, dm.scale/1000)
 
             ### labels and x limits ###
             if do_ratio:
@@ -1066,7 +1128,7 @@ class PlotManager():
 
             ### Add lumi text ###
             #if do_cms_text:
-            #    add_lumi_text(ax, dm._scale, dm._period)
+            #    add_lumi_text(ax, dm.scale, dm.period)
 
             ### Make output directory if it does not exist ###
             make_directory('{0}/linear/{1}'.format(self._output_path, lut_entry.category), False)
@@ -1140,7 +1202,6 @@ class PlotManager():
                 print('{0} not in features.')
                 continue
 
-
             ### initialize figure ###
             if do_ratio:
                 fig, axes = plt.subplots(2, 1, figsize=(10, 10), sharex=True, gridspec_kw={'height_ratios':[3,1]})
@@ -1158,6 +1219,8 @@ class PlotManager():
                 plot_condition = lut_entry.condition 
                 hist_data = [df.query(plot_condition)[feature].values for df in df_model]
                 weights   = [df.query(plot_condition)['weight'].values for df in df_model]
+
+            if feature == features
             
             hist, bins, _ = ax.hist(hist_data,
                                     bins      = int(lut_entry.n_bins),
@@ -1247,7 +1310,7 @@ class PlotManager():
 
             ### Add lumi text ###
             if do_cms_text:
-                add_lumi_text(ax, self._dm._scale/1000)
+                add_lumi_text(ax, self._dm.scale/1000)
 
             ### Make output directory if it does not exist ###
             make_directory(f'{self._output_path}/linear/{lut_entry.category}', False)
@@ -1262,7 +1325,7 @@ class PlotManager():
             if ymax == ymin:
                 fig.clear()
                 plt.close()
-                break
+                continue
 
             ax.set_ylim((0., 1.5*ymax))
             fig.savefig('{0}/linear/{1}/{2}.{3}'.format(self._output_path, 

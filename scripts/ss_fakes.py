@@ -62,6 +62,13 @@ if __name__ == '__main__':
         df_qcd = pd.concat([df_data, df_sim], sort=False)
         df_qcd.loc[:,'lepton2_q'] = -1*df_qcd['lepton1_q']
 
+        if args.selection == 'etau':
+            df_qcd.loc[:,'weight'] *= 1.1
+        elif args.selection == 'mutau':
+            df_qcd.loc[:,'weight'] *= 1.1
+        elif args.selection == 'emu':
+            df_qcd.loc[:,'weight'] *= 1.1
+
         # save output and update event counts
         df_qcd.to_pickle(f'{input_dir}/ntuple_fakes_ss.pkl')
 

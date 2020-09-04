@@ -17,8 +17,8 @@ fancy_labels = dict(
                     emu   = [r'$\sf p_{T,trailing}$', r'$\sf e\mu$'],
                     mutau = [r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$'],
                     etau  = [r'$\sf p_{T,\tau}$', r'$\sf e\tau$'],
-                    mu4j  = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
-                    e4j   = [r'$\sf p_{T,e}$', r'$\sf e+jets$'],
+                    mujet = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
+                    ejet  = [r'$\sf p_{T,e}$', r'$\sf e+jets$'],
                     )
 features = dict(
                 mumu  = 'lepton2_pt', # trailing muon pt
@@ -26,8 +26,8 @@ features = dict(
                 emu   = 'trailing_lepton_pt', # like the name says
                 mutau = 'lepton2_pt', # tau pt
                 etau  = 'lepton2_pt', # tau pt
-                mu4j  = 'lepton1_pt', # muon pt
-                e4j   = 'lepton1_pt', # electron pt
+                mujet = 'lepton1_pt', # muon pt
+                ejet  = 'lepton1_pt', # electron pt
                 )
 
 def signal_amplitudes(beta, br_tau, single_w=False):
@@ -193,8 +193,8 @@ class FitData(object):
 
                  ):
         self._selections     = selections
-        self._processes      = processes
         self._n_selections   = len(selections)
+        self._processes      = processes
         self._n_processess   = len(processes)
         self._selection_data = {s: self._initialize_data(path, s) for s in selections}
 
@@ -284,8 +284,16 @@ class FitData(object):
         self._model_data = dict()
         self._rnum_cache = dict()
         self._bb_np      = dict()
+        self._bb_penalty = dict()
         self._categories = []
         for sel in self._selections:
+
+            # use for older template data
+            #if sel == 'ejet':
+            #    sel = 'e4j'
+            #if sel == 'mujet':
+            #    sel = 'mu4j'
+
             for category, templates in self.get_selection_data(sel).items():
 
                 # omit categories 
@@ -298,7 +306,8 @@ class FitData(object):
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
                 self._bb_np[f'{sel}_{category}']      = np.ones(data_val.size)
 
-                #print('\n', sel, category, data_val, np.sqrt(data_val.sum()), '\n')
+                #print('\n', sel, category)
+                #print(data_val, np.sqrt(data_val.sum()), '\n')
 
                 norm_mask    = []
                 process_mask = []
@@ -327,6 +336,7 @@ class FitData(object):
                     if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
 
                         val, var = template['val'].values, template['var'].values
+                        #print(ds, val)
 
                         # determine whether process contribution is significant
                         # or should be masked (this should be studied for
@@ -341,15 +351,19 @@ class FitData(object):
                         delta_plus, delta_minus = [], []
                         norm_vector = []
                         for pname, param in params.iterrows():
+                            #print(pname, param.type, param[sel], param['active'], param[ds])
                             if param.type == 'shape' and param[sel]:
                                 if f'{pname}_up' in template.columns and param['active'] and param[ds]:
-                                    deff_plus  = template[f'{pname}_up'].values - val
-                                    deff_minus = template[f'{pname}_down'].values - val
+                                    diff_plus  = template[f'{pname}_up'].values - val
+                                    diff_minus = template[f'{pname}_down'].values - val
+
+                                    #print(diff_plus + diff_minus, diff_plus - diff_minus)
                                 else:
-                                    deff_plus  = np.zeros_like(val)
-                                    deff_minus = np.zeros_like(val)
-                                delta_plus.append(deff_plus + deff_minus)
-                                delta_minus.append(deff_plus - deff_minus)
+                                    diff_plus  = np.zeros_like(val)
+                                    diff_minus = np.zeros_like(val)
+                                delta_plus.append(diff_plus + diff_minus)
+                                delta_minus.append(diff_plus - diff_minus)
+
 
                             elif param.type == 'norm':
                                 if param[sel] and param[ds]:
@@ -364,6 +378,7 @@ class FitData(object):
                     elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
                         full_sum, reduced_sum = 0, 0
                         for sub_ds, sub_template in template.items():
+                            #print(ds, sub_ds)
                             val, var = sub_template['val'].values, sub_template['var'].values
                             full_sum += val.sum()
 
@@ -384,13 +399,16 @@ class FitData(object):
                                         #if ds == 'ttbar' and pname == 'top_pt':
                                         #    sub_template.loc[:,'top_pt_down'] = val
 
-                                        deff_plus  = sub_template[f'{pname}_up'].values - val
-                                        deff_minus = sub_template[f'{pname}_down'].values - val
+                                        diff_plus  = sub_template[f'{pname}_up'].values - val
+                                        diff_minus = sub_template[f'{pname}_down'].values - val
                                     else:
-                                        deff_plus  = np.zeros_like(val)
-                                        deff_minus = np.zeros_like(val)
-                                    delta_plus.append(deff_plus + deff_minus)
-                                    delta_minus.append(deff_plus - deff_minus)
+                                        diff_plus  = np.zeros_like(val)
+                                        diff_minus = np.zeros_like(val)
+                                    delta_plus.append(diff_plus + diff_minus)
+                                    delta_minus.append(diff_plus - diff_minus)
+
+                                    #print(pname, diff_plus + diff_minus, diff_plus - diff_minus, sep='\n')
+
                                 elif param.type == 'norm':
                                     if param[sel] and param[ds]:
                                         norm_vector.append(1)
@@ -431,28 +449,35 @@ class FitData(object):
             return self._parameters['err_init']
 
     # model building
-    def model_sums(self, selection, category):
+    def model_sums(self, selection, category, syst=None):
         '''
         This sums over all datasets/sub_datasets in selection_data for the given category.
         '''
 
-        templates = self._selection_data[selection][category]['templates'] 
+        templates = self._selection_data[selection][category]['templates']
         outdata = np.zeros_like(templates['data']['val'], dtype=float)
         for ds, template in templates.items():
             if ds == 'data':
-                continue 
+                continue
 
             if ds in ['ttbar', 't', 'ww', 'wjets']:
                 for sub_ds, sub_template in template.items():
-                    outdata += sub_template['val'].values
+                    if syst is not None and syst in sub_template.columns:
+                        outdata += sub_template[syst].values
+                    else:
+                        outdata += sub_template['val'].values
             else:
-                outdata += template['val'].values
+                if syst is not None and syst in template.columns:
+                    outdata += template[syst].values
+                else:
+                    outdata += template['val'].values
 
         return outdata
 
     def mixture_model(self, params, category, 
                       process_amplitudes = None,
                       no_sum             = False,
+                      no_var = False
                       ):
         '''
         Outputs mixture and associated variance for a given category.
@@ -467,12 +492,11 @@ class FitData(object):
         no_sum: (default False) if set to True, will not sum across the process dimension
         '''
 
-        # get the model data and unpack parameters
+        # get the model data
         model_data   = self.get_model_data(category)
-        norm_params  = params[self._npoi:self._npoi + self._nnorm]
-        shape_params = params[self._npoi + self._nnorm:]
 
         # update norm parameter array
+        norm_params  = params[self._npoi:self._npoi + self._nnorm]
         norm_mask       = model_data['norm_mask'].astype(bool)
         norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask)
 
@@ -480,6 +504,7 @@ class FitData(object):
         # parameter values are in the range [-1, 1] there is a quadratic
         # interpolation between those values.  Beyond that range the morphing
         # is linear.  
+        shape_params = params[self._npoi + self._nnorm:]
         shape_params = shape_params[model_data['shape_param_mask']]
         sp_positive = 0.5*shape_params**2 # values in [-1, 1]
         sp_plus_mask, sp_minus_mask = (shape_params > 1), (shape_params < -1)
@@ -509,7 +534,10 @@ class FitData(object):
         model_var = model_tensor[:,:,1].sum(axis=0) 
         #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes, axes=1)
 
-        return model_val, model_var
+        if no_var:
+            return model_val
+        else:
+            return model_val, model_var
 
     def mixture_model_jacobian(self, params, category, process_amplitudes=None):
         '''
@@ -583,7 +611,7 @@ class FitData(object):
         model_tensor = model_data['model']
         model_val_jac = np.einsum('ijk,kli->jl', model_tensor, A) # n.p. modification
 
-        return model_val_jac 
+        return model_val_jac
         
     def objective(self, params,
                   data                = None,
@@ -591,7 +619,8 @@ class FitData(object):
                   do_bb_lite          = True,
                   no_shape            = False,
                   randomize_templates = False,
-                  lu_test = None
+                  factorize_nll       = False,
+                  lu_test             = None
                  ):
         '''
         Cost function for MC data model.  This version has no background
@@ -651,6 +680,7 @@ class FitData(object):
             # include effect of MC statisitcs (important that this is done
             # AFTER no_shape condition so inputs are integrated over)
             if do_bb_lite:
+
                 # update bin-by-bin amplitudes
                 bin_amp = bb_objective_aux(data_val, model_val, model_var)[0]
                 model_val *= bin_amp
@@ -659,6 +689,7 @@ class FitData(object):
                 # add deviation of amplitudes to cost (assume Gaussian penalty)
                 bb_penalty = (bin_amp - 1)**2/(2*model_var/model_val**2)
                 cost += np.sum(bb_penalty)
+                self._bb_penalty[category] = bb_penalty
 
             # calculate the cost
             if cost_type == 'poisson':
@@ -689,7 +720,6 @@ class FitData(object):
 
         # do the same for the tau branching fraction
         #cost += (np.sum(br_tau) - 1)**2/1e-3
-
 
         return cost
 
@@ -760,7 +790,6 @@ class FitData(object):
                 # update bin-by-bin amplitudes
                 bin_amp = bb_objective_aux(data_val, model_val, model_var)[0]
                 model_val *= bin_amp
-
                 if no_shape:
                     model_jac = model_jac*bin_amp
                 else:
@@ -769,7 +798,7 @@ class FitData(object):
                 # add deviation of amplitudes to cost (this is not needed as
                 # long as bb amplitudes are calculated analytically)
                 #bb_penalty_jac = (bin_amp - 1)/(model_var/model_val**2)
-                #dcost += np.sum(bb_penalty_jac)
+                #dcost += bb_penalty_jac
 
             # calculate the jacobian of the NLL
             mask = (model_val > 0) & (data_val > 0)
