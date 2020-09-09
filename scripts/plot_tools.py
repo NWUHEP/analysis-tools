@@ -112,10 +112,6 @@ tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 and dilepton1_delta_
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
 Category = namedtuple('Category', ['cut', 'jet_cut', 'selections', 'label', 'njets'])
 categories = dict(
-                  #cat_gt2_eq1_a = Category('n_jets >= 2 and n_bjets == 1',                   ['emu', 'etau', 'mutau', 'ejet', 'mujet'], '$N_{j} \geq 2, N_{b} = 1$'),
-                  #cat_gt2_eq1_b = Category(f'n_jets >= 2 and n_bjets == 1 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} = 1$, Z veto'),
-                  #cat_gt2_gt2_a = Category('n_jets >= 2 and n_bjets >= 2',                   ['emu', 'etau', 'mutau', 'ejet', 'mujet'], '$N_{j} \geq 2, N_{b} \geq 2$'),
-                  #cat_gt2_gt2_b = Category(f'n_jets >= 2 and n_bjets >= 2 and {ll_dy_veto}', ['ee', 'mumu'], '$N_{j} \geq 2, N_{b} \geq 2$, Z veto'),
 
                   cat_gt2_eq0   = Category(None,       'n_jets >= 2 and n_bjets == 0', ['etau', 'mutau', 'ee', 'mumu', 'emu'], r'$N_{j} \geq 2, N_{b} = 0$', 2),
 
@@ -128,12 +124,11 @@ categories = dict(
                   cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'], r'$N_{j} \geq 3, N_{b} = 1$',            3),
                   cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'], r'$N_{j} \geq 3, N_{b} \geq 2$',         3),
 
-                  # emu categorization
                   cat_eq0_eq0_a = Category(None,       'n_jets == 0 and n_bjets == 0', ['emu'], r'$N_{j} = 0, N_{b} = 0$',       0),
                   cat_eq1_eq0_a = Category(None,       'n_jets == 1 and n_bjets == 0', ['emu'], r'$N_{j} = 1, N_{b} = 0$',       1),
                   cat_eq1_eq1_a = Category(None,       'n_jets == 1 and n_bjets == 1', ['emu'], r'$N_{j} = 1, N_{b} = 1$',       1),
-                  cat_gt2_eq1_a = Category(None,       'n_jets >= 2 and n_bjets == 1', ['emu'], r'$N_{j} \geq 2, N_{b} = 1$',    2),
-                  cat_gt2_gt2_a = Category(None,       'n_jets >= 2 and n_bjets >= 2', ['emu'], r'$N_{j} \geq 2, N_{b} \geq 2$', 2),
+                  cat_gt2_eq1_a = Category(None,       'n_jets >= 2 and n_bjets == 1', ['emu', 'etau', 'mutau'], r'$N_{j} \geq 2, N_{b} = 1$',    2),
+                  cat_gt2_gt2_a = Category(None,       'n_jets >= 2 and n_bjets >= 2', ['emu', 'etau', 'mutau'], r'$N_{j} \geq 2, N_{b} \geq 2$', 2),
 
                   cat_gt2_eq1_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets == 1', ['ee',   'mumu'], r'$N_{j} \geq 2, N_{b} = 1$, Z veto',    2),
                   cat_gt2_gt2_b = Category(ll_dy_veto, 'n_jets >= 2 and n_bjets >= 2', ['ee',   'mumu'], r'$N_{j} \geq 2, N_{b} \geq 2$, Z veto', 2),
@@ -1220,7 +1215,10 @@ class PlotManager():
                 hist_data = [df.query(plot_condition)[feature].values for df in df_model]
                 weights   = [df.query(plot_condition)['weight'].values for df in df_model]
 
-            if feature == features
+            #if feature == fit_features[self.selection]:
+            #    binning =
+            #else:
+            #    binning = int(lut_entry.n_bins)
             
             hist, bins, _ = ax.hist(hist_data,
                                     bins      = int(lut_entry.n_bins),

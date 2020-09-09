@@ -192,10 +192,10 @@ class FitData(object):
                  veto_list   = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0'] 
 
                  ):
-        self._selections     = selections
-        self._n_selections   = len(selections)
-        self._processes      = processes
-        self._n_processess   = len(processes)
+        self._selections   = selections
+        self._n_selections = len(selections)
+        self._processes    = processes
+        self._n_processes  = len(processes)
         self._selection_data = {s: self._initialize_data(path, s) for s in selections}
 
         # retrieve parameter configurations
@@ -333,7 +333,7 @@ class FitData(object):
                         if sel in ['etau', 'mutau', 'emu'] and ds == 'fakes_ss':
                             ds = 'fakes'
                 
-                    if ds in ['zjets_alt', 'diboson', 'fakes']: # processes that are not subdivided
+                    if ds in ['zjets_alt', 'diboson', 'gjets', 'fakes']: # processes that are not subdivided
 
                         val, var = template['val'].values, template['var'].values
                         #print(ds, val)
@@ -517,7 +517,7 @@ class FitData(object):
             beta, br_tau = params[:4], params[4:7]
             ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
             w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
-            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
+            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1, 1]])
 
         # mask the process amplitudes for this category and apply normalization parameters
         process_amplitudes = process_amplitudes[model_data['process_mask']]
@@ -590,7 +590,7 @@ class FitData(object):
         if process_amplitudes is None:
             ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
             w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
-            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]])
+            process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1, 1]])
 
         # apply mask
         process_mask = model_data['process_mask'].astype(bool)
@@ -599,7 +599,7 @@ class FitData(object):
         # do the same for the signal amplitude jacobians
         ww_amp_jac = signal_amplitudes_jacobian(beta, br_tau, params.size - 7)/self._ww_amp_init
         w_amp_jac  = signal_amplitudes_jacobian(beta, br_tau, params.size - 7, single_w=True)/self._w_amp_init
-        process_amplitudes_jac = np.concatenate([ww_amp_jac, ww_amp_jac, ww_amp_jac, w_amp_jac, np.zeros((params.size, 3))], axis=1)
+        process_amplitudes_jac = np.concatenate([ww_amp_jac, ww_amp_jac, ww_amp_jac, w_amp_jac, np.zeros((params.size, 4))], axis=1)
         process_amplitudes_jac = process_amplitudes_jac[:,process_mask]
 
         # combine everything together
@@ -651,7 +651,7 @@ class FitData(object):
         beta, br_tau  = params[:4], params[4:7]
         ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
-        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
+        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1, 1]]) 
 
         # calculate per category, per selection costs
         cost = 0
@@ -750,11 +750,12 @@ class FitData(object):
         params_reduced[self._pmask] = params
         params = params_reduced
 
-        # build the process amplitudes (once per evaluation) 
+        # build the process amplitudes (once per evaluation, this should be
+        # modified to infer the correct dimension and placement of values) 
         beta, br_tau = params[:4], params[4:7]
         ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
         w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
-        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1]]) 
+        process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1, 1]]) 
 
         # calculate per category, per selection costs
         dcost = np.zeros(params.size)

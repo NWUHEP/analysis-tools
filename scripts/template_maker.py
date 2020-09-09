@@ -214,8 +214,6 @@ if __name__ == '__main__':
             dm.calibrate_fakes()
             labels.remove('fakes_mc')
 
-        break()
-
         data = dict()
         selection_categories = [c for c, citems in pt.categories.items() if selection in citems.selections]
         for category in tqdm(selection_categories,
