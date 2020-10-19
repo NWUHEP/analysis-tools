@@ -110,6 +110,11 @@ def jet_scale(df, feature, bins, sys_type, jet_cut):
     h_up   = (h_up.sum()/h_nominal.sum()) * h_nominal
     h_down = (h_down.sum()/h_nominal.sum()) * h_nominal
 
+    # symmetrizations (*shrugs*)
+    h_diff = h_nominal - (h_up + h_down)/2
+    h_up += h_diff
+    h_down += h_diff
+
     #print('up (averaged)', h_up.sum())
     #print('down (averaged)', h_down.sum())
     
@@ -351,6 +356,7 @@ class SystematicTemplateGenerator():
             self._df_sys['trigger_e_probe_up'], self._df_sys['trigger_e_probe_down'] = h_up, h_down
 
         # electron prefiring condition
+        df.loc[df['el_prefiring_var'] < 0., 'el_prefiring_var'] = 0.
         w_up   = df['weight']*(1 + np.sqrt(df['el_prefiring_var']))
         w_down = df['weight']*(1 - np.sqrt(df['el_prefiring_var']))
         h_up, _   = np.histogram(df[feature], bins=bins, weights=w_up)
@@ -623,6 +629,8 @@ class SystematicTemplateGenerator():
         if label == 'ttbar': 
             self._df_sys[f'xs_{label}_qcd_scale_up'], self._df_sys[f'xs_{label}_qcd_scale_down'] = h_up, h_down
         else: # split processes where ME influences jet multiplicity (Z, W, etc.)
+            #print(label, njets)
+            #print(h_up, h_down, sep='\n')
             self._df_sys[f'xs_{label}_qcd_scale_{njets}_up'], self._df_sys[f'xs_{label}_qcd_scale_{njets}_down'] = h_up, h_down
 
     def top_pt_systematics(self, df):

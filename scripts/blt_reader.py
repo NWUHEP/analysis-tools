@@ -188,8 +188,8 @@ def fill_event_vars(tree, dataset, selection):
         syst_dict['n_partons']  = tree.nPartons
         if dataset in ['ttbar_lep', 'ttbar_semilep', 'ttbar_inclusive', 
                        'zjets_m-10to50_alt', 'zjets_m-50_alt',
-                       'z0jets_alt', 'z1jets_alt', 'z2jets_alt'
-
+                       'z0jets_alt', 'z1jets_alt', 'z2jets_alt',
+                       'w1jets', 'w2jets', 'w3jets', 'w4jets'
                       ]:
             syst_dict['qcd_weight_nominal']   = tree.qcdWeights[0]
             syst_dict['qcd_weight_nom_up']    = tree.qcdWeights[1]
@@ -617,14 +617,14 @@ if __name__ == '__main__':
     selections  = ['ee', 'mumu', 'emu', 'mutau', 'etau', 'mujet', 'ejet']
     #selections  = ['ee', 'emu', 'etau', 'ejet']
     do_data     = False
-    do_mc       = False
-    do_syst     = True
+    do_mc       = True
+    do_syst     = False
     period      = 2016
 
     # configure datasets to run over
     data_labels  = ['muon', 'electron']
-    mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets', 'gjets', 'qcd']
-    #mc_labels    = ['qcd']
+    #mc_labels    = ['ttbar', 'zjets_alt', 'diboson', 'ww', 't', 'wjets', 'gjets', 'qcd']
+    mc_labels    = ['wjets']
 
     dataset_list = []
     if do_data:

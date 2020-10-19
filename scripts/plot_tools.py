@@ -25,7 +25,7 @@ dataset_dict = dict(
                                  'electron_2016H'
                                  ],
                     ttbar     = ['ttbar_inclusive', 'ttbar_lep', 'ttbar_semilep'],
-                    t         = ['t_tw', 'tbar_tw'], #'t_t', 'tbar_t',
+                    t         = ['t_tw', 'tbar_tw', 't_t', 'tbar_t'],
                     wjets_alt = ['wjets_alt', 'wjets_alt_ext1', 'wjets_alt_ext2'],
                     wjets     = ['w1jets', 'w2jets', 'w3jets', 'w4jets'],
                     zjets_alt = ['zjets_m-50_alt',  'zjets_m-10to50_alt',
@@ -107,6 +107,16 @@ fit_features = dict(
                     mujet  = 'lepton1_pt', # muon pt
                     ejet   = 'lepton1_pt', # electron pt
                    )
+
+fit_plot_labels = dict(
+                        ee    = ['we_we', 'we_wtau_e', 'wtau_e_wtau_e', 'other', 'zjets_alt', 'diboson'],
+                        mumu  = ['wmu_wmu', 'wmu_wtau_mu', 'wtau_mu_wtau_mu', 'other', 'zjets_alt', 'diboson'],
+                        emu   = ['we_wmu', 'we_wtau_mu', 'wmu_wtau_e', 'wtau_e_wtau_mu', 'other', 'zjets_alt', 'fakes', 'diboson'],
+                        etau  = ['we_wtau_h', 'we_wh', 'wtau_e_wh', 'wtau_e_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson'],
+                        mutau  = ['wmu_wtau_h', 'wmu_wh', 'wtau_mu_wh', 'wtau_mu_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson'],
+                        ejet  = ['we_wh', 'we_wtau_h', 'other', 'zjets_alt', 'gjets', 'diboson', 'fakes'],
+                        mujet  = ['wmu_wtau_h', 'wmu_wh', 'wtau_mu_wh', 'wtau_mu_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson']
+                        )
 # WIP
 tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
@@ -288,7 +298,7 @@ def add_lumi_text(ax, lumi):
             fontweight='bold',
             transform=ax.transAxes
             )
-    ax.text(0.13, 1.01, 'Preliminary',
+    ax.text(0.14, 1.01, 'Preliminary',
             fontsize=18,
             fontname='Arial',
             fontstyle='italic',
@@ -301,8 +311,7 @@ def add_lumi_text(ax, lumi):
             transform=ax.transAxes
             )
 
-def fit_plot(bins, data_val, model_pre, model_post, 
-             templates, template_labels,
+def fit_plot(templates, model_pre, data_val, 
              model_stat_err, syst_err_pre, syst_err_post,
              xlabel      = 'x [a.u.]',
              title       = None,
@@ -319,33 +328,30 @@ def fit_plot(bins, data_val, model_pre, model_post,
     fig, axes = plt.subplots(2, 1, figsize=(10, 12), facecolor='white', sharex=True, gridspec_kw={'height_ratios':[5,2]})
 
     # get bin widths and central points
+    bins = templates.index
     dx = (bins[1:] - bins[:-1])
     dx = np.append(dx, dx[-1]) 
     x  = bins + dx/2         
 
     ax = axes[0]
 
-    # unpack model data
+    # get plot style data
     histsum = np.zeros(model_pre.size)
-    labels = []
-    colors = ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef']
-    colors = colors[::-1]
-    count = 0
-    for label in template_labels[::-1]:
-        template = templates[label]
-        if label == 'Z':
-            color = 'r'
-        elif label == 'W':
-            color = 'g'
-        elif label == 'QCD':
-            color = 'C1'
-        elif label == 'VV (non-WW)':
-            color = 'C5'
-        elif 'other' in label:
-            color = 'gray'
+    lut_styles = pd.read_excel('data/plotting_lut.xlsx',
+                                 sheet_name='datasets_2016',
+                                 index_col='dataset_name'
+                                ).dropna(how='all')
+    decay_map = pd.read_csv('data/decay_map.csv').set_index('decay')
+    for label, template in templates.iteritems():
+        if label in decay_map.index:
+            color = decay_map.loc[label, 'color']
+            fancy_label = decay_map.loc[label, 'alt_label']
+        elif label in lut_styles.label.values:
+            color = lut_styles.loc[label, 'color']
+            fancy_label = lut_styles.loc[label, 'text']
         else:
-            color = colors[count]
-            count += 1
+            color = 'gray'
+            fancy_label = label
 
         ax.plot(bins, (histsum + template)/dx,
                 drawstyle='steps-post',
@@ -359,15 +365,9 @@ def fit_plot(bins, data_val, model_pre, model_post,
                         step='post',
                         color=color,
                         alpha=0.8,
-                        label=label
+                        label=fancy_label
                         )
         histsum += template
-
-        if 'tW' in label:
-            labels.append(label)
-
-    labels = labels[::-1]
-    labels.extend(['W', 'Z', 'VV (non-WW)'])
 
     # overlay data and model
     ax.errorbar(x, data_val/dx, np.sqrt(data_val)/dx,
@@ -408,6 +408,12 @@ def fit_plot(bins, data_val, model_pre, model_post,
                     label=r'$\sigma_{\sf syst. postfit}$'
                     )
 
+    # calculate chi2
+    stderr = np.sqrt(np.sum(model_stat_err**2 + ((syst_err_post[0] - syst_err_post[1])/2)**2))
+    delta = (histsum - data_val)**2
+    #chi2 = np.sum(delta/histsum)
+    chi2 = 2*np.sum(histsum - data_val*(1 - np.log(data_val/histsum)))
+
     ax.set_yscale('log')
     ax.set_ylim(0.2*np.min(data_val/dx), 90.*np.max(data_val/dx))
     ax.set_ylabel('Events / GeV', fontsize=24)
@@ -415,6 +421,12 @@ def fit_plot(bins, data_val, model_pre, model_post,
             fontsize=22, 
             fontname='Arial', 
             color='red', 
+            transform=ax.transAxes
+            )
+    ax.text(0.55, 0.5, r'$\chi^{2} = $' + f'{chi2:.2f}; ' + r'$N_{DOF} = $' + f'{bins.size}', 
+            fontsize=20, 
+            fontname='Arial', 
+            color='k', 
             transform=ax.transAxes
             )
     add_lumi_text(ax, 35.9)
@@ -425,6 +437,7 @@ def fit_plot(bins, data_val, model_pre, model_post,
 
     ax = axes[1]
     ax.plot(bins[[0,-1]], [1, 1], 'k--', linewidth=1)
+    model_post = templates.sum(axis=1)
     ax.errorbar(x*(1+0.01), data_val/model_post, np.sqrt(data_val)/model_post, 
                 markersize=10,
                 fmt='ko', 
@@ -470,11 +483,10 @@ def fit_plot(bins, data_val, model_pre, model_post,
     ax.grid(axis='x')
 
     plt.tight_layout(h_pad=0., rect=[0., 0., 1., 0.95])
-    plt.savefig(output_path)
-
     if show:
         plt.show()
     else:
+        plt.savefig(output_path)
         plt.close()
 
     return

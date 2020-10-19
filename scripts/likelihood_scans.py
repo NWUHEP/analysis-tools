@@ -35,12 +35,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ##########################
 
-    processes  = ['ttbar', 't', 'ww', 'wjets', 'zjets_alt', 'diboson', 'fakes']
+    processes  = ['ttbar', 't', 'ww', 'wjets', 'zjets_alt', 'gjets', 'diboson', 'fakes']
     selections = [
                   'ee', 'mumu',
                   'emu',
                   'mutau', 'etau',
-                  #'mujet', 'ejet'
+                  'mujet', 'ejet'
                  ]
     plot_labels = fh.fancy_labels
     pt.set_default_style()
@@ -50,7 +50,10 @@ if __name__ == '__main__':
     
     # initialize fit data 
     if os.path.isdir(args.input):
-        fit_data = fh.FitData(args.input, selections, processes, process_cut=0.05)
+        fit_data = fh.FitData(args.input, selections, processes, 
+                              param_file = 'data/model_parameters_unblinded.csv',
+                              process_cut=0.05
+                              )
     else:
         infile = open(args.input, 'rb')
         fit_data = pickle.load(infile)
@@ -99,10 +102,10 @@ if __name__ == '__main__':
     n_masked = 0
     for ix, (pname, pdata) in tqdm(enumerate(parameters.iterrows()), total=parameters.shape[0]):
 
-        if pdata.active == 0 or ('jes' not in pname and 'escale' not in pname):
-            if pdata.active == 0:
-                n_masked += 1
-            continue
+        #if pdata.active == 0 or ('jes' not in pname and 'escale' not in pname):
+        #    if pdata.active == 0:
+        #        n_masked += 1
+        #    continue
                             
         if args.prescan is '':
 

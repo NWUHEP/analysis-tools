@@ -98,7 +98,7 @@ def make_morphing_templates(df, label, syst_gen, cat_items):
     #        syst_gen.tau_systematics(df)
         
     # theory systematics
-    if dataset in ['ttbar', 'zjets_alt']:
+    if dataset in ['ttbar', 'zjets_alt', 'wjets']:
         syst_gen.theory_systematics(df, dataset, cat_items.njets)
 
         if dataset == 'ttbar':
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     feature_list += [f'n_bjets_btag_{n}_down' for n in btag_source_names]
 
     selections = ['ee', 'mumu', 'emu', 'etau', 'mutau', 'ejet', 'mujet']
-    #selections = ['ee', 'emu', 'etau', 'ejet']
+    #selections = ['emu']
     pt.make_directory(f'{args.output}', clear=False)
     for selection in selections:
         print(f'Running over category {selection}...')
@@ -235,6 +235,7 @@ if __name__ == '__main__':
             ### get signal and background templates
             templates = dict(data = dict(val = h, var = h))
             for label in labels:
+
                 if label in ['ttbar', 't', 'ww', 'wjets']: 
                     # divide ttbar, tW, and ww samples into 21 decay modes
                     # w+jets sample into 6 decay modes
@@ -313,7 +314,7 @@ if __name__ == '__main__':
                                'ttbar_inclusive_tuneup_ext1', 'ttbar_inclusive_tunedown_ext1',
                               ]
 
-        dm = pt.DataManager(input_dir     = f'local_data/flatuples/test_08242020/{selection}_2016',
+        dm = pt.DataManager(input_dir     = f'local_data/flatuples/ttbar_systematics_new/{selection}_2016',
                             dataset_names = datasets_ttbar_syst,
                             selection     = selection,
                             scale         = 35.9e3,

@@ -179,6 +179,9 @@ def bb_objective_aux(data_val, exp_val, exp_var):
     a = 1
     b = exp_var/exp_val - 1
     c = -data_val*exp_var/exp_val**2
+    if np.any(b*b - 4*a*c < 0.):
+        print(b*b - 4*a*c)
+
     beta_plus  = (-b + np.sqrt(b*b - 4*a*c))/2
     beta_minus = (-b - np.sqrt(b*b - 4*a*c))/2
 
@@ -189,7 +192,10 @@ class FitData(object):
                  param_file  = 'data/model_parameters_default.csv',
                  use_prefit  = False,
                  process_cut = 0.01,
-                 veto_list   = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0'] 
+                 veto_list   = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0', 
+                                'ejet_cat_eq3_gt2', 'mujet_cat_eq3_gt2'
+                                ],
+                 debug_mode = False
 
                  ):
         self._selections   = selections
@@ -210,7 +216,7 @@ class FitData(object):
 
         # initialize fit data
         self.veto_list = veto_list # used to remove categories from fit
-        self._initialize_fit_tensor(process_cut)
+        self._initialize_fit_tensor(process_cut, debug=debug_mode)
 
         # initialize cost (do this last)
         #self._cost_init = 0
@@ -274,7 +280,7 @@ class FitData(object):
 
         return
 
-    def _initialize_fit_tensor(self, process_cut):
+    def _initialize_fit_tensor(self, process_cut, debug=False):
         '''
         This converts the data stored in the input dataframes into a numpy tensor of
         dimensions (n_selections*n_categories*n_bins, n_processes, n_nuisances).
@@ -306,8 +312,9 @@ class FitData(object):
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
                 self._bb_np[f'{sel}_{category}']      = np.ones(data_val.size)
 
-                #print('\n', sel, category)
-                #print(data_val, np.sqrt(data_val.sum()), '\n')
+                if debug:
+                    print('\n', sel, category)
+                    print(data_val, np.sqrt(data_val.sum()), '\n')
 
                 norm_mask    = []
                 process_mask = []
@@ -336,7 +343,9 @@ class FitData(object):
                     if ds in ['zjets_alt', 'diboson', 'gjets', 'fakes']: # processes that are not subdivided
 
                         val, var = template['val'].values, template['var'].values
-                        #print(ds, val)
+
+                        if debug and val.sum() > 0.:
+                            print(ds, val)
 
                         # determine whether process contribution is significant
                         # or should be masked (this should be studied for
@@ -351,11 +360,16 @@ class FitData(object):
                         delta_plus, delta_minus = [], []
                         norm_vector = []
                         for pname, param in params.iterrows():
-                            #print(pname, param.type, param[sel], param['active'], param[ds])
+                            #if debug:
+                            #    print(pname, f'type : {param.type}, active : {param['active']}, {sel} : {param[sel]}, {ds} : {param[ds]}')
+
                             if param.type == 'shape' and param[sel]:
                                 if f'{pname}_up' in template.columns and param['active'] and param[ds]:
                                     diff_plus  = template[f'{pname}_up'].values - val
                                     diff_minus = template[f'{pname}_down'].values - val
+
+                                    if debug:
+                                        print(template[['val', f'{pname}_up', f'{pname}_down']])
 
                                     #print(diff_plus + diff_minus, diff_plus - diff_minus)
                                 else:
@@ -378,7 +392,6 @@ class FitData(object):
                     elif ds in ['ttbar', 't', 'ww', 'wjets']: # datasets with sub-templates
                         full_sum, reduced_sum = 0, 0
                         for sub_ds, sub_template in template.items():
-                            #print(ds, sub_ds)
                             val, var = sub_template['val'].values, sub_template['var'].values
                             full_sum += val.sum()
 
@@ -389,11 +402,16 @@ class FitData(object):
                             else:
                                 process_mask.append(1)
 
+                            if debug and val.sum() > 0.:
+                                print(ds, sub_ds, val)
+
                             delta_plus, delta_minus = [], []
                             norm_vector = []
                             for pname, param in params.iterrows():
                                 if param.type == 'shape' and param[sel]:
                                     if f'{pname}_up' in sub_template.columns and param[ds]: 
+                                        if debug:
+                                            print(sub_template[['val', f'{pname}_up', f'{pname}_down']])
 
                                         ## temporary modifcation to top pt morphing for ttbar templates
                                         #if ds == 'ttbar' and pname == 'top_pt':
@@ -418,6 +436,9 @@ class FitData(object):
                             process_array = np.vstack([val.reshape(1, val.size), var.reshape(1, var.size), delta_plus, delta_minus])
                             data_tensor.append(process_array.T)
                             norm_mask.append(norm_vector)
+
+                        if debug: 
+                            print(full_sum)
 
                 self._model_data[f'{sel}_{category}'] = dict(
                                                              data             = (data_val, data_var),
@@ -477,7 +498,8 @@ class FitData(object):
     def mixture_model(self, params, category, 
                       process_amplitudes = None,
                       no_sum             = False,
-                      no_var = False
+                      no_var             = False,
+                      debug              = False
                       ):
         '''
         Outputs mixture and associated variance for a given category.
@@ -500,6 +522,9 @@ class FitData(object):
         norm_mask       = model_data['norm_mask'].astype(bool)
         norm_param_prod = np.product(np.ones_like(norm_mask)*norm_params, axis=1, where=norm_mask)
 
+        if debug:
+            print(norm_param_prod)
+
         # apply shape parameter mask and build array for morphing.  When shape
         # parameter values are in the range [-1, 1] there is a quadratic
         # interpolation between those values.  Beyond that range the morphing
@@ -518,6 +543,7 @@ class FitData(object):
             ww_amp = signal_amplitudes(beta, br_tau)/self._ww_amp_init
             w_amp  = signal_amplitudes(beta, br_tau, single_w=True)/self._w_amp_init
             process_amplitudes = np.concatenate([ww_amp, ww_amp, ww_amp, w_amp, [1, 1, 1, 1]])
+            #self._process_amplitudes = process_amplitudes
 
         # mask the process amplitudes for this category and apply normalization parameters
         process_amplitudes = process_amplitudes[model_data['process_mask']]
@@ -525,14 +551,22 @@ class FitData(object):
 
         # build expectation from model_tensor and propogate systematics
         model_tensor = model_data['model']
+        model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
         if no_sum:
-            model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
+            model_val = model_val.T*process_amplitudes
+            model_var = model_tensor[:,:,1].T*process_amplitudes 
         else:
-            model_val = np.tensordot(model_tensor, shape_params, axes=1) # n.p. modification
             model_val = np.tensordot(model_val.T, process_amplitudes, axes=1)
+            #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes, axes=1)
+            model_var = model_tensor[:,:,1].sum(axis=0)#*process_amplitudes 
 
-        model_var = model_tensor[:,:,1].sum(axis=0) 
-        #model_var    = np.tensordot(model_tensor[:,:,1].T, process_amplitudes, axes=1)
+        if debug:
+            print(shape_params)
+            print(process_amplitudes)
+            for i, layer in enumerate(model_tensor):
+                for j, sublayer in enumerate(layer):
+                    print(i, j, sublayer)
+
 
         if no_var:
             return model_val
@@ -616,7 +650,7 @@ class FitData(object):
     def objective(self, params,
                   data                = None,
                   cost_type           = 'poisson',
-                  do_bb_lite          = True,
+                  do_bb_lite          = False,
                   no_shape            = False,
                   randomize_templates = False,
                   factorize_nll       = False,
@@ -677,6 +711,10 @@ class FitData(object):
                 model_val = np.sum(model_val)
                 model_var = np.sum(model_var)
 
+            #print(category)
+            #print(data_val)
+            #print(model_val)
+
             # include effect of MC statisitcs (important that this is done
             # AFTER no_shape condition so inputs are integrated over)
             if do_bb_lite:
@@ -725,7 +763,7 @@ class FitData(object):
 
     def objective_jacobian(self, params, 
                            data                = None,
-                           do_bb_lite          = True,
+                           do_bb_lite          = False,
                            randomize_templates = False,
                            no_shape            = False,
                            lu_test             = None,
