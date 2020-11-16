@@ -169,6 +169,67 @@ def calculate_covariance(f, x0):
     else:
         return False, False 
 
+def weighted_variance(x, w):
+    v1 = np.sum(w)
+    v2 = np.sum(w**2)
+    svar = (v1/(v1**2 - v2))*np.sum(w*(x - np.mean(x))**2)
+
+    return np.sqrt(svar)
+
+def bivariate_normal_ratio(r, mu_x, mu_y, sigma_x, sigma_y, rho):
+
+    a_r = np.sqrt(r**2/sigma_x**2 - 2*rho*r/(sigma_x*sigma_y) + 1/sigma_y**2)
+    b_r = r*mu_x/sigma_x**2 - rho*(mu_x + mu_y*r)/(sigma_x*sigma_y) + mu_y/sigma_y**2
+    c = mu_x**2/sigma_x**2 - 2*rho*mu_x*mu_y/(sigma_x*sigma_y) + mu_y**2/sigma_y**2
+    d_r = np.exp((b_r**2 - c*a_r**2)/(2*(1 - rho**2)*a_r**2))
+
+    cdf_arg = b_r/(np.sqrt(1 - rho**2)*a_r) 
+    f_r = b_r*d_r/(np.sqrt(2*np.pi)*sigma_x*sigma_y*a_r**3) * (norm.cdf(cdf_arg) - norm.cdf(-cdf_arg)) \
+        + np.sqrt(1 - rho**2)/(np.pi*sigma_x*sigma_y*a_r**2) * np.exp(-c/(2*(1 - rho**2)))
+
+    #print(a_r, b_r, c, d_r, cdf_arg, f_r)
+
+    return f_r
+
+def trivariate_normal_ratio(r, mu, sigma, rho):
+
+    #assert (mu.size == signma.size == rho.size = 3)
+
+    psi = 1 - np.sum(rho**2) + 2*np.product(rho)
+
+    a = (1 - rho[2])*r[0]**2/sigma[0]**2 \
+        + (1 - rho[1])*r[1]**2/sigma[1]**2 \
+        + (1 - rho[0])/sigma[2]**2 \
+        + 2*(rho[1]*rho[2] - rho[0])*r[0]*r[1]/(sigma[0]*sigma[1]) \
+        + 2*(rho[0]*rho[2] - rho[1])*r[0]/(sigma[0]*sigma[2]) \
+        + 2*(rho[1]*rho[0] - rho[2])*r[1]/(sigma[1]*sigma[2]) 
+    a = np.sqrt(a)
+
+    b = (1 - rho[2])*r[0]*mu[0]/sigma[0]**2 \
+        + (1 - rho[1])*r[1]*mu[1]/sigma[1]**2 \
+        + (1 - rho[0])*mu[2]/sigma[2]**2 \
+        + (rho[1]*rho[2] - rho[0])*(r[0]*mu[1] + r[1]*mu[0])/(sigma[0]*sigma[1]) \
+        + (rho[0]*rho[2] - rho[1])*(r[0]*mu[2] + mu[0])/(sigma[0]*sigma[2]) \
+        + (rho[1]*rho[0] - rho[2])*(r[1]*mu[2] + mu[1])/(sigma[1]*sigma[2])
+
+    c = (1 - rho[2])*mu[0]**2/sigma[0]**2 \
+        + (1 - rho[1])*mu[1]**2/sigma[1]**2 \
+        + (1 - rho[0])*mu[2]**2/sigma[2]**2 \
+        + 2*(rho[1]*rho[2] - rho[0])*mu[0]*mu[1]/(sigma[0]*sigma[1]) \
+        + 2*(rho[0]*rho[2] - rho[1])*mu[0]*mu[2]/(sigma[0]*sigma[2]) \
+        + 2*(rho[1]*rho[0] - rho[2])*mu[1]*mu[2]/(sigma[1]*sigma[2]) 
+
+    d = np.exp((b**2 - c*a**2)/(2*psi*a**2))
+
+    cdf_arg = b/(np.sqrt(psi)*a) 
+    f = b*d/(np.sqrt(2*np.pi)*np.product(sigma)*a**3) * (norm.cdf(cdf_arg) - norm.cdf(-cdf_arg)) \
+        + np.sqrt(psi)/(np.sqrt(2*np.pi**3)*np.product(sigma)*a**2) * np.exp(-c/(2*psi))
+
+    #print(b**2, c*a**2)
+    #print(psi, a, b, c, d, cdf_arg, f)
+
+    return f
+
 # GOF statistics
 def chi2_test(y1, y2, var1, var2):
     chi2 = 0.5*(y1 - y2)**2/(var1 + var2)
