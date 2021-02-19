@@ -256,7 +256,8 @@ class FitData(object):
                  veto_list   = ['ee_cat_gt2_eq0', 'mumu_cat_gt2_eq0', 
                                 'ejet_cat_eq3_gt2', 'mujet_cat_eq3_gt2'
                                 ],
-                 debug_mode = False
+                 debug_mode = False,
+                 ratio_test = False
 
                  ):
         self._selections   = selections
@@ -269,9 +270,14 @@ class FitData(object):
         self._decay_map = pd.read_csv('data/decay_map.csv').set_index('id')
         self._initialize_parameters(param_file, use_prefit)
 
+        self._ratio_test = ratio_test
+        if ratio_test:
+            self._pval_init[:2] *= self._pval_init[2]
+
         # initialize branching fraction parameters
         self._beta_init   = self._pval_init[:4]
         self._br_tau_init = self._pval_init[4:7]
+
         self._ww_amp_init = signal_amplitudes(self._beta_init, self._br_tau_init)
         self._w_amp_init  = signal_amplitudes(self._beta_init, self._br_tau_init, single_w=True)
 
@@ -715,7 +721,7 @@ class FitData(object):
                   no_shape            = False,
                   randomize_templates = False,
                   factorize_nll       = False,
-                  lu_test             = None
+                  lu_test             = None,
                  ):
         '''
         Cost function for MC data model.  This version has no background
@@ -741,6 +747,10 @@ class FitData(object):
         params_reduced = self._pval_fit.copy()
         params_reduced[self._pmask] = params
         params = params_reduced
+
+        # conversion of first two parameters if ratio_test True
+        if self._ratio_test:
+            params[:2] *= params[2]
 
         # build the process amplitudes (once per evaluation) 
         beta, br_tau  = params[:4], params[4:7]
@@ -848,6 +858,10 @@ class FitData(object):
         params_reduced = self._pval_fit.copy()
         params_reduced[self._pmask] = params
         params = params_reduced
+
+        # conversion of first two parameters if ratio_test True
+        if self._ratio_test:
+            params[:2] *= params[2]
 
         # build the process amplitudes (once per evaluation, this should be
         # modified to infer the correct dimension and placement of values) 
