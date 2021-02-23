@@ -104,8 +104,8 @@ fit_features = dict(
                     emu   = 'trailing_lepton_pt', # muon or electron pt
                     mutau = 'lepton2_pt', # tau pt
                     etau  = 'lepton2_pt', # tau pt
-                    mujet  = 'lepton1_pt', # muon pt
-                    ejet   = 'lepton1_pt', # electron pt
+                    mujet = 'lepton1_pt', # muon pt
+                    ejet  = 'lepton1_pt', # electron pt
                    )
 
 fit_plot_labels = dict(
@@ -113,10 +113,11 @@ fit_plot_labels = dict(
                         mumu  = ['wmu_wmu', 'wmu_wtau_mu', 'wtau_mu_wtau_mu', 'other', 'zjets_alt', 'diboson'],
                         emu   = ['we_wmu', 'we_wtau_mu', 'wmu_wtau_e', 'wtau_e_wtau_mu', 'other', 'zjets_alt', 'fakes', 'diboson'],
                         etau  = ['we_wtau_h', 'we_wh', 'wtau_e_wh', 'wtau_e_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson'],
-                        mutau  = ['wmu_wtau_h', 'wmu_wh', 'wtau_mu_wh', 'wtau_mu_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson'],
+                        mutau = ['wmu_wtau_h', 'wmu_wh', 'wtau_mu_wh', 'wtau_mu_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson'],
                         ejet  = ['we_wh', 'we_wtau_h', 'other', 'zjets_alt', 'gjets', 'diboson', 'fakes'],
-                        mujet  = ['wmu_wtau_h', 'wmu_wh', 'wtau_mu_wh', 'wtau_mu_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson']
+                        mujet = ['wmu_wtau_h', 'wmu_wh', 'wtau_mu_wh', 'wtau_mu_wtau_h', 'other', 'zjets_alt', 'fakes', 'diboson']
                         )
+
 # WIP
 tau_dy_cut = '(dilepton1_mass > 40 and dilepton1_mass < 100 and dilepton1_delta_phi > 2.5 and lepton1_mt < 60)'
 ll_dy_veto = '(dilepton1_mass > 101 or dilepton1_mass < 81)'
@@ -134,6 +135,7 @@ categories = dict(
                   cat_gt3_eq1   = Category(None,       'n_jets >= 3 and n_bjets == 1', ['etau', 'mutau'], r'$N_{j} \geq 3, N_{b} = 1$',            3),
                   cat_gt3_gt2   = Category(None,       'n_jets >= 3 and n_bjets >= 2', ['etau', 'mutau'], r'$N_{j} \geq 3, N_{b} \geq 2$',         3),
 
+                  # emu categories and old ltau categories
                   cat_eq0_eq0_a = Category(None,       'n_jets == 0 and n_bjets == 0', ['emu'], r'$N_{j} = 0, N_{b} = 0$',       0),
                   cat_eq1_eq0_a = Category(None,       'n_jets == 1 and n_bjets == 0', ['emu'], r'$N_{j} = 1, N_{b} = 0$',       1),
                   cat_eq1_eq1_a = Category(None,       'n_jets == 1 and n_bjets == 1', ['emu'], r'$N_{j} = 1, N_{b} = 1$',       1),

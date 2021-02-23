@@ -1,4 +1,5 @@
 import pickle
+import re
 from multiprocessing import Process, Queue, Pool
 
 import numpy as np
@@ -373,7 +374,7 @@ class FitData(object):
                 if f'{sel}_{category}' in self.veto_list:
                     continue
 
-                self._categories.append(f'{sel}_{category}') 
+                self._categories.append(f'{sel}_{category}')
                 templates                             = templates['templates']
                 data_val, data_var                    = templates['data']['val'], templates['data']['var']
                 self._rnum_cache[f'{sel}_{category}'] = np.random.randn(data_val.size)
@@ -445,10 +446,24 @@ class FitData(object):
                                 delta_plus.append(diff_plus + diff_minus)
                                 delta_minus.append(diff_plus - diff_minus)
 
-
                             elif param.type == 'norm':
                                 if param[sel] and param[ds]:
                                     norm_vector.append(1)
+                                    #if ds == 'fakes':
+
+                                    #    # kluge to split fake n.p. by category
+                                    #    is_fake = bool(re.search('fakes', pname))
+                                    #    jet_cat = category.split('_', maxsplit=1)[1]
+                                    #    if jet_cat[-2:] == '_a': # for emu categories
+                                    #        jet_cat = jet_cat[:-2]
+                                    #    is_jet_cat = bool(re.search(jet_cat, pname))
+                                    #    #print(pname, sel, category, is_fake, is_jet_cat)
+                                    #    if is_fake and is_jet_cat:
+                                    #        norm_vector.append(1)
+                                    #    else:
+                                    #        norm_vector.append(0)
+                                    #else:
+                                    #    norm_vector.append(1)
                                 else:
                                     norm_vector.append(0)
 
