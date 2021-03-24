@@ -15,7 +15,7 @@ np.set_printoptions(precision=2)
 fancy_labels = dict(
                     mumu  = [r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$'],
                     ee    = [r'$\sf p_{T,e}$', r'$\sf ee$'],
-                    emu   = [r'$\sf p_{T,trailing}$', r'$\sf e\mu$'],
+                    emu   = [r'$\sf p_{T,subleading}$', r'$\sf e\mu$'],
                     mutau = [r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$'],
                     etau  = [r'$\sf p_{T,\tau}$', r'$\sf e\tau$'],
                     mujet = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
@@ -448,22 +448,20 @@ class FitData(object):
 
                             elif param.type == 'norm':
                                 if param[sel] and param[ds]:
-                                    norm_vector.append(1)
-                                    #if ds == 'fakes':
+                                    #norm_vector.append(1)
+                                    if ds == 'fakes' and sel in ['etau', 'mutau', 'ejet', 'mujet']:
 
-                                    #    # kluge to split fake n.p. by category
-                                    #    is_fake = bool(re.search('fakes', pname))
-                                    #    jet_cat = category.split('_', maxsplit=1)[1]
-                                    #    if jet_cat[-2:] == '_a': # for emu categories
-                                    #        jet_cat = jet_cat[:-2]
-                                    #    is_jet_cat = bool(re.search(jet_cat, pname))
-                                    #    #print(pname, sel, category, is_fake, is_jet_cat)
-                                    #    if is_fake and is_jet_cat:
-                                    #        norm_vector.append(1)
-                                    #    else:
-                                    #        norm_vector.append(0)
-                                    #else:
-                                    #    norm_vector.append(1)
+                                        # kluge to split fake n.p. by category
+                                        is_fake = bool(re.search('fakes', pname))
+                                        jet_cat = category.split('_', maxsplit=1)[1]
+                                        is_jet_cat = bool(re.search(jet_cat, pname))
+                                        #print(pname, sel, category, is_fake, is_jet_cat)
+                                        if is_fake and is_jet_cat:
+                                            norm_vector.append(1)
+                                        else:
+                                            norm_vector.append(0)
+                                    else:
+                                        norm_vector.append(1)
                                 else:
                                     norm_vector.append(0)
 

@@ -92,7 +92,7 @@ cuts = dict(
 fancy_labels = dict(
                     mumu  = [r'$\sf p_{T,\mu}$', r'$\sf \mu\mu$'],
                     ee    = [r'$\sf p_{T,e}$', r'$\sf ee$'],
-                    emu   = [r'$\sf p_{T,trailing}$', r'$\sf e\mu$'],
+                    emu   = [r'$\sf p_{T,subleading}$', r'$\sf e\mu$'],
                     mutau = [r'$\sf p_{T,\tau}$', r'$\sf \mu\tau$'],
                     etau  = [r'$\sf p_{T,\tau}$', r'$\sf e\tau$'],
                     mujet  = [r'$\sf p_{T,\mu}$', r'$\sf \mu+jets$'],
@@ -294,21 +294,22 @@ def set_default_style():
 
 
 def add_lumi_text(ax, lumi):
+
     ax.text(0.03, 1.01, 'CMS', 
-            fontsize=25, 
+            fontsize=26, 
             fontname='Arial',
             fontweight='bold',
             transform=ax.transAxes
             )
-    ax.text(0.14, 1.01, 'Preliminary',
-            fontsize=18,
-            fontname='Arial',
-            fontstyle='italic',
-            transform=ax.transAxes
-            )
+    #ax.text(0.14, 1.01, 'Preliminary',
+    #        fontsize=18,
+    #        fontname='Arial',
+    #        fontstyle='italic',
+    #        transform=ax.transAxes
+    #        )
     ax.text(0.70, 1.01,
             r'$\mathsf{{ {0:.1f}\,fb^{{-1}}}}\,(13\,\mathsf{{TeV}})$'.format(lumi),
-            fontsize=20,
+            fontsize=22,
             fontname='Arial',
             transform=ax.transAxes
             )
@@ -341,7 +342,8 @@ def fit_plot(templates, model_pre, data_val,
     histsum = np.zeros(model_pre.size)
     lut_styles = pd.read_excel('data/plotting_lut.xlsx',
                                  sheet_name='datasets_2016',
-                                 index_col='dataset_name'
+                                 index_col='dataset_name',
+                                 engine='openpyxl'
                                 ).dropna(how='all')
     decay_map = pd.read_csv('data/decay_map.csv').set_index('decay')
     for label, template in templates.iteritems():
@@ -418,21 +420,21 @@ def fit_plot(templates, model_pre, data_val,
 
     ax.set_yscale('log')
     ax.set_ylim(0.2*np.min(data_val/dx), 90.*np.max(data_val/dx))
-    ax.set_ylabel('Events / GeV', fontsize=24)
-    ax.text(0.55, 0.6, title, 
-            fontsize=22, 
+    ax.set_ylabel('Events / GeV', fontsize=26)
+    ax.text(0.55, 0.65, title, 
+            fontsize=24, 
             fontname='Arial', 
             color='red', 
             transform=ax.transAxes
             )
-    ax.text(0.55, 0.5, r'$\chi^{2} = $' + f'{chi2:.2f}; ' + r'$N_{DOF} = $' + f'{bins.size}', 
-            fontsize=20, 
-            fontname='Arial', 
-            color='k', 
-            transform=ax.transAxes
-            )
+    #ax.text(0.55, 0.5, r'$\chi^{2} = $' + f'{chi2:.2f}; ' + r'$N_{DOF} = $' + f'{bins.size}', 
+    #        fontsize=20, 
+    #        fontname='Arial', 
+    #        color='k', 
+    #        transform=ax.transAxes
+    #        )
     add_lumi_text(ax, 35.9)
-    ax.legend(fontsize=18, loc=9, ncol=3)
+    ax.legend(fontsize=20, loc=9, ncol=3)
     #ax.legend(labels + [r'$\sigma_{\sf stat.}$', r'$\sigma_{\sf syst.}$', 'Data'])
 
     #ax.grid()
@@ -479,8 +481,8 @@ def fit_plot(templates, model_pre, data_val,
 
     ax.set_xlim(x[0]-dx[0]/2, x[-2]+dx[-2]/2)
     ax.set_ylim(0.5, 1.5)
-    ax.set_ylabel('Obs./Exp.', fontsize=24)
-    ax.set_xlabel(xlabel, fontsize=22)
+    ax.set_ylabel('Obs./Exp.', fontsize=26)
+    ax.set_xlabel(xlabel + ' [GeV]', fontsize=28, loc='right')
     #ax.legend()
     ax.grid(axis='x')
 
@@ -527,15 +529,18 @@ class DataManager():
         self._event_counts = pd.read_csv('{0}/event_counts.csv'.format(self.input_dir, self.selection))
         self._lut_datasets = pd.read_excel('data/plotting_lut.xlsx',
                                            sheet_name='datasets_{0}'.format(self.period),
-                                           index_col='dataset_name'
+                                           index_col='dataset_name',
+                                           engine='openpyxl'
                                           ).dropna(how='all')
         lut_features_default = pd.read_excel('data/plotting_lut.xlsx',
                                              sheet_name='variables',
-                                             index_col='variable_name'
+                                             index_col='variable_name',
+                                             engine='openpyxl'
                                             ).dropna(how='all')
         lut_features_select = pd.read_excel('data/plotting_lut.xlsx',
                                             sheet_name='variables_{0}'.format(self.selection),
-                                            index_col='variable_name'
+                                            index_col='variable_name',
+                                            engine='openpyxl'
                                            ).dropna(how='all')
         self._lut_features = pd.concat([lut_features_default, lut_features_select], sort=True)#.astype({'n_bins':int})
 
